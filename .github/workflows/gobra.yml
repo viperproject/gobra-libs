@@ -1,0 +1,41 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+# Copyright (c) 2023 ETH Zurich.
+
+name: Verify the Gobra library
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+
+env:
+  assumeInjectivityOnInhale: '0'
+  parallelizeBranches: '0'
+  checkConsistency: '1'
+  imageVersion: 'latest'
+  mceMode: 'off'
+  requireTriggers: '1'
+
+jobs:
+  verify-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+      - name: Verify the packages in the root directory
+        uses: viperproject/gobra-action@main
+        with:
+          projectLocation: 'gobra-libs'
+          recursive: 1
+          timeout: 5m
+          includePaths: '.' # relative to project location
+          assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
+          checkConsistency: ${{ env.checkConsistency }}
+          parallelizeBranches: ${{ env.parallelizeBranches }}
+          imageVersion: ${{ env.imageVersion }}
+          mceMode: ${{ env.mceMode }}
+          requireTriggers: ${{ env.requireTriggers }}
