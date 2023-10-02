@@ -22,8 +22,7 @@ const Uncallable bool = false
 
 ghost
 requires false
-ensures  !res
-pure func Unreachable() (res bool)
+func Unreachable()
 
 ghost
 ensures false
