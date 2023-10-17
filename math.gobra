@@ -4,31 +4,31 @@ package math
 // Max returns the maximum of x and y
 ghost
 pure func Max(x, y int) int {
-    return x > y ? x : y
+	return x > y ? x : y
 }
 
 // Max3 returns the maximum of x, y and z
 ghost
 pure func Max3(x, y, z int) int {
-    return Max(Max(x, y), z)
+	return Max(Max(x, y), z)
 }
 
 // Min returns the minimum of x and y
 ghost
 pure func Min(x, y int) int {
-    return x < y ? x : y
+	return x < y ? x : y
 }
 
 // Min3 returns the minimum of x, y and z
 ghost
 pure func Min3(x, y, z int) int {
-    return Min(Min(x, y), z)
+	return Min(Min(x, y), z)
 }
 
 // Abs returns the absolute value of x
 ghost
 pure func Abs(x int) int {
-    return x >= 0 ? x : -x
+	return x >= 0 ? x : -x
 }
 
 // Pow raises x to the power of e.
@@ -38,7 +38,7 @@ ghost
 requires e >= 0
 decreases e
 pure func Pow(x, e int) int {
-    return e == 0 ? 1 : x * Pow(x, e - 1)
+	return e == 0 ? 1 : x * Pow(x, e - 1)
 }
 
 // Pow raises 2 to the power of e.
@@ -47,7 +47,7 @@ pure func Pow(x, e int) int {
 ghost
 requires e >= 0
 pure func Pow2(e int) int {
-    return Pow(2, e)
+	return Pow(2, e)
 }
 
 // Clip clips x to the interval [low, high]
@@ -58,5 +58,5 @@ pure func Pow2(e int) int {
 ghost
 requires low <= high
 pure func Clip(x, low, high int) int {
-    return Min(Max(x, low), high)
+	return Min(Max(x, low), high)
 }
