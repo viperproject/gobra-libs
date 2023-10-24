@@ -1,0 +1,173 @@
+// This package defines lemmas for sets commonly used in specifications.
+package sets
+
+// TODO Add proper attribution
+// SO Not taken from outside sources
+// S1 https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sets/Sets.dfy
+
+// SO
+// TODO Figure out how to import these from verify.gobra
+type Unit struct{}
+
+ghost
+requires b
+decreases
+pure func Asserting(ghost b bool) Unit {
+	return Unit{}
+}
+
+// SKIP S1: LemmaSubset<T>, quantified definition of subset
+
+// SO
+// Returns whether x is a proper subset of y.
+ghost
+decreases
+pure func IsProperSubset(x, y set[int]) bool {
+	return x subset y && x != y
+}
+
+// SO
+// Returns a singleton set containing x.
+ghost
+decreases
+pure func Singleton(x int) set[int] {
+	return set[int] {x}
+}
+
+// S0
+// Returns an empty set.
+ghost
+decreases
+pure func Empty() set[int] {
+	return set[int] {}
+}
+
+// S0/S1
+// Returns an element from a non-empty set.
+ghost
+decreases
+requires len(xs) != 0
+ensures x in xs
+ensures len(xs) == 1 ==> xs == Singleton(x)
+pure func choose(xs set[int]) (x int)
+
+// TODO Get IsProperSubset case to verify
+// S1
+// If x is a subset of y, then the size of x is less than or equal to the size of y.
+// If x is a strict subset of y, then the size of x is less than to the size of y.
+// ghost
+// decreases x, y
+// ensures x subset y ==> len(x) <= len(y)
+// ensures IsProperSubset(x, y) ==> len(x) < len(y)
+// func SubsetSize(x, y set[int]) Unit {
+	// if len(x) != 0 {
+		// ghost e := choose(x)
+		// SubsetSize(x setminus set[int] {e}, y setminus set[int] {e})
+	// }
+	// return Unit{}
+// }
+
+// S1
+// If x is a subset of y and both have the same size, they are equal.
+ghost
+requires x subset y
+requires len(x) == len(y)
+ensures x == y
+decreases
+pure func SubsetEquality(x, y set[int]) Unit {
+	return Asserting(len(y setminus x) == len(y) - len(x))
+}
+
+// S1
+// A singleton set has a size of 1.
+ghost
+requires x == Singleton(e)
+ensures len(x) == 1
+decreases
+pure func SingletonSize(x set[int], e int) Unit {
+	return Unit{}
+}
+
+
+// TODO Prove this (Dafny Proof uses strict SubsetSize)
+// S1
+// Elements in a singleton set are equal to each other.
+// ghost
+// requires len(x) == 1
+// requires a in x
+// requires b in x
+// ensures a == b
+// pure func SingletonEquality(x set[int], a, b int) Unit {
+// 	return Unit{}
+// }
+
+// SKIP S1: IsSingleton (quantified predicate)
+// SKIP S1: LemmaIsSingleton (uses IsSingleton)
+// NOTE S1: ExtractFromNonEmptySet and S1: ExtractFromSingleton are in choose
+
+// SKIP S1: MapSize<> (no Injective() defined)
+// SKIP S1: Map<> (no Injective() defined)
+// SKIP S1: LemmaFilterSize<> (not sure whether ~>/passing functions exists in Gobra)
+// SKIP S1: Filter (not sure whether ~>/passing functions exists in Gobra)
+
+// S1
+// The size of a union of two sets is greater than or equal to the size of
+// either individual set.
+ghost
+ensures len(xs union ys) >= len(xs)
+ensures len(xs union ys) >= len(ys)
+decreases ys
+pure func LemmaUnionSize(xs, ys set[int]) Unit {
+	return len(ys) == 0 ? Unit{} :
+		let y := choose(ys) in
+		(let yr := ys setminus Singleton(y) in
+		(y in xs ?
+			(let xr := xs setminus Singleton(y) in
+			(let _ := Asserting(xr union yr == xs union ys setminus Singleton(y)) in LemmaUnionSize(xr, yr))) :
+			(let _ := Asserting(xs union yr == xs union ys setminus Singleton(y)) in LemmaUnionSize(xs, yr))))
+}
+// Proof using non-pure function (TODO delete if above is okay)
+// func LemmaUnionSize(xs, ys set[int]) Unit {
+// 	if len(ys) != 0 {
+// 		ghost y := choose(ys)
+// 		ghost yr := ys setminus Singleton(y)
+// 		if y in xs {
+// 			ghost xr := xs setminus Singleton(y)
+// 			assert xr union yr == xs union ys setminus Singleton(y)
+// 			LemmaUnionSize(xr, yr)
+// 		} else {
+// 			assert xs union yr == xs union ys setminus Singleton(y)
+// 			LemmaUnionSize(xs, yr)
+// 		}
+// 	}
+// }
+
+
+// S1
+// Construct a set with all integers in the range [a, b).
+ghost
+requires a <= b
+ensures forall i int :: { i in s } (a <= i && i < b) == i in s
+ensures len(s) == b - a
+decreases b - a
+pure func SetRange(a, b int) (s set[int]) {
+	return a == b ? Empty() : Singleton(a) union SetRange(a + 1, b)
+}
+
+// S1
+// Construct a set with all integers in the range [0, n).
+ghost
+requires n >= 0
+ensures forall i int :: {i in s} (0 <= i && i < n) == i in s
+ensures len(s) == n
+pure func SetRangeFromZero(n int) (s set[int]) {
+	return SetRange(0, n)
+}
+
+// TODO S1: LemmaBoundedSetSize (Dafny proof requires LemmaSubsetSize +
+// contains unclear forall in proof)
+
+// SKIP S1: LemmaGreatestImplies{Minimal, Maximal}, LemmaMaximalEquivalentGreatest
+// LemmaMinimalEquivalentLeast, LeammLeastIsUnique, LemmaGreatestIsUnique, LemmaMinimalIsUnique
+// LemmaMaximalIsUnique, LemmaFindUniqueMinimal, LemmaFindUniqueMaximal
+// since Orderings are not defined
