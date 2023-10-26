@@ -4,6 +4,10 @@ package sets
 // TODO Add proper attribution
 // SO Not taken from outside sources
 // S1 https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sets/Sets.dfy
+// S2 https://github.com/verus-lang/verus/blob/main/source/pervasive/set_lib.rs
+
+// TODO Restructure, rename and properly document definitions at the end
+// (in particular consistency in names of functions, arguments, variables)
 
 // SO
 // TODO Figure out how to import these from verify.gobra
@@ -15,6 +19,11 @@ decreases
 pure func Asserting(ghost b bool) Unit {
 	return Unit{}
 }
+
+ghost
+ensures false
+decreases _
+func TODO()
 
 // SKIP S1: LemmaSubset<T>, quantified definition of subset
 
@@ -42,13 +51,21 @@ pure func Empty() set[int] {
 	return set[int] {}
 }
 
+// S2
+// Returns whether x is empty.
+ghost
+decreases
+pure func IsEmpty(x set[int]) bool {
+	return len(x) == 0
+}
+
 // S0/S1
 // Returns an element from a non-empty set.
 ghost
-decreases
-requires len(xs) != 0
+requires !IsEmpty(xs)
 ensures x in xs
 ensures len(xs) == 1 ==> xs == Singleton(x)
+decreases
 pure func choose(xs set[int]) (x int)
 
 // TODO Get IsProperSubset case to verify
@@ -117,14 +134,14 @@ ghost
 ensures len(xs union ys) >= len(xs)
 ensures len(xs union ys) >= len(ys)
 decreases ys
-pure func LemmaUnionSize(xs, ys set[int]) Unit {
-	return len(ys) == 0 ? Unit{} :
+pure func UnionSizeLower(xs, ys set[int]) Unit {
+	return IsEmpty(ys) ? Unit{} :
 		let y := choose(ys) in
 		(let yr := ys setminus Singleton(y) in
 		(y in xs ?
 			(let xr := xs setminus Singleton(y) in
-			(let _ := Asserting(xr union yr == xs union ys setminus Singleton(y)) in LemmaUnionSize(xr, yr))) :
-			(let _ := Asserting(xs union yr == xs union ys setminus Singleton(y)) in LemmaUnionSize(xs, yr))))
+			(let _ := Asserting(xr union yr == xs union ys setminus Singleton(y)) in UnionSizeLower(xr, yr))) :
+			(let _ := Asserting(xs union yr == xs union ys setminus Singleton(y)) in UnionSizeLower(xs, yr))))
 }
 // Proof using non-pure function (TODO delete if above is okay)
 // func LemmaUnionSize(xs, ys set[int]) Unit {
@@ -160,6 +177,7 @@ ghost
 requires n >= 0
 ensures forall i int :: {i in s} (0 <= i && i < n) == i in s
 ensures len(s) == n
+decreases
 pure func SetRangeFromZero(n int) (s set[int]) {
 	return SetRange(0, n)
 }
@@ -171,3 +189,158 @@ pure func SetRangeFromZero(n int) (s set[int]) {
 // LemmaMinimalEquivalentLeast, LeammLeastIsUnique, LemmaGreatestIsUnique, LemmaMinimalIsUnique
 // LemmaMaximalIsUnique, LemmaFindUniqueMinimal, LemmaFindUniqueMaximal
 // since Orderings are not defined
+
+// SKIP S2: is_full (don't have a notion of full)
+// SKIP S2: map<B>, fold<E> (cannot pass functions)
+// SKIP S2: to_seq() (not sure whether its fine to have forall + exists in ensures)
+// SKIP S2: to_sorted_seq() (cannot pass function)
+// SKIP S2: is_singleton() (including forall like that feels off)
+// SKIP S2: find_unique_{mmaximal, minimal*}() (cannot pass function)
+
+// S2
+// Converts a set into a multiset where each element from the set has
+// multiplicity 1 and any other element has multiplicity 0.
+ghost
+ensures forall i int :: {i # ms} (i in s) ==> ((i # ms) == 1)
+ensures forall i int :: {i # ms} (!(i in s)) ==> ((i # ms) == 0)
+decreases s
+func ToMultiset(s set[int]) (ms mset[int]) {
+	if IsEmpty(s) {
+		return mset[int] {}
+	} else {
+		ghost x := choose(s)
+		return ((mset[int] {}) union (mset[int] {x})) union ToMultiset(s setminus Singleton(x))
+	}
+}
+
+// TODO Are we going to need lemmas of the form i # xmset > 0 ==> i in xmset?
+
+// SKIP: S2: lemma_len0_is_empty(self) <- this one is confusing, since we defined IsEmpty before
+// SKIP: S2: lemma_singleton_size + lemma_is_singleton (not sure whether we need 
+// these, as singleton isn't a separate notion)
+// SKIP: S2: lemma_len_filter, lemma_greatest_implies_maximal, lemma_least_implies_minimal,
+// lemma_maximal_equivalent_greatest, lemma_minimal_equivalent_least, lemma_least_is_unique,
+// lemma_greatest_is_unique, lemma_minimal_is_unique, lemma_maximal_is_unique (cannot pass functions/no ordering)
+
+// S2
+// The size of a union of two sets is less than or equal to the size of
+// both individual sets combined.
+ghost
+ensures len(xs union ys) <= len(xs) + len(ys)
+decreases
+pure func UnionSizeUpper(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// SKIP: S2: lemma_len_union_ind (corresponds to UnionSizeLower from S1)
+
+// S2
+// The size of the intersection of xs and ys is less than or equal to the
+// size of xs.
+ghost
+ensures len(xs intersection ys) <= len(xs)
+decreases xs
+pure func IntersectSizeUpper(xs, ys set[int]) Unit {
+	return IsEmpty(xs) ? Unit{} :
+		let x := Singleton(choose(xs)) in
+		(let _ := Asserting((xs setminus x) intersection ys == (xs intersection ys) setminus x) in
+		(IntersectSizeUpper(xs setminus x, ys)))
+
+}
+// Proof using non-pure function (TODO delete if above is okay)
+// ghost
+// ensures len(xs intersection ys) <= len(xs)
+// decreases xs
+// func IntersectSizeUpper(xs, ys set[int]) Unit {
+// 	if !IsEmpty(xs) {
+// 		ghost x := choose(xs)
+// 		assert (xs setminus Singleton(x)) intersection ys == (xs intersection ys) setminus Singleton(x)
+// 		return IntersectSizeUpper(xs setminus Singleton(x), ys)
+// 	}
+// }
+
+// SKIP: S2 lemma_len_subset corresponds to SubsetSize from S1
+
+// S2
+// The size of the difference xs - ys is less than or equal to the size of xs. 
+ghost
+ensures len(xs setminus ys) <= len(xs)
+decreases
+pure func SetminusSizeUpper(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// SKIP: S2: set_int_range, lemma_int_range correspond to SetRange from S1
+// SKIP: S2: lemma_subset_equality corresponds to SubsetEquality from S1
+
+// SKIP: S2: lemma_map_size (cannot pass function)
+
+// TODO Do we need lemmas to assert that union and intersect are commutative?
+
+// S2
+ghost
+ensures (xs union ys) union ys == xs union ys
+decreases
+pure func UnionAgain1(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+ghost
+ensures (xs union ys) union xs == xs union ys
+decreases
+pure func UnionAgain2(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+ghost
+ensures (xs intersection ys) intersection ys == (xs intersection ys)
+decreases
+pure func IntersectAgain1(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+ghost
+ensures (xs intersection ys) intersection xs == (xs intersection ys)
+decreases
+pure func IntersectAgain2(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+// If ys contains e, then the difference xs - ys does not contain e.
+ghost
+ensures e in ys ==> !(e in (xs setminus ys))
+decreases
+pure func SetDifference2(xs, ys set[int], e int) Unit {
+	return Unit{}
+}
+
+// SKIP S2: lemma_set_disjoint (no notion of disjoint in Gobra)
+// SKIP S2: lemma_set_empty_equivalency_len (unclear how it ties to the rest,
+// since we already consider IsEmpty() and Choose())
+
+// SKIP S2: lemma_set_disjoint_lens (no notion of disjoint in Gobra)
+
+// S2 (proves slightly different version)
+ghost
+ensures len(xs union ys) == len(xs) + len(ys) - len(xs intersection ys)
+decreases
+pure func UnionSizeEq(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+ghost
+ensures len(xs setminus ys) == len(xs) - len(xs intersection ys)
+ensures len(xs setminus ys) + len(ys setminus xs) + len(xs intersection ys) == len(xs union ys)
+decreases
+pure func SetminusSize(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// SKIP: S2: axiom_is_empty (seems to be more or less choose)
+// SKIP: S2: check_argument_is_set<A> (seems to be specific to Verus)
+// SKIP: S2: Macros (seems to be specific to Verus)
