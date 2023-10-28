@@ -5,9 +5,16 @@ package sets
 // SO Not taken from outside sources
 // S1 https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sets/Sets.dfy
 // S2 https://github.com/verus-lang/verus/blob/main/source/pervasive/set_lib.rs
+// S3 https://why3.lri.fr/stdlib/set.html
+
 
 // TODO Restructure, rename and properly document definitions at the end
 // (in particular consistency in names of functions, arguments, variables)
+
+// QUES How will set literals be interpreted if we turn of the axioms?
+
+// TODO Figure out what the Gobra warnings are
+// TODO Unicode comments?
 
 // SO
 // TODO Figure out how to import these from verify.gobra
@@ -42,6 +49,12 @@ decreases
 pure func Singleton(x int) set[int] {
 	return set[int] {x}
 }
+
+// TODO Figure out how to properly formalize empty (see comment about
+// empty from S3 below)
+
+// TODO Figure out how to properly formalize Singleton; probably requires
+// similar considerations as empty
 
 // S0
 // Returns an empty set.
@@ -137,11 +150,11 @@ decreases ys
 pure func UnionSizeLower(xs, ys set[int]) Unit {
 	return IsEmpty(ys) ? Unit{} :
 		let y := choose(ys) in
-		(let yr := ys setminus Singleton(y) in
+		(let yr := Remove(ys, y) in
 		(y in xs ?
-			(let xr := xs setminus Singleton(y) in
-			(let _ := Asserting(xr union yr == xs union ys setminus Singleton(y)) in UnionSizeLower(xr, yr))) :
-			(let _ := Asserting(xs union yr == xs union ys setminus Singleton(y)) in UnionSizeLower(xs, yr))))
+			(let xr := Remove(xs, y) in
+			(let _ := Asserting(xr union yr == Remove(xs union ys, y)) in UnionSizeLower(xr, yr))) :
+			(let _ := Asserting(xs union yr == Remove(xs union ys, y)) in UnionSizeLower(xs, yr))))
 }
 // Proof using non-pure function (TODO delete if above is okay)
 // func LemmaUnionSize(xs, ys set[int]) Unit {
@@ -168,7 +181,7 @@ ensures forall i int :: { i in s } (a <= i && i < b) == i in s
 ensures len(s) == b - a
 decreases b - a
 pure func SetRange(a, b int) (s set[int]) {
-	return a == b ? Empty() : Singleton(a) union SetRange(a + 1, b)
+	return a == b ? Empty() : Add(SetRange(a + 1, b), a)
 }
 
 // S1
@@ -197,6 +210,7 @@ pure func SetRangeFromZero(n int) (s set[int]) {
 // SKIP S2: is_singleton() (including forall like that feels off)
 // SKIP S2: find_unique_{mmaximal, minimal*}() (cannot pass function)
 
+// TODO convert this into a pure function
 // S2
 // Converts a set into a multiset where each element from the set has
 // multiplicity 1 and any other element has multiplicity 0.
@@ -209,7 +223,7 @@ func ToMultiset(s set[int]) (ms mset[int]) {
 		return mset[int] {}
 	} else {
 		ghost x := choose(s)
-		return ((mset[int] {}) union (mset[int] {x})) union ToMultiset(s setminus Singleton(x))
+		return ((mset[int] {}) union (mset[int] {x})) union ToMultiset(Remove(s, x))
 	}
 }
 
@@ -242,9 +256,9 @@ ensures len(xs intersection ys) <= len(xs)
 decreases xs
 pure func IntersectSizeUpper(xs, ys set[int]) Unit {
 	return IsEmpty(xs) ? Unit{} :
-		let x := Singleton(choose(xs)) in
-		(let _ := Asserting((xs setminus x) intersection ys == (xs intersection ys) setminus x) in
-		(IntersectSizeUpper(xs setminus x, ys)))
+		let x := choose(xs) in
+		(let _ := Asserting((Remove(xs, x)) intersection ys == Remove((xs intersection ys), x)) in
+		(IntersectSizeUpper(Remove(xs, x), ys)))
 
 }
 // Proof using non-pure function (TODO delete if above is okay)
@@ -344,3 +358,230 @@ pure func SetminusSize(xs, ys set[int]) Unit {
 // SKIP: S2: axiom_is_empty (seems to be more or less choose)
 // SKIP: S2: check_argument_is_set<A> (seems to be specific to Verus)
 // SKIP: S2: Macros (seems to be specific to Verus)
+
+// SKIP S3: Potentially infinite sets (no support in Gobra)
+
+// S3: Finite sets
+// ***************
+// SKIP S3: type fset 'a, meta "material_type_arg" type fset, 0
+// (don't seem to apply to Gobra)
+
+// SKIP S3: mem (built-in `in`)
+// SKIP S3: (==) (built-in `==`)
+// SKIP S3: extensionality (don't seem to apply to Gobra)
+// SKIP S3: subset (seems to be quantified axiom)
+
+// S3
+// Definition of subset without quantifiers.
+ghost
+requires e in xs
+requires xs subset ys
+ensures e in ys
+decreases
+pure func Subset(xs, ys set[int], e int) Unit {
+	return Unit{}
+}
+
+// S3
+// Subset relation is reflexive.
+ghost
+ensures xs subset xs
+decreases
+pure func SubsetReflexive(xs set[int]) Unit {
+	return Unit{}
+}
+
+// S3
+// Subset relation is transitive.
+ghost
+requires xs subset ys
+requires ys subset zs
+ensures xs subset zs
+decreases
+pure func SubsetTransitive(xs, ys, zs set[int]) Unit {
+	return Unit{}
+}
+
+// SKIP: S3 is_empty, empty, is_empty_empty, empty_is_empty
+// unsure how to formalize the empty set: Is it defined as {}, a set of len 0,
+// or as a set s such that forall e . e not in s?
+
+
+// TODO Can we write functions like Add, Remove, etc. (and some above) as Go
+// methods?
+// S3 (add, add_def)
+// Add an element x to the set xs.
+ghost
+// Need this post-condition to verify CardinalAdd
+ensures (x in xs) ==> res == xs
+decreases
+pure func Add(xs set[int], x int) (res set[int]) {
+	return xs union Singleton(x)
+}
+// QUES add_def has mem y (add x s) <-> (mem y s \/ y = x) as its definition
+// We push the work to union; (how) do we need to formalize it?
+
+// SKIP S3: singleton <- already define it as literal in Singleton (S0)
+// SKIP S3: mem_singleton: contains quantifiers; unsure how to formalize singletons:
+// as set of length one? forall x, y. y in Singleton(x) => x = y (S3)?
+// forall x, y: x in Singleton(_) && y in Singleton(_) => x == y (S1, S2)?
+
+// S3
+// Remove the element x from the set xs.
+// TODO Should we add something like ensures !(x in xs) ==> xs == Remove(xs, x)
+// like we did for Add?
+ghost
+decreases
+pure func Remove(xs set[int], x int) set[int] {
+	return xs setminus Singleton(x)
+}
+// QUES remove_def has mem y (remove x s) <-> (mem y s /\ y <> x) as its definition
+// We push the work to setminux; (how) do we need to formalize it?
+
+// S3
+// If x is in the set xs, removing and adding it back in does not change the set
+ghost
+requires x in xs
+ensures Add(Remove(xs, x), x) == xs
+decreases
+pure func AddRemove(xs set[int], x int) Unit {
+	return Unit{}
+}
+
+// S3
+// If we remove x from the set xs, it doesn't matter whether we have added x
+// to it before.
+ghost
+ensures Remove(Add(xs, x), x) == Remove(xs, x)
+decreases
+pure func RemoveAdd(xs set[int], x int) Unit {
+	return Unit{}
+}
+
+// S3
+ghost
+ensures Remove(xs, x) subset xs
+decreases
+pure func SubsetRemove(xs set[int], x int) Unit {
+	return Unit{}
+}
+
+// SKIP S3: union (union is already a "symbol" in Gobra)
+// SKIP S3 union_def (quantified defintion of union)
+// TODO Should we merge SubsetUnion1 and SubsetUnion2?
+// S3
+ghost
+ensures xs subset (xs union ys)
+decreases
+pure func SubsetUnion1(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S3
+ghost
+ensures ys subset (xs union ys)
+decreases
+pure func SubsetUnion2(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// SKIP S3: inter (intersection is already a "symbol" in Gobra)
+// SKIP S3: inter_def (quantified definition of intersection)
+
+// S3
+ghost
+ensures (xs intersection ys) subset xs
+decreases
+pure func SubsetIntersection1(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S3
+ghost
+ensures (xs intersection ys) subset ys
+decreases
+pure func SubsetIntersection2(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+
+// SKIP S3: diff (setminus is already a "symbol" in Gobra)
+// SKIP S3: diff_def (quantified definition of setminus)
+
+// S3
+ghost
+ensures (xs setminus ys) subset xs 
+decreases
+pure func SubsetSetminus(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// SKIP S3: pick, pick_def (corresponds to Choose)
+// SKIP S3: disjoint, disjoint_inter_empty, disjoint_diff_eq,
+// disjoint_diff_s2: definition of disjoint requires a quantifier
+// TODO Notion of disjoint seems useful; (how) should we implement it?
+
+// SKIP S3 filter, filter_def, subset_filter, map, map_def, mem_map (cannot pass functions)
+
+// S3
+ghost
+ensures len(xs) >= 0
+decreases
+pure func CardinalNonneg(xs set[int]) Unit {
+	return Unit{}
+}
+
+// S3 SKIP: cardinal_empty: What does it mean for a set to be empty? (see above)
+
+// S3
+ghost
+ensures (x in xs) ==> (len(Add(xs, x)) == len(xs))
+ensures !(x in xs) ==> (len(Add(xs, x)) == len(xs) + 1)
+decreases
+func CardinalAdd(xs set[int], x int) Unit {
+	return Unit{}
+}
+
+// S3
+ghost
+ensures (x in xs) ==> (len(Remove(xs, x)) == len(xs) - 1)
+ensures !(x in xs) ==> (len(Remove(xs, x)) == len(xs))
+decreases
+func CardinalRemove(xs set[int], x int) Unit {
+	return Unit{}
+}
+
+// SKIP S3 cardinal_subset => corresponds to S1 SubsetSize
+// SKIP S3 subset_eq => corresponds to S1 SubsetEquality
+
+// S3
+// If xs is a Singleton, and x is in xs, then choose(xs) will always return x.
+ghost
+requires len(xs) == 1
+ensures x in xs ==> choose(xs) == x
+decreases
+pure func Cardinal1(xs set[int], x int) Unit {
+	return Unit{}
+}
+
+// SKIP S3 cardinal_union => corresponds to S2 UnionSizeEq
+// SKIP S3 cardinal_inter_disjoint (no notion of disjoint in gobra)
+// SKIP S3 cardinal_diff => included in S2 SetminusSize
+// SKIP S3 cardinal_filter, cardinal_map (cannot pass functions)
+
+// SKIP S3: Induction principle on finite sets
+
+// SKIP S3: min_elt{,_def}, max_elt{,_def} mention forall x . x in xs in
+// their post-condition; not sure whether we want such a function
+
+// SKIP S3: interval, interval_def, cardinal_interval => correspond to SetRange
+
+// SKIP Sum of a function over a finite set => cannot pass functions
+
+// S3 The sections in "Finite Monomorphic sets" suggest to move cardinality properties as a
+// postcondition to functions that "generate" it
+// Empty() would return an empty list, but also ensure that its cardinality is 0
+// Add(xs, x) would return a set where x has been added to xs, but also ensure that
+// the cardinality stays the same if x was already in xs, or increases if it wasnt
+// A similar consideration is made for Singleton(x) and Remove(xs, x)
+// TODO Consider whether we want to merge functions like this
