@@ -1,0 +1,270 @@
+// This package defines lemmas for non-linear arithmetic commonly used in specifications.
+package nla
+
+// SO Not taken from outside sources
+// S1 https://github.com/dafny-lang/libraries/blob/master/src/NonlinearArithmetic/Mul.dfy
+
+// NOTE Skipped *Auto, LemmaMulIsMulRecursive, LemmaMulIsMulPos, LemmaMulProperties
+
+// TODO Decide on suitable comments
+
+// S0
+// TODO Figure out how to import this from verify.gobra
+type Unit struct{}
+
+// S1
+// Identity and zero properties of multiplication.
+ghost
+ensures 0 * x == 0
+ensures x * 0 == 0
+ensures 1 * x == x
+ensures x * 1 == x
+decreases
+pure func MulBasics(x int) Unit {
+	return Unit{}
+}
+
+// S1
+// Multiplying two integers is non-zero iff both factors are non-zero.
+ghost
+ensures (x * y != 0) == (x != 0 && y != 0)
+decreases
+pure func MulNonzero(x, y int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+ensures x * (y * z) == (x * y) * z
+decreases
+pure func MulAssoc(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+ensures x * y == y * x
+decreases
+pure func MulComm(x, y int) Unit {
+	return Unit{}
+}
+
+// S1
+// The product of two non-zero integers with the same sign is at least as large
+// as each of its factors.
+ghost
+requires x != 0
+requires y != 0
+requires x * y >= 0
+ensures x * y >= x && x * y >= y
+decreases
+pure func MulOrdering(x, y int) Unit {  // TODO? Find a better name
+	return Unit{}
+}
+
+// S1
+ghost
+requires x == y
+ensures x * z == y * z
+decreases
+pure func MulEquality(x, y, z int) Unit {  // TODO? Find a better name
+	return Unit{}
+}
+
+// S1
+// Multiplying two integers with a non-negative number maintains their
+// numerical order.
+ghost
+requires x <= y
+requires z >= 0
+ensures x * z <= y * z
+decreases
+pure func MulInequality(x, y, z int) Unit {  // TODO? Find a better name
+	return Unit{}
+}
+
+// S1
+// Multiplying by a positive integer preserves inequality.
+ghost
+requires x < y
+requires z > 0
+ensures x * z < y * z
+decreases
+pure func MulStrictInequality(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+// The product of two non-negative bounded integers is less than or equal to
+// the product of their upper bounds.
+ghost
+requires x <= XBound
+requires y <= YBound
+requires 0 <= x
+requires 0 <= y
+ensures x * y <= XBound * YBound
+decreases
+pure func MulUpperBound(x, XBound, y, YBound int) Unit {
+	return Unit{}
+}
+
+// S1
+// The product of two positive, strictly upper bounded integers is less than
+// the product of their upper bounds.
+ghost
+requires x < XBound
+requires y < YBound
+// QUES If I make these strict, MulStrictInequalityConverse doesn't verify anymore - what?
+requires 0 < x
+requires 0 < y
+ensures x * y <= (XBound - 1) * (YBound - 1)
+decreases
+pure func MulStrictUpperBound(x, XBound, y, YBound int) Unit {
+	return let _ := MulInequality(x, XBound - 1, y) in
+		MulInequality(y, YBound - 1, XBound - 1)
+}
+
+// S1
+// Any two integers that are multiplied by a positive number will maintain
+// their numerical order.
+ghost
+requires 0 < x
+ensures y <= z ==> x * y <= x * z
+ensures y < z ==> x * y < x * z
+decreases
+pure func MulLeftInequality(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+// If two separate integers are each multiplied by a common integer and the
+// products are equal, the two original integers are equal.
+ghost
+requires m != 0
+requires m * x == m * y
+ensures x == y
+decreases
+pure func MulEqualityConverse(m, x, y int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+requires x * z <= y * z
+requires z > 0
+ensures x <= y
+decreases
+pure func MulInequalityConverse(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+requires x * z < y * z
+requires z >= 0
+ensures x < y
+decreases
+pure func MulStrictInequalityConverse(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+ensures x * (y + z) == x * y + x * z
+decreases
+pure func MulIsDistributiveAdd(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+ensures (y + z) * x == y * x + z * x
+decreases
+pure func MulIsDistributiveAddOtherWay(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+ensures x * (y - z) == x * y - x * z
+decreases
+pure func MulIsDistributiveSub(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+// Proves the overall distribute nature of multiplication.
+ghost
+// TODO Are all of these needed? In particular those marked with *
+ensures x * (y + z) == x * y + x * z
+ensures x * (y - z) == x * y - x * z
+ensures (y + z) * x == y * x + z * x  // *
+ensures (y - z) * x == y * x - z * x  // *
+ensures x * (y + z) == (y + z) * x
+ensures x * (y - z) == (y - z) * x
+ensures x * y == y * x
+ensures x * z == z * x
+decreases
+pure func MulIsDistributive(x, y, z int) Unit {
+	return Unit{}
+}
+
+// S1
+// Multiplying two positive integers will result in a positive integer.
+ghost
+ensures (0 < x && 0 < y) ==> (0 < x * y)
+decreases
+pure func MulStrictlyPositive(x, y int) Unit {
+	return Unit{}
+}
+
+// S1
+// Multiplying a positive integer by an integer greater than 1 will result in
+// a product that is greater than the original integer
+ghost
+requires 1 < x
+requires 0 < y
+ensures y < x * y
+decreases
+pure func MulStrictlyIncrease(x, y int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+requires 0 < x
+requires 0 < y
+ensures y <= x * y
+decreases
+pure func MulIncreases(x, y int) Unit {
+	return Unit{}
+}
+
+// S1
+// Multiplying two non-negative numbers will result in a non-negative product
+ghost
+requires 0 <= x
+requires 0 <= y
+ensures 0 <= x * y
+decreases
+pure func MulNonnegative(x, y int) Unit {
+	return Unit{}
+}
+
+// S1
+// Proves the equivalent froms of using the unary negation operators.
+ghost
+ensures ((-x) * y) == (-(x * y))
+ensures (-(x * y)) == (x * (-y))
+decreases
+pure func MulUnaryNegation(x, y int) Unit {
+	return Unit{}
+}
+
+// S1
+ghost
+ensures x * y == (-x) * (-y)
+decreases
+pure func MulCancelsNegatives(x, y int) Unit {
+	return Unit{}
+}
