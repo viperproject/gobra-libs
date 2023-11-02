@@ -8,6 +8,8 @@ package sets
 // S3 https://why3.lri.fr/stdlib/set.html
 
 
+// (How) Should we transform the axiomization of sets into lemmas?
+
 // TODO Restructure, rename and properly document definitions at the end
 // (in particular consistency in names of functions, arguments, variables)
 
