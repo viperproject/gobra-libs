@@ -8,14 +8,11 @@ package sets
 // S3 https://why3.lri.fr/stdlib/set.html
 
 
-// (How) Should we transform the axiomization of sets into lemmas?
+// TODO Go through axiomization of sets
 
 // TODO Restructure, rename and properly document definitions at the end
-// (in particular consistency in names of functions, arguments, variables)
+// (in particular consistency in names of functions, arguments (names/order), variables)
 
-// QUES How will set literals be interpreted if we turn of the axioms?
-
-// TODO Figure out what the Gobra warnings are
 // TODO Unicode comments?
 
 // SO
@@ -34,7 +31,7 @@ ensures false
 decreases _
 func TODO()
 
-// SKIP S1: LemmaSubset<T>, quantified definition of subset
+// SKIP S1: LemmaSubset<T>; implemented below as Subset from S3
 
 // SO
 // Returns whether x is a proper subset of y.
@@ -44,27 +41,45 @@ pure func IsProperSubset(x, y set[int]) bool {
 	return x subset y && x != y
 }
 
+// S1
+ghost
+decreases
+pure func IsSingleton(x set[int]) bool {
+	return len(x) == 1
+}
+
 // SO
 // Returns a singleton set containing x.
 ghost
+ensures IsSingleton(result)
 decreases
-pure func Singleton(x int) set[int] {
+pure func SingletonSet(x int) (result set[int]) {
 	return set[int] {x}
 }
 
-// TODO Figure out how to properly formalize empty (see comment about
-// empty from S3 below)
-
-// TODO Figure out how to properly formalize Singleton; probably requires
-// similar considerations as empty
+// S1
+// Elements in a singleton set are equal to each other
+// TODO Prove this: Dafny proof requires strict case of SubsetSize
+// ghost
+// requires IsSingleton(x)
+// requires a in x
+// requires b in x
+// ensures a == b
+// decreases
+// pure func SingletonEquality(x set[int], a int, b int) Unit {
+// 	return Unit{}
+// }
 
 // S0
-// Returns an empty set.
-ghost
-decreases
-pure func Empty() set[int] {
-	return set[int] {}
-}
+// If a is in a singleton set x, then x is of the form {a}
+// TODO Prove this
+// ghost
+// requires IsSingleton(x)
+// requires a in x
+// ensures x == SingletonSet(a)
+// pure func SingletonIsSingletonSet(x set[int], a int) Unit {
+// 	return Unit{}
+// }
 
 // S2
 // Returns whether x is empty.
@@ -74,12 +89,41 @@ pure func IsEmpty(x set[int]) bool {
 	return len(x) == 0
 }
 
+// S0
+// Returns an empty set.
+ghost
+ensures IsEmpty(result)
+decreases
+pure func EmptySet() (result set[int]) {
+	return set[int] {}
+}
+
+// S3
+// Nothing can be an element of the empty set.
+ghost
+requires IsEmpty(x)
+ensures !(e in x)
+decreases
+pure func ElementNotInEmpty(x set[int], e int) Unit {
+	return Unit{}
+}
+
+// S3
+// A set of length 0 is the empty set.
+ghost
+requires IsEmpty(x)
+ensures x == EmptySet()
+decreases
+pure func EmptyIsEmptySet(x set[int]) Unit {
+	return Unit{}
+}
+
 // S0/S1
 // Returns an element from a non-empty set.
 ghost
 requires !IsEmpty(xs)
 ensures x in xs
-ensures len(xs) == 1 ==> xs == Singleton(x)
+ensures len(xs) == 1 ==> xs == SingletonSet(x)
 decreases
 pure func choose(xs set[int]) (x int)
 
@@ -113,7 +157,7 @@ pure func SubsetEquality(x, y set[int]) Unit {
 // S1
 // A singleton set has a size of 1.
 ghost
-requires x == Singleton(e)
+requires x == SingletonSet(e)
 ensures len(x) == 1
 decreases
 pure func SingletonSize(x set[int], e int) Unit {
@@ -135,6 +179,7 @@ pure func SingletonSize(x set[int], e int) Unit {
 
 // SKIP S1: IsSingleton (quantified predicate)
 // SKIP S1: LemmaIsSingleton (uses IsSingleton)
+// IsSingleton + LemmaIsSingleton is reduced to len(x) == 1 in our implementation.
 // NOTE S1: ExtractFromNonEmptySet and S1: ExtractFromSingleton are in choose
 
 // SKIP S1: MapSize<> (no Injective() defined)
@@ -183,7 +228,7 @@ ensures forall i int :: { i in s } (a <= i && i < b) == i in s
 ensures len(s) == b - a
 decreases b - a
 pure func SetRange(a, b int) (s set[int]) {
-	return a == b ? Empty() : Add(SetRange(a + 1, b), a)
+	return a == b ? EmptySet() : Add(SetRange(a + 1, b), a)
 }
 
 // S1
@@ -404,13 +449,6 @@ pure func SubsetTransitive(xs, ys, zs set[int]) Unit {
 	return Unit{}
 }
 
-// SKIP: S3 is_empty, empty, is_empty_empty, empty_is_empty
-// unsure how to formalize the empty set: Is it defined as {}, a set of len 0,
-// or as a set s such that forall e . e not in s?
-
-
-// TODO Can we write functions like Add, Remove, etc. (and some above) as Go
-// methods?
 // S3 (add, add_def)
 // Add an element x to the set xs.
 ghost
@@ -418,7 +456,7 @@ ghost
 ensures (x in xs) ==> res == xs
 decreases
 pure func Add(xs set[int], x int) (res set[int]) {
-	return xs union Singleton(x)
+	return xs union SingletonSet(x)
 }
 // QUES add_def has mem y (add x s) <-> (mem y s \/ y = x) as its definition
 // We push the work to union; (how) do we need to formalize it?
@@ -435,7 +473,7 @@ pure func Add(xs set[int], x int) (res set[int]) {
 ghost
 decreases
 pure func Remove(xs set[int], x int) set[int] {
-	return xs setminus Singleton(x)
+	return xs setminus SingletonSet(x)
 }
 // QUES remove_def has mem y (remove x s) <-> (mem y s /\ y <> x) as its definition
 // We push the work to setminux; (how) do we need to formalize it?
