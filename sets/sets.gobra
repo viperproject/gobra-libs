@@ -601,6 +601,7 @@ pure func DisjointUnionLen(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
+// TODO If we do want this; make sure to call it something like BoundedSetLen to be consistent.
 // TODO Do we want S1: LemmaBoundedSetSize? (Dafny proof requires LemmaSubsetSize +
 // contains unclear forall in proof)
 // Dafny signature:
