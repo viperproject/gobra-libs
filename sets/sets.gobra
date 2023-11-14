@@ -6,6 +6,7 @@ package sets
 // S1 https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sets/Sets.dfy
 // S2 https://github.com/verus-lang/verus/blob/main/source/pervasive/set_lib.rs
 // S3 https://why3.lri.fr/stdlib/set.html
+// S4 https://github.com/viperproject/silicon/blob/master/src/main/resources/dafny_axioms/sets.vpr
 
 
 // TODO Go through axiomization of sets
@@ -33,12 +34,73 @@ func TODO()
 
 // SKIP S1: LemmaSubset<T>; implemented below as Subset from S3
 
+// S4: in_empty_set => InEmpty
+// S4: empty_set_cardinality: (Set_card(s) == 0 <==> s == Set_empty()) is
+// expressed by EmptySet and EmptyIsEmptySet. (Set_card(s) != 0 ==> exists e: E :: {Set_in(e, s)} Set_in(e, s))
+// is expressed by choose.
+// S4: in_singleton_set: expressed by SingletonSet
+// S4: in_singleton_set_equality: expressed by SingletonEquality
+// S4: singleton_set_cardinality: expressed by IsSingleton
+// S4: in_unionone_same: expressed by Add
+// S4: in_unionone_other: expressed by InAddOther
+// S4: invariance_in_unionone: expressed by InvarianceInAdd
+// S4: unionone_cardinality_invariant + unionone_cardinality_changed: expressed by CardinalAdd
+// S4: in_union_in_one: expressed by InUnionInOne
+// S4: in_left_in_union/in_right_in_union seems to be a case distinction of InUnionInOne, hence skipped
+// S4: disjoint_sets_difference_union: commented; what are a and b supposed to be?
+// S4: union_left_idempotency/union_right_idempotency -> same name
+// S4: intersection_left_idempotency/intersection_right_idempotency -> same name
+// S4: cardinality_sums -> UnionSizeEq
+// S4: subset_definition -> Subset()
+// S4: equality_definition/native_equality -> SetEquality
+// S4: disjointness_definition: Defined disjointness in terms of intersection instead of more quantifiers
+// S4: cardinality_difference -> SetminusSize
+
+// S4
+ghost
+ensures (xs == ys) == (forall e int :: {e in xs} {e in ys} ((e in xs) == (e in ys)))
+decreases
+pure func SetEquality(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S4
+ghost
+ensures e in (xs intersection ys) == ((e in xs) && (e in ys))
+decreases
+pure func InIntersectionInBoth(xs, ys set[int], e int) Unit {
+	return Unit{}
+}
+
+// S4
+ghost
+ensures (e in (xs union ys)) == ((e in xs) || (e in ys))
+decreases
+pure func InUnionInOne(xs, ys set[int], e int) Unit {
+	return Unit{}
+}
+
+// S4
+// The length of a set is non-negative.
+ghost
+ensures len(x) >= 0
+pure func LengthNonNegative(x set[int]) Unit {
+	return Unit{}
+}
+
 // SO
 // Returns whether x is a proper subset of y.
 ghost
 decreases
 pure func IsProperSubset(x, y set[int]) bool {
 	return x subset y && x != y
+}
+
+// S4
+ghost
+decreases
+pure func AreDisjoint(xs, ys set[int]) bool {
+	return IsEmpty(xs intersection ys)
 }
 
 // S1
@@ -52,6 +114,7 @@ pure func IsSingleton(x set[int]) bool {
 // Returns a singleton set containing x.
 ghost
 ensures IsSingleton(result)
+ensures x in result
 decreases
 pure func SingletonSet(x int) (result set[int]) {
 	return set[int] {x}
@@ -59,27 +122,25 @@ pure func SingletonSet(x int) (result set[int]) {
 
 // S1
 // Elements in a singleton set are equal to each other
-// TODO Prove this: Dafny proof requires strict case of SubsetSize
-// ghost
-// requires IsSingleton(x)
-// requires a in x
-// requires b in x
-// ensures a == b
-// decreases
-// pure func SingletonEquality(x set[int], a int, b int) Unit {
-// 	return Unit{}
-// }
+ghost
+requires IsSingleton(x)
+requires a in x
+requires b in x
+ensures a == b
+decreases
+pure func SingletonEquality(x set[int], a int, b int) Unit {
+	return let _ := choose(x) in Unit{}
+}
 
 // S0
 // If a is in a singleton set x, then x is of the form {a}
-// TODO Prove this
-// ghost
-// requires IsSingleton(x)
-// requires a in x
-// ensures x == SingletonSet(a)
-// pure func SingletonIsSingletonSet(x set[int], a int) Unit {
-// 	return Unit{}
-// }
+ghost
+requires IsSingleton(x)
+requires a in x
+ensures x == SingletonSet(a)
+pure func SingletonIsSingletonSet(x set[int], a int) Unit {
+	return let _ := choose(x) in Unit{}
+}
 
 // S2
 // Returns whether x is empty.
@@ -98,13 +159,13 @@ pure func EmptySet() (result set[int]) {
 	return set[int] {}
 }
 
-// S3
+// S3, S4
 // Nothing can be an element of the empty set.
 ghost
 requires IsEmpty(x)
 ensures !(e in x)
 decreases
-pure func ElementNotInEmpty(x set[int], e int) Unit {
+pure func InEmpty(x set[int], e int) Unit {
 	return Unit{}
 }
 
@@ -338,19 +399,21 @@ pure func SetminusSizeUpper(xs, ys set[int]) Unit {
 
 // TODO Do we need lemmas to assert that union and intersect are commutative?
 
-// S2
+// S4: union_right_idempotency -> 
+
+// S2/S4
 ghost
 ensures (xs union ys) union ys == xs union ys
 decreases
-pure func UnionAgain1(xs, ys set[int]) Unit {
+pure func UnionRightIdempotency(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
-// S2
+// S2/S4
 ghost
-ensures (xs union ys) union xs == xs union ys
+ensures xs union (xs union ys) == xs union ys
 decreases
-pure func UnionAgain2(xs, ys set[int]) Unit {
+pure func UnionLeftIdempotency(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
@@ -358,24 +421,34 @@ pure func UnionAgain2(xs, ys set[int]) Unit {
 ghost
 ensures (xs intersection ys) intersection ys == (xs intersection ys)
 decreases
-pure func IntersectAgain1(xs, ys set[int]) Unit {
+pure func IntersectionRightIdempotency(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
 // S2
 ghost
-ensures (xs intersection ys) intersection xs == (xs intersection ys)
+ensures xs intersection (xs intersection ys) == (xs intersection ys)
 decreases
-pure func IntersectAgain2(xs, ys set[int]) Unit {
+pure func IntersectionLeftIdempotency(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+
+// S4
+ghost
+ensures (e in (xs setminus ys)) == ((e in xs) && !(e in ys))
+decreases
+pure func InDifference(xs, ys set[int], e int) Unit {
 	return Unit{}
 }
 
 // S2
 // If ys contains e, then the difference xs - ys does not contain e.
 ghost
-ensures e in ys ==> !(e in (xs setminus ys))
+requires e in ys
+ensures !(e in (xs setminus ys))
 decreases
-pure func SetDifference2(xs, ys set[int], e int) Unit {
+pure func NotInDifference(xs, ys set[int], e int) Unit {
 	return Unit{}
 }
 
@@ -454,6 +527,7 @@ pure func SubsetTransitive(xs, ys, zs set[int]) Unit {
 ghost
 // Need this post-condition to verify CardinalAdd
 ensures (x in xs) ==> res == xs
+ensures x in res
 decreases
 pure func Add(xs set[int], x int) (res set[int]) {
 	return xs union SingletonSet(x)
@@ -465,6 +539,23 @@ pure func Add(xs set[int], x int) (res set[int]) {
 // SKIP S3: mem_singleton: contains quantifiers; unsure how to formalize singletons:
 // as set of length one? forall x, y. y in Singleton(x) => x = y (S3)?
 // forall x, y: x in Singleton(_) && y in Singleton(_) => x == y (S1, S2)?
+
+// S4
+ghost
+ensures (e1 in Add(xs, e2)) == ((e1 == e2) || e1 in xs)
+decreases
+pure func InAddOther(xs set[int], e1, e2 int) Unit {
+	return Unit{}
+}
+
+// S4
+ghost
+requires e1 in xs
+ensures e1 in Add(xs, e2)
+decreases
+pure func InvarianceInAdd(xs set[int], e1, e2 int) Unit {
+	return Unit{}
+}
 
 // S3
 // Remove the element x from the set xs.
