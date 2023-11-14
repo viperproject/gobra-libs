@@ -9,12 +9,10 @@ package sets
 // S4 https://github.com/viperproject/silicon/blob/master/src/main/resources/dafny_axioms/sets.vpr
 
 
-// TODO Go through axiomization of sets
-
 // TODO Restructure, rename and properly document definitions at the end
 // (in particular consistency in names of functions, arguments (names/order), variables)
 
-// TODO Unicode comments?
+// QUES Should we use unicode comments like ∀ x,y : set[int]. |x| ≤ |y|?
 
 // SO
 // TODO Figure out how to import these from verify.gobra
@@ -238,9 +236,9 @@ pure func SingletonSize(x set[int], e int) Unit {
 // 	return Unit{}
 // }
 
-// SKIP S1: IsSingleton (quantified predicate)
-// SKIP S1: LemmaIsSingleton (uses IsSingleton)
-// IsSingleton + LemmaIsSingleton is reduced to len(x) == 1 in our implementation.
+// SKIP S1: IsSingleton: Captured by choose and SingletonEquality
+// SKIP S1: LemmaIsSingleton: This our IsSingleton
+// -> IsSingleton + LemmaIsSingleton is reduced to len(x) == 1 in our implementation.
 // NOTE S1: ExtractFromNonEmptySet and S1: ExtractFromSingleton are in choose
 
 // SKIP S1: MapSize<> (no Injective() defined)
@@ -264,21 +262,6 @@ pure func UnionSizeLower(xs, ys set[int]) Unit {
 			(let _ := Asserting(xr union yr == Remove(xs union ys, y)) in UnionSizeLower(xr, yr))) :
 			(let _ := Asserting(xs union yr == Remove(xs union ys, y)) in UnionSizeLower(xs, yr))))
 }
-// Proof using non-pure function (TODO delete if above is okay)
-// func LemmaUnionSize(xs, ys set[int]) Unit {
-// 	if len(ys) != 0 {
-// 		ghost y := choose(ys)
-// 		ghost yr := ys setminus Singleton(y)
-// 		if y in xs {
-// 			ghost xr := xs setminus Singleton(y)
-// 			assert xr union yr == xs union ys setminus Singleton(y)
-// 			LemmaUnionSize(xr, yr)
-// 		} else {
-// 			assert xs union yr == xs union ys setminus Singleton(y)
-// 			LemmaUnionSize(xs, yr)
-// 		}
-// 	}
-// }
 
 
 // S1
@@ -303,7 +286,7 @@ pure func SetRangeFromZero(n int) (s set[int]) {
 	return SetRange(0, n)
 }
 
-// TODO S1: LemmaBoundedSetSize (Dafny proof requires LemmaSubsetSize +
+// TODO Do we want S1: LemmaBoundedSetSize? (Dafny proof requires LemmaSubsetSize +
 // contains unclear forall in proof)
 
 // SKIP S1: LemmaGreatestImplies{Minimal, Maximal}, LemmaMaximalEquivalentGreatest
@@ -313,33 +296,29 @@ pure func SetRangeFromZero(n int) (s set[int]) {
 
 // SKIP S2: is_full (don't have a notion of full)
 // SKIP S2: map<B>, fold<E> (cannot pass functions)
-// SKIP S2: to_seq() (not sure whether its fine to have forall + exists in ensures)
+// SKIP S2: to_seq() (probably not worth the quantifiers)
 // SKIP S2: to_sorted_seq() (cannot pass function)
-// SKIP S2: is_singleton() (including forall like that feels off)
+// SKIP S2: is_singleton() -> formalized above
 // SKIP S2: find_unique_{mmaximal, minimal*}() (cannot pass function)
 
-// TODO convert this into a pure function
+// TODO: Do we even want to bother with multisets?
 // S2
 // Converts a set into a multiset where each element from the set has
 // multiplicity 1 and any other element has multiplicity 0.
-ghost
-ensures forall i int :: {i # ms} (i in s) ==> ((i # ms) == 1)
-ensures forall i int :: {i # ms} (!(i in s)) ==> ((i # ms) == 0)
-decreases s
-func ToMultiset(s set[int]) (ms mset[int]) {
-	if IsEmpty(s) {
-		return mset[int] {}
-	} else {
-		ghost x := choose(s)
-		return ((mset[int] {}) union (mset[int] {x})) union ToMultiset(Remove(s, x))
-	}
-}
-
-// TODO Are we going to need lemmas of the form i # xmset > 0 ==> i in xmset?
+// ghost
+// ensures forall i int :: {i # ms} (i in s) ==> ((i # ms) == 1)
+// ensures forall i int :: {i # ms} (!(i in s)) ==> ((i # ms) == 0)
+// decreases s
+// pure func ToMultiset(s set[int]) (ms mset[int]) {
+// 	return IsEmpty(s) ? mset[int] {} :
+// 		let x := choose(s) in
+// 		((mset[int] {}) union (mset[int] {x})) union ToMultiset(Remove(s, x))
+// }
 
 // SKIP: S2: lemma_len0_is_empty(self) <- this one is confusing, since we defined IsEmpty before
-// SKIP: S2: lemma_singleton_size + lemma_is_singleton (not sure whether we need 
-// these, as singleton isn't a separate notion)
+// SKIP: S2: lemma_singleton_size + lemma_is_singleton
+// => formalized empty and singleton sets above
+
 // SKIP: S2: lemma_len_filter, lemma_greatest_implies_maximal, lemma_least_implies_minimal,
 // lemma_maximal_equivalent_greatest, lemma_minimal_equivalent_least, lemma_least_is_unique,
 // lemma_greatest_is_unique, lemma_minimal_is_unique, lemma_maximal_is_unique (cannot pass functions/no ordering)
@@ -369,17 +348,6 @@ pure func IntersectSizeUpper(xs, ys set[int]) Unit {
 		(IntersectSizeUpper(Remove(xs, x), ys)))
 
 }
-// Proof using non-pure function (TODO delete if above is okay)
-// ghost
-// ensures len(xs intersection ys) <= len(xs)
-// decreases xs
-// func IntersectSizeUpper(xs, ys set[int]) Unit {
-// 	if !IsEmpty(xs) {
-// 		ghost x := choose(xs)
-// 		assert (xs setminus Singleton(x)) intersection ys == (xs intersection ys) setminus Singleton(x)
-// 		return IntersectSizeUpper(xs setminus Singleton(x), ys)
-// 	}
-// }
 
 // SKIP: S2 lemma_len_subset corresponds to SubsetSize from S1
 
@@ -397,9 +365,19 @@ pure func SetminusSizeUpper(xs, ys set[int]) Unit {
 
 // SKIP: S2: lemma_map_size (cannot pass function)
 
-// TODO Do we need lemmas to assert that union and intersect are commutative?
+ghost
+ensures (xs union ys) == (ys union xs)
+decreases
+pure func UnionCommutativity(xs, ys set[int]) Unit {
+	return Unit{}
+}
 
-// S4: union_right_idempotency -> 
+ghost
+ensures (xs intersection ys) == (ys intersection xs)
+decreases
+pure func IntersectionCommutativity(xs, ys set[int]) Unit {
+	return Unit{}
+}
 
 // S2/S4
 ghost
@@ -452,11 +430,26 @@ pure func NotInDifference(xs, ys set[int], e int) Unit {
 	return Unit{}
 }
 
-// SKIP S2: lemma_set_disjoint (no notion of disjoint in Gobra)
+// S2
+ghost
+requires AreDisjoint(xs, ys)
+ensures (xs union ys) setminus xs == ys
+ensures (xs union ys) setminus ys == xs
+decreases
+pure func SetDisjoint(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
 // SKIP S2: lemma_set_empty_equivalency_len (unclear how it ties to the rest,
 // since we already consider IsEmpty() and Choose())
 
-// SKIP S2: lemma_set_disjoint_lens (no notion of disjoint in Gobra)
+ghost
+requires AreDisjoint(xs, ys)
+ensures len(xs union ys) == len(xs) + len(ys)
+decreases
+pure func DisjointUnionSize(xs, ys set[int]) Unit {
+	return Unit{}
+}
 
 // S2 (proves slightly different version)
 ghost
@@ -488,7 +481,7 @@ pure func SetminusSize(xs, ys set[int]) Unit {
 
 // SKIP S3: mem (built-in `in`)
 // SKIP S3: (==) (built-in `==`)
-// SKIP S3: extensionality (don't seem to apply to Gobra)
+// SKIP S3: extensionality (doesn't seem to apply to Gobra)
 // SKIP S3: subset (seems to be quantified axiom)
 
 // S3
@@ -532,13 +525,8 @@ decreases
 pure func Add(xs set[int], x int) (res set[int]) {
 	return xs union SingletonSet(x)
 }
-// QUES add_def has mem y (add x s) <-> (mem y s \/ y = x) as its definition
-// We push the work to union; (how) do we need to formalize it?
 
-// SKIP S3: singleton <- already define it as literal in Singleton (S0)
-// SKIP S3: mem_singleton: contains quantifiers; unsure how to formalize singletons:
-// as set of length one? forall x, y. y in Singleton(x) => x = y (S3)?
-// forall x, y: x in Singleton(_) && y in Singleton(_) => x == y (S1, S2)?
+// SKIP S3: singleton, mem_singleton -> formalized above
 
 // S4
 ghost
@@ -566,8 +554,6 @@ decreases
 pure func Remove(xs set[int], x int) set[int] {
 	return xs setminus SingletonSet(x)
 }
-// QUES remove_def has mem y (remove x s) <-> (mem y s /\ y <> x) as its definition
-// We push the work to setminux; (how) do we need to formalize it?
 
 // S3
 // If x is in the set xs, removing and adding it back in does not change the set
@@ -599,6 +585,7 @@ pure func SubsetRemove(xs set[int], x int) Unit {
 
 // SKIP S3: union (union is already a "symbol" in Gobra)
 // SKIP S3 union_def (quantified defintion of union)
+
 // TODO Should we merge SubsetUnion1 and SubsetUnion2?
 // S3
 ghost
@@ -649,8 +636,7 @@ pure func SubsetSetminus(xs, ys set[int]) Unit {
 
 // SKIP S3: pick, pick_def (corresponds to Choose)
 // SKIP S3: disjoint, disjoint_inter_empty, disjoint_diff_eq,
-// disjoint_diff_s2: definition of disjoint requires a quantifier
-// TODO Notion of disjoint seems useful; (how) should we implement it?
+// disjoint_diff_s2: implemented above
 
 // SKIP S3 filter, filter_def, subset_filter, map, map_def, mem_map (cannot pass functions)
 
@@ -662,7 +648,6 @@ pure func CardinalNonneg(xs set[int]) Unit {
 	return Unit{}
 }
 
-// S3 SKIP: cardinal_empty: What does it mean for a set to be empty? (see above)
 
 // S3
 ghost
@@ -696,7 +681,7 @@ pure func Cardinal1(xs set[int], x int) Unit {
 }
 
 // SKIP S3 cardinal_union => corresponds to S2 UnionSizeEq
-// SKIP S3 cardinal_inter_disjoint (no notion of disjoint in gobra)
+// SKIP S3 cardinal_inter_disjoint => follows from definition of disjoint
 // SKIP S3 cardinal_diff => included in S2 SetminusSize
 // SKIP S3 cardinal_filter, cardinal_map (cannot pass functions)
 
