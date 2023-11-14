@@ -30,29 +30,6 @@ ensures false
 decreases _
 func TODO()
 
-// SKIP S1: LemmaSubset<T>; implemented below as Subset from S3
-
-// S4: in_empty_set => InEmpty
-// S4: empty_set_cardinality: (Set_card(s) == 0 <==> s == Set_empty()) is
-// expressed by EmptySet and EmptyIsEmptySet. (Set_card(s) != 0 ==> exists e: E :: {Set_in(e, s)} Set_in(e, s))
-// is expressed by choose.
-// S4: in_singleton_set: expressed by SingletonSet
-// S4: in_singleton_set_equality: expressed by SingletonEquality
-// S4: singleton_set_cardinality: expressed by IsSingleton
-// S4: in_unionone_same: expressed by Add
-// S4: in_unionone_other: expressed by InAddOther
-// S4: invariance_in_unionone: expressed by InvarianceInAdd
-// S4: unionone_cardinality_invariant + unionone_cardinality_changed: expressed by CardinalAdd
-// S4: in_union_in_one: expressed by InUnionInOne
-// S4: in_left_in_union/in_right_in_union seems to be a case distinction of InUnionInOne, hence skipped
-// S4: disjoint_sets_difference_union: commented; what are a and b supposed to be?
-// S4: union_left_idempotency/union_right_idempotency -> same name
-// S4: intersection_left_idempotency/intersection_right_idempotency -> same name
-// S4: cardinality_sums -> UnionSizeEq
-// S4: subset_definition -> Subset()
-// S4: equality_definition/native_equality -> SetEquality
-// S4: disjointness_definition: Defined disjointness in terms of intersection instead of more quantifiers
-// S4: cardinality_difference -> SetminusSize
 
 // S4
 ghost
@@ -236,16 +213,6 @@ pure func SingletonSize(x set[int], e int) Unit {
 // 	return Unit{}
 // }
 
-// SKIP S1: IsSingleton: Captured by choose and SingletonEquality
-// SKIP S1: LemmaIsSingleton: This our IsSingleton
-// -> IsSingleton + LemmaIsSingleton is reduced to len(x) == 1 in our implementation.
-// NOTE S1: ExtractFromNonEmptySet and S1: ExtractFromSingleton are in choose
-
-// SKIP S1: MapSize<> (no Injective() defined)
-// SKIP S1: Map<> (no Injective() defined)
-// SKIP S1: LemmaFilterSize<> (not sure whether ~>/passing functions exists in Gobra)
-// SKIP S1: Filter (not sure whether ~>/passing functions exists in Gobra)
-
 // S1
 // The size of a union of two sets is greater than or equal to the size of
 // either individual set.
@@ -289,18 +256,6 @@ pure func SetRangeFromZero(n int) (s set[int]) {
 // TODO Do we want S1: LemmaBoundedSetSize? (Dafny proof requires LemmaSubsetSize +
 // contains unclear forall in proof)
 
-// SKIP S1: LemmaGreatestImplies{Minimal, Maximal}, LemmaMaximalEquivalentGreatest
-// LemmaMinimalEquivalentLeast, LeammLeastIsUnique, LemmaGreatestIsUnique, LemmaMinimalIsUnique
-// LemmaMaximalIsUnique, LemmaFindUniqueMinimal, LemmaFindUniqueMaximal
-// since Orderings are not defined
-
-// SKIP S2: is_full (don't have a notion of full)
-// SKIP S2: map<B>, fold<E> (cannot pass functions)
-// SKIP S2: to_seq() (probably not worth the quantifiers)
-// SKIP S2: to_sorted_seq() (cannot pass function)
-// SKIP S2: is_singleton() -> formalized above
-// SKIP S2: find_unique_{mmaximal, minimal*}() (cannot pass function)
-
 // TODO: Do we even want to bother with multisets?
 // S2
 // Converts a set into a multiset where each element from the set has
@@ -315,14 +270,6 @@ pure func SetRangeFromZero(n int) (s set[int]) {
 // 		((mset[int] {}) union (mset[int] {x})) union ToMultiset(Remove(s, x))
 // }
 
-// SKIP: S2: lemma_len0_is_empty(self) <- this one is confusing, since we defined IsEmpty before
-// SKIP: S2: lemma_singleton_size + lemma_is_singleton
-// => formalized empty and singleton sets above
-
-// SKIP: S2: lemma_len_filter, lemma_greatest_implies_maximal, lemma_least_implies_minimal,
-// lemma_maximal_equivalent_greatest, lemma_minimal_equivalent_least, lemma_least_is_unique,
-// lemma_greatest_is_unique, lemma_minimal_is_unique, lemma_maximal_is_unique (cannot pass functions/no ordering)
-
 // S2
 // The size of a union of two sets is less than or equal to the size of
 // both individual sets combined.
@@ -332,8 +279,6 @@ decreases
 pure func UnionSizeUpper(xs, ys set[int]) Unit {
 	return Unit{}
 }
-
-// SKIP: S2: lemma_len_union_ind (corresponds to UnionSizeLower from S1)
 
 // S2
 // The size of the intersection of xs and ys is less than or equal to the
@@ -349,7 +294,6 @@ pure func IntersectSizeUpper(xs, ys set[int]) Unit {
 
 }
 
-// SKIP: S2 lemma_len_subset corresponds to SubsetSize from S1
 
 // S2
 // The size of the difference xs - ys is less than or equal to the size of xs. 
@@ -359,11 +303,6 @@ decreases
 pure func SetminusSizeUpper(xs, ys set[int]) Unit {
 	return Unit{}
 }
-
-// SKIP: S2: set_int_range, lemma_int_range correspond to SetRange from S1
-// SKIP: S2: lemma_subset_equality corresponds to SubsetEquality from S1
-
-// SKIP: S2: lemma_map_size (cannot pass function)
 
 ghost
 ensures (xs union ys) == (ys union xs)
@@ -440,9 +379,6 @@ pure func SetDisjoint(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
-// SKIP S2: lemma_set_empty_equivalency_len (unclear how it ties to the rest,
-// since we already consider IsEmpty() and Choose())
-
 ghost
 requires AreDisjoint(xs, ys)
 ensures len(xs union ys) == len(xs) + len(ys)
@@ -468,22 +404,9 @@ pure func SetminusSize(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
-// SKIP: S2: axiom_is_empty (seems to be more or less choose)
-// SKIP: S2: check_argument_is_set<A> (seems to be specific to Verus)
-// SKIP: S2: Macros (seems to be specific to Verus)
-
-// SKIP S3: Potentially infinite sets (no support in Gobra)
 
 // S3: Finite sets
 // ***************
-// SKIP S3: type fset 'a, meta "material_type_arg" type fset, 0
-// (don't seem to apply to Gobra)
-
-// SKIP S3: mem (built-in `in`)
-// SKIP S3: (==) (built-in `==`)
-// SKIP S3: extensionality (doesn't seem to apply to Gobra)
-// SKIP S3: subset (seems to be quantified axiom)
-
 // S3
 // Definition of subset without quantifiers.
 ghost
@@ -525,8 +448,6 @@ decreases
 pure func Add(xs set[int], x int) (res set[int]) {
 	return xs union SingletonSet(x)
 }
-
-// SKIP S3: singleton, mem_singleton -> formalized above
 
 // S4
 ghost
@@ -583,8 +504,6 @@ pure func SubsetRemove(xs set[int], x int) Unit {
 	return Unit{}
 }
 
-// SKIP S3: union (union is already a "symbol" in Gobra)
-// SKIP S3 union_def (quantified defintion of union)
 
 // TODO Should we merge SubsetUnion1 and SubsetUnion2?
 // S3
@@ -603,9 +522,6 @@ pure func SubsetUnion2(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
-// SKIP S3: inter (intersection is already a "symbol" in Gobra)
-// SKIP S3: inter_def (quantified definition of intersection)
-
 // S3
 ghost
 ensures (xs intersection ys) subset xs
@@ -622,10 +538,6 @@ pure func SubsetIntersection2(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
-
-// SKIP S3: diff (setminus is already a "symbol" in Gobra)
-// SKIP S3: diff_def (quantified definition of setminus)
-
 // S3
 ghost
 ensures (xs setminus ys) subset xs 
@@ -634,11 +546,6 @@ pure func SubsetSetminus(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
-// SKIP S3: pick, pick_def (corresponds to Choose)
-// SKIP S3: disjoint, disjoint_inter_empty, disjoint_diff_eq,
-// disjoint_diff_s2: implemented above
-
-// SKIP S3 filter, filter_def, subset_filter, map, map_def, mem_map (cannot pass functions)
 
 // S3
 ghost
@@ -666,10 +573,6 @@ decreases
 func CardinalRemove(xs set[int], x int) Unit {
 	return Unit{}
 }
-
-// SKIP S3 cardinal_subset => corresponds to S1 SubsetSize
-// SKIP S3 subset_eq => corresponds to S1 SubsetEquality
-
 // S3
 // If xs is a Singleton, and x is in xs, then choose(xs) will always return x.
 ghost
@@ -680,19 +583,9 @@ pure func Cardinal1(xs set[int], x int) Unit {
 	return Unit{}
 }
 
-// SKIP S3 cardinal_union => corresponds to S2 UnionSizeEq
-// SKIP S3 cardinal_inter_disjoint => follows from definition of disjoint
-// SKIP S3 cardinal_diff => included in S2 SetminusSize
-// SKIP S3 cardinal_filter, cardinal_map (cannot pass functions)
+// TODO S3: min_elt{,_def}, max_elt{,_def} mention forall x . x in xs in
+// their post-condition; do we want these functions?
 
-// SKIP S3: Induction principle on finite sets
-
-// SKIP S3: min_elt{,_def}, max_elt{,_def} mention forall x . x in xs in
-// their post-condition; not sure whether we want such a function
-
-// SKIP S3: interval, interval_def, cardinal_interval => correspond to SetRange
-
-// SKIP Sum of a function over a finite set => cannot pass functions
 
 // S3 The sections in "Finite Monomorphic sets" suggest to move cardinality properties as a
 // postcondition to functions that "generate" it
@@ -700,4 +593,4 @@ pure func Cardinal1(xs set[int], x int) Unit {
 // Add(xs, x) would return a set where x has been added to xs, but also ensure that
 // the cardinality stays the same if x was already in xs, or increases if it wasnt
 // A similar consideration is made for Singleton(x) and Remove(xs, x)
-// TODO Consider whether we want to merge functions like this
+// TODO Do we want to merge functions like this?
