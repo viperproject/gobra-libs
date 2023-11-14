@@ -9,13 +9,13 @@ package sets
 // S4 https://github.com/viperproject/silicon/blob/master/src/main/resources/dafny_axioms/sets.vpr
 
 
-// TODO Restructure, rename and properly document definitions at the end
-// (in particular consistency in names of functions, arguments (names/order), variables)
-
+// TODO Improve comments
 // QUES Should we use unicode comments like ∀ x,y : set[int]. |x| ≤ |y|?
 
-// SO
 // TODO Figure out how to import these from verify.gobra
+// SO
+// Helpers
+// *******
 type Unit struct{}
 
 ghost
@@ -30,103 +30,18 @@ ensures false
 decreases _
 func TODO()
 
-
-// S4
-ghost
-ensures (xs == ys) == (forall e int :: {e in xs} {e in ys} ((e in xs) == (e in ys)))
-decreases
-pure func SetEquality(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-// S4
-ghost
-ensures e in (xs intersection ys) == ((e in xs) && (e in ys))
-decreases
-pure func InIntersectionInBoth(xs, ys set[int], e int) Unit {
-	return Unit{}
-}
-
-// S4
-ghost
-ensures (e in (xs union ys)) == ((e in xs) || (e in ys))
-decreases
-pure func InUnionInOne(xs, ys set[int], e int) Unit {
-	return Unit{}
-}
-
-// S4
-// The length of a set is non-negative.
-ghost
-ensures len(x) >= 0
-pure func LengthNonNegative(x set[int]) Unit {
-	return Unit{}
-}
-
-// SO
-// Returns whether x is a proper subset of y.
-ghost
-decreases
-pure func IsProperSubset(x, y set[int]) bool {
-	return x subset y && x != y
-}
-
-// S4
-ghost
-decreases
-pure func AreDisjoint(xs, ys set[int]) bool {
-	return IsEmpty(xs intersection ys)
-}
-
-// S1
-ghost
-decreases
-pure func IsSingleton(x set[int]) bool {
-	return len(x) == 1
-}
-
-// SO
-// Returns a singleton set containing x.
-ghost
-ensures IsSingleton(result)
-ensures x in result
-decreases
-pure func SingletonSet(x int) (result set[int]) {
-	return set[int] {x}
-}
-
-// S1
-// Elements in a singleton set are equal to each other
-ghost
-requires IsSingleton(x)
-requires a in x
-requires b in x
-ensures a == b
-decreases
-pure func SingletonEquality(x set[int], a int, b int) Unit {
-	return let _ := choose(x) in Unit{}
-}
-
-// S0
-// If a is in a singleton set x, then x is of the form {a}
-ghost
-requires IsSingleton(x)
-requires a in x
-ensures x == SingletonSet(a)
-pure func SingletonIsSingletonSet(x set[int], a int) Unit {
-	return let _ := choose(x) in Unit{}
-}
-
+// Empty set
+// *********
 // S2
-// Returns whether x is empty.
+// A set is empty if it has length 0.
 ghost
 decreases
-pure func IsEmpty(x set[int]) bool {
-	return len(x) == 0
+pure func IsEmpty(xs set[int]) bool {
+	return len(xs) == 0
 }
 
 // S0
-// Returns an empty set.
+// Returns an empty set {}.
 ghost
 ensures IsEmpty(result)
 decreases
@@ -134,129 +49,114 @@ pure func EmptySet() (result set[int]) {
 	return set[int] {}
 }
 
-// S3, S4
-// Nothing can be an element of the empty set.
+// An empty set has length 0.
 ghost
-requires IsEmpty(x)
-ensures !(e in x)
+requires xs == EmptySet()
+ensures IsEmpty(xs)
 decreases
-pure func InEmpty(x set[int], e int) Unit {
+pure func EmptyLen(xs set[int]) Unit {
 	return Unit{}
 }
 
 // S3
 // A set of length 0 is the empty set.
 ghost
-requires IsEmpty(x)
-ensures x == EmptySet()
+requires IsEmpty(xs)
+ensures xs == EmptySet()
 decreases
-pure func EmptyIsEmptySet(x set[int]) Unit {
+pure func EmptyIsEmptySet(xs set[int]) Unit {
 	return Unit{}
 }
 
-// S0/S1
-// Returns an element from a non-empty set.
+// S3, S4
+// Nothing can be an element of the empty set.
 ghost
-requires !IsEmpty(xs)
-ensures x in xs
-ensures len(xs) == 1 ==> xs == SingletonSet(x)
+requires IsEmpty(xs)
+ensures !(e in xs)
 decreases
-pure func choose(xs set[int]) (x int)
-
-// TODO Get IsProperSubset case to verify
-// S1
-// If x is a subset of y, then the size of x is less than or equal to the size of y.
-// If x is a strict subset of y, then the size of x is less than to the size of y.
-// ghost
-// decreases x, y
-// ensures x subset y ==> len(x) <= len(y)
-// ensures IsProperSubset(x, y) ==> len(x) < len(y)
-// func SubsetSize(x, y set[int]) Unit {
-	// if len(x) != 0 {
-		// ghost e := choose(x)
-		// SubsetSize(x setminus set[int] {e}, y setminus set[int] {e})
-	// }
-	// return Unit{}
-// }
-
-// S1
-// If x is a subset of y and both have the same size, they are equal.
-ghost
-requires x subset y
-requires len(x) == len(y)
-ensures x == y
-decreases
-pure func SubsetEquality(x, y set[int]) Unit {
-	return Asserting(len(y setminus x) == len(y) - len(x))
-}
-
-// S1
-// A singleton set has a size of 1.
-ghost
-requires x == SingletonSet(e)
-ensures len(x) == 1
-decreases
-pure func SingletonSize(x set[int], e int) Unit {
+pure func NotInEmpty(xs set[int], e int) Unit {
 	return Unit{}
 }
 
+// Singleton set
+// **************
+// S1
+// A set is a singleton if it has length 1.
+ghost
+decreases
+pure func IsSingleton(xs set[int]) bool {
+	return len(xs) == 1
+}
 
-// TODO Prove this (Dafny Proof uses strict SubsetSize)
+// SO
+// Returns a singleton set containing x.
+ghost
+ensures IsSingleton(result)
+ensures e in result
+decreases
+pure func SingletonSet(e int) (result set[int]) {
+	return set[int] {e}
+}
+
+// S1
+// A singleton set has a length of 1.
+ghost
+requires xs == SingletonSet(e)
+ensures IsSingleton(xs)
+decreases
+pure func SingletonLen(xs set[int], e int) Unit {
+	return Unit{}
+}
+
+// S0
+// If a is in a singleton set x, then x is of the form {a}
+ghost
+requires IsSingleton(xs)
+requires e in xs
+ensures xs == SingletonSet(e)
+decreases
+pure func SingletonIsSingletonSet(xs set[int], e int) Unit {
+	return let _ := Choose(xs) in Unit{}
+}
+
 // S1
 // Elements in a singleton set are equal to each other.
-// ghost
-// requires len(x) == 1
-// requires a in x
-// requires b in x
-// ensures a == b
-// pure func SingletonEquality(x set[int], a, b int) Unit {
-// 	return Unit{}
-// }
-
-// S1
-// The size of a union of two sets is greater than or equal to the size of
-// either individual set.
 ghost
-ensures len(xs union ys) >= len(xs)
-ensures len(xs union ys) >= len(ys)
-decreases ys
-pure func UnionSizeLower(xs, ys set[int]) Unit {
-	return IsEmpty(ys) ? Unit{} :
-		let y := choose(ys) in
-		(let yr := Remove(ys, y) in
-		(y in xs ?
-			(let xr := Remove(xs, y) in
-			(let _ := Asserting(xr union yr == Remove(xs union ys, y)) in UnionSizeLower(xr, yr))) :
-			(let _ := Asserting(xs union yr == Remove(xs union ys, y)) in UnionSizeLower(xs, yr))))
+requires IsSingleton(xs)
+requires a in xs
+requires b in xs
+ensures a == b
+decreases
+pure func SingletonEquality(xs set[int], a int, b int) Unit {
+	return let _ := Choose(xs) in Unit{}
 }
 
+// Constructing new sets
+// **********************
 
 // S1
 // Construct a set with all integers in the range [a, b).
 ghost
 requires a <= b
-ensures forall i int :: { i in s } (a <= i && i < b) == i in s
-ensures len(s) == b - a
+ensures forall i int :: { i in result } (a <= i && i < b) == i in result
+ensures len(result) == b - a
 decreases b - a
-pure func SetRange(a, b int) (s set[int]) {
-	return a == b ? EmptySet() : Add(SetRange(a + 1, b), a)
+pure func Range(a, b int) (result set[int]) {
+	return a == b ? EmptySet() : Add(Range(a + 1, b), a)
 }
 
 // S1
 // Construct a set with all integers in the range [0, n).
 ghost
 requires n >= 0
-ensures forall i int :: {i in s} (0 <= i && i < n) == i in s
-ensures len(s) == n
+ensures forall i int :: { i in result } (0 <= i && i < n) == i in result
+ensures len(result) == n
 decreases
-pure func SetRangeFromZero(n int) (s set[int]) {
-	return SetRange(0, n)
+pure func RangeFromZero(n int) (result set[int]) {
+	return Range(0, n)
 }
 
-// TODO Do we want S1: LemmaBoundedSetSize? (Dafny proof requires LemmaSubsetSize +
-// contains unclear forall in proof)
-
-// TODO: Do we even want to bother with multisets?
+// TODO: Do we want to implement multisets?
 // S2
 // Converts a set into a multiset where each element from the set has
 // multiplicity 1 and any other element has multiplicity 0.
@@ -266,147 +166,55 @@ pure func SetRangeFromZero(n int) (s set[int]) {
 // decreases s
 // pure func ToMultiset(s set[int]) (ms mset[int]) {
 // 	return IsEmpty(s) ? mset[int] {} :
-// 		let x := choose(s) in
+// 		let x := Choose(s) in
 // 		((mset[int] {}) union (mset[int] {x})) union ToMultiset(Remove(s, x))
 // }
 
-// S2
-// The size of a union of two sets is less than or equal to the size of
-// both individual sets combined.
+
+// choose axiom
+// ************
+// S0/S1
+// Returns an element from a non-empty set.
 ghost
-ensures len(xs union ys) <= len(xs) + len(ys)
+requires !IsEmpty(xs)
+ensures e in xs
+ensures IsSingleton(xs) ==> xs == SingletonSet(e)
 decreases
-pure func UnionSizeUpper(xs, ys set[int]) Unit {
+pure func Choose(xs set[int]) (e int)
+
+// TODO Is this needed? It feels similar to what we get from calling Choose
+// S3
+// If xs is a Singleton, and x is in xs, then Choose(xs) will always return x.
+ghost
+requires IsSingleton(xs)
+requires e in xs
+ensures Choose(xs) == e
+decreases
+pure func ChooseFromSingleton(xs set[int], e int) Unit {
 	return Unit{}
 }
 
-// S2
-// The size of the intersection of xs and ys is less than or equal to the
-// size of xs.
+// General definitions and properties
+// **********************************
+// S4
+// Returns whether xs and ys are disjoint sets.
 ghost
-ensures len(xs intersection ys) <= len(xs)
-decreases xs
-pure func IntersectSizeUpper(xs, ys set[int]) Unit {
-	return IsEmpty(xs) ? Unit{} :
-		let x := choose(xs) in
-		(let _ := Asserting((Remove(xs, x)) intersection ys == Remove((xs intersection ys), x)) in
-		(IntersectSizeUpper(Remove(xs, x), ys)))
-
-}
-
-
-// S2
-// The size of the difference xs - ys is less than or equal to the size of xs. 
-ghost
-ensures len(xs setminus ys) <= len(xs)
 decreases
-pure func SetminusSizeUpper(xs, ys set[int]) Unit {
-	return Unit{}
+pure func AreDisjoint(xs, ys set[int]) bool {
+	return IsEmpty(xs intersection ys)
 }
-
-ghost
-ensures (xs union ys) == (ys union xs)
-decreases
-pure func UnionCommutativity(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-ghost
-ensures (xs intersection ys) == (ys intersection xs)
-decreases
-pure func IntersectionCommutativity(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-// S2/S4
-ghost
-ensures (xs union ys) union ys == xs union ys
-decreases
-pure func UnionRightIdempotency(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-// S2/S4
-ghost
-ensures xs union (xs union ys) == xs union ys
-decreases
-pure func UnionLeftIdempotency(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-// S2
-ghost
-ensures (xs intersection ys) intersection ys == (xs intersection ys)
-decreases
-pure func IntersectionRightIdempotency(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-// S2
-ghost
-ensures xs intersection (xs intersection ys) == (xs intersection ys)
-decreases
-pure func IntersectionLeftIdempotency(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
 
 // S4
+// Definition of set equality.
 ghost
-ensures (e in (xs setminus ys)) == ((e in xs) && !(e in ys))
+ensures (xs == ys) == (forall e int :: {e in xs} {e in ys} ((e in xs) == (e in ys)))
 decreases
-pure func InDifference(xs, ys set[int], e int) Unit {
+pure func SetEquality(xs, ys set[int]) Unit {
 	return Unit{}
 }
 
-// S2
-// If ys contains e, then the difference xs - ys does not contain e.
-ghost
-requires e in ys
-ensures !(e in (xs setminus ys))
-decreases
-pure func NotInDifference(xs, ys set[int], e int) Unit {
-	return Unit{}
-}
-
-// S2
-ghost
-requires AreDisjoint(xs, ys)
-ensures (xs union ys) setminus xs == ys
-ensures (xs union ys) setminus ys == xs
-decreases
-pure func SetDisjoint(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-ghost
-requires AreDisjoint(xs, ys)
-ensures len(xs union ys) == len(xs) + len(ys)
-decreases
-pure func DisjointUnionSize(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-// S2 (proves slightly different version)
-ghost
-ensures len(xs union ys) == len(xs) + len(ys) - len(xs intersection ys)
-decreases
-pure func UnionSizeEq(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-// S2
-ghost
-ensures len(xs setminus ys) == len(xs) - len(xs intersection ys)
-ensures len(xs setminus ys) + len(ys setminus xs) + len(xs intersection ys) == len(xs union ys)
-decreases
-pure func SetminusSize(xs, ys set[int]) Unit {
-	return Unit{}
-}
-
-
-// S3: Finite sets
-// ***************
+// Subset
+// ******
 // S3
 // Definition of subset without quantifiers.
 ghost
@@ -414,7 +222,7 @@ requires e in xs
 requires xs subset ys
 ensures e in ys
 decreases
-pure func Subset(xs, ys set[int], e int) Unit {
+pure func InSubset(xs, ys set[int], e int) Unit {
 	return Unit{}
 }
 
@@ -438,51 +246,177 @@ pure func SubsetTransitive(xs, ys, zs set[int]) Unit {
 	return Unit{}
 }
 
+// S1
+// If x is a subset of y and both have the same length, they are equal.
+ghost
+requires xs subset ys
+requires len(xs) == len(ys)
+ensures xs == ys
+decreases
+pure func SubsetEquality(xs, ys set[int]) Unit {
+	return Asserting(len(ys setminus xs) == len(ys) - len(xs))
+}
+
+// SO
+// Returns whether x is a proper subset of y.
+ghost
+decreases
+pure func IsProperSubset(xs, ys set[int]) bool {
+	return xs subset ys && xs != ys
+}
+
+// Union
+// *****
+// S4
+// If an e is in the union of xs and ys, then it must be in xs or ys.
+ghost
+ensures (e in (xs union ys)) == ((e in xs) || (e in ys))
+decreases
+pure func InUnionInOne(xs, ys set[int], e int) Unit {
+	return Unit{}
+}
+
+// Union is commutative.
+ghost
+ensures (xs union ys) == (ys union xs)
+decreases
+pure func UnionCommutativity(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2/S4
+ghost
+ensures (xs union ys) union ys == xs union ys
+decreases
+pure func UnionRightIdempotency(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2/S4
+ghost
+ensures xs union (xs union ys) == xs union ys
+decreases
+pure func UnionLeftIdempotency(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// Add (union with singleton)
+// **************************
 // S3 (add, add_def)
 // Add an element x to the set xs.
 ghost
 // Need this post-condition to verify CardinalAdd
-ensures (x in xs) ==> res == xs
-ensures x in res
+ensures (e in xs) ==> res == xs
+ensures e in res
 decreases
-pure func Add(xs set[int], x int) (res set[int]) {
-	return xs union SingletonSet(x)
+pure func Add(xs set[int], e int) (res set[int]) {
+	return xs union SingletonSet(e)
 }
 
 // S4
 ghost
-ensures (e1 in Add(xs, e2)) == ((e1 == e2) || e1 in xs)
+ensures (a in Add(xs, b)) == ((a == b) || a in xs)
 decreases
-pure func InAddOther(xs set[int], e1, e2 int) Unit {
+pure func InAdd(xs set[int], a, b int) Unit {
 	return Unit{}
 }
 
 // S4
 ghost
-requires e1 in xs
-ensures e1 in Add(xs, e2)
+requires a in xs
+ensures a in Add(xs, b)
 decreases
-pure func InvarianceInAdd(xs set[int], e1, e2 int) Unit {
+pure func InvarianceInAdd(xs set[int], a, b int) Unit {
 	return Unit{}
 }
 
+// Remove (setminus with singleton)
+// ********************************
 // S3
 // Remove the element x from the set xs.
 // TODO Should we add something like ensures !(x in xs) ==> xs == Remove(xs, x)
 // like we did for Add?
 ghost
 decreases
-pure func Remove(xs set[int], x int) set[int] {
-	return xs setminus SingletonSet(x)
+pure func Remove(xs set[int], e int) set[int] {
+	return xs setminus SingletonSet(e)
 }
+
+// Intersection
+// ************
+ghost
+ensures (xs intersection ys) == (ys intersection xs)
+decreases
+pure func IntersectionCommutativity(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+ghost
+ensures (xs intersection ys) intersection ys == (xs intersection ys)
+decreases
+pure func IntersectionRightIdempotency(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+ghost
+ensures xs intersection (xs intersection ys) == (xs intersection ys)
+decreases
+pure func IntersectionLeftIdempotency(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+
+// Setminus
+// ********
+// S4
+ghost
+ensures (e in (xs setminus ys)) == ((e in xs) && !(e in ys))
+decreases
+pure func InSetminus(xs, ys set[int], e int) Unit {
+	return Unit{}
+}
+
+// S2
+// If ys contains e, then the difference xs - ys does not contain e.
+ghost
+requires e in ys
+ensures !(e in (xs setminus ys))
+decreases
+pure func NotInSetminus(xs, ys set[int], e int) Unit {
+	return Unit{}
+}
+
+// Relating multiple operations
+// ****************************
+// S4
+ghost
+ensures e in (xs intersection ys) == ((e in xs) && (e in ys))
+decreases
+pure func InIntersectionInBoth(xs, ys set[int], e int) Unit {
+	return Unit{}
+}
+
+
+// S2
+ghost
+requires AreDisjoint(xs, ys)
+ensures (xs union ys) setminus xs == ys
+ensures (xs union ys) setminus ys == xs
+decreases
+pure func DisjointUnionSetminus(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
 
 // S3
 // If x is in the set xs, removing and adding it back in does not change the set
 ghost
-requires x in xs
-ensures Add(Remove(xs, x), x) == xs
+requires e in xs
+ensures Add(Remove(xs, e), e) == xs
 decreases
-pure func AddRemove(xs set[int], x int) Unit {
+pure func AddRemove(xs set[int], e int) Unit {
 	return Unit{}
 }
 
@@ -490,20 +424,19 @@ pure func AddRemove(xs set[int], x int) Unit {
 // If we remove x from the set xs, it doesn't matter whether we have added x
 // to it before.
 ghost
-ensures Remove(Add(xs, x), x) == Remove(xs, x)
+ensures Remove(Add(xs, e), e) == Remove(xs, e)
 decreases
-pure func RemoveAdd(xs set[int], x int) Unit {
+pure func RemoveAdd(xs set[int], e int) Unit {
 	return Unit{}
 }
 
 // S3
 ghost
-ensures Remove(xs, x) subset xs
+ensures Remove(xs, e) subset xs
 decreases
-pure func SubsetRemove(xs set[int], x int) Unit {
+pure func SubsetRemove(xs set[int], e int) Unit {
 	return Unit{}
 }
-
 
 // TODO Should we merge SubsetUnion1 and SubsetUnion2?
 // S3
@@ -521,6 +454,7 @@ decreases
 pure func SubsetUnion2(xs, ys set[int]) Unit {
 	return Unit{}
 }
+
 
 // S3
 ghost
@@ -547,41 +481,135 @@ pure func SubsetSetminus(xs, ys set[int]) Unit {
 }
 
 
-// S3
+// Length
+// ******
+
+// S4
+// The length of a set is non-negative.
 ghost
 ensures len(xs) >= 0
 decreases
-pure func CardinalNonneg(xs set[int]) Unit {
+pure func NonNegativeLen(xs set[int]) Unit {
 	return Unit{}
 }
 
+// TODO Get IsProperSubset case to verify
+// S1
+// If x is a subset of y, then the length of x is less than or equal to the length of y.
+// If x is a strict subset of y, then the length of x is less than to the length of y.
+// ghost
+// decreases x, y
+// ensures x subset y ==> len(x) <= len(y)
+// ensures IsProperSubset(x, y) ==> len(x) < len(y)
+// func SubsetLen(x, y set[int]) Unit {
+	// if len(x) != 0 {
+		// ghost e := Choose(x)
+		// SubsetLen(x setminus set[int] {e}, y setminus set[int] {e})
+	// }
+	// return Unit{}
+// }
+
+// S1
+// The length of a union of two sets is greater than or equal to the length of
+// either individual set.
+ghost
+ensures len(xs union ys) >= len(xs)
+ensures len(xs union ys) >= len(ys)
+decreases ys
+pure func UnionLenLower(xs, ys set[int]) Unit {
+	return IsEmpty(ys) ? Unit{} :
+		let y := Choose(ys) in
+		(let yr := Remove(ys, y) in
+		(y in xs ?
+			(let xr := Remove(xs, y) in
+			(let _ := Asserting(xr union yr == Remove(xs union ys, y)) in UnionLenLower(xr, yr))) :
+			(let _ := Asserting(xs union yr == Remove(xs union ys, y)) in UnionLenLower(xs, yr))))
+}
+
+// S2
+// The length of a union of two sets is less than or equal to the length of
+// both individual sets combined.
+ghost
+ensures len(xs union ys) <= len(xs) + len(ys)
+decreases
+pure func UnionLenUpper(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+// The length of the intersection of xs and ys is less than or equal to the
+// length of xs.
+ghost
+ensures len(xs intersection ys) <= len(xs)
+decreases xs
+pure func IntersectLenUpper(xs, ys set[int]) Unit {
+	return IsEmpty(xs) ? Unit{} :
+		let x := Choose(xs) in
+		(let _ := Asserting((Remove(xs, x)) intersection ys == Remove((xs intersection ys), x)) in
+		(IntersectLenUpper(Remove(xs, x), ys)))
+}
+
+// S2
+// The length of the difference xs - ys is less than or equal to the length of xs. 
+ghost
+ensures len(xs setminus ys) <= len(xs)
+decreases
+pure func SetminusLenUpper(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2 (proves slightly different version)
+ghost
+ensures len(xs union ys) == len(xs) + len(ys) - len(xs intersection ys)
+decreases
+pure func UnionLenEq(xs, ys set[int]) Unit {
+	return Unit{}
+}
+
+// S2
+ghost
+ensures len(xs setminus ys) == len(xs) - len(xs intersection ys)
+ensures len(xs setminus ys) + len(ys setminus xs) + len(xs intersection ys) == len(xs union ys)
+decreases
+pure func SetminusLenEq(xs, ys set[int]) Unit {
+	return Unit{}
+}
 
 // S3
 ghost
-ensures (x in xs) ==> (len(Add(xs, x)) == len(xs))
-ensures !(x in xs) ==> (len(Add(xs, x)) == len(xs) + 1)
+ensures (e in xs) ==> (len(Add(xs, e)) == len(xs))
+ensures !(e in xs) ==> (len(Add(xs, e)) == len(xs) + 1)
 decreases
-func CardinalAdd(xs set[int], x int) Unit {
+func AddLen(xs set[int], e int) Unit {
 	return Unit{}
 }
 
 // S3
 ghost
-ensures (x in xs) ==> (len(Remove(xs, x)) == len(xs) - 1)
-ensures !(x in xs) ==> (len(Remove(xs, x)) == len(xs))
+ensures (e in xs) ==> (len(Remove(xs, e)) == len(xs) - 1)
+ensures !(e in xs) ==> (len(Remove(xs, e)) == len(xs))
 decreases
-func CardinalRemove(xs set[int], x int) Unit {
+func RemoveLen(xs set[int], e int) Unit {
 	return Unit{}
 }
-// S3
-// If xs is a Singleton, and x is in xs, then choose(xs) will always return x.
+
 ghost
-requires len(xs) == 1
-ensures x in xs ==> choose(xs) == x
+requires AreDisjoint(xs, ys)
+ensures len(xs union ys) == len(xs) + len(ys)
 decreases
-pure func Cardinal1(xs set[int], x int) Unit {
+pure func DisjointUnionLen(xs, ys set[int]) Unit {
 	return Unit{}
 }
+
+// TODO Do we want S1: LemmaBoundedSetSize? (Dafny proof requires LemmaSubsetSize +
+// contains unclear forall in proof)
+// Dafny signature:
+//   lemma LemmaBoundedSetSize(x: set<int>, a: int, b: int)
+//     requires forall i {:trigger i in x} :: i in x ==> a <= i < b
+//     requires a <= b
+//     ensures |x| <= b - a
+
+// *****************
 
 // TODO S3: min_elt{,_def}, max_elt{,_def} mention forall x . x in xs in
 // their post-condition; do we want these functions?
