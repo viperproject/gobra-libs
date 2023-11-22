@@ -1,6 +1,9 @@
 // This package defines lemmas for sets commonly used in specifications.
 package sets
 
+// ##(-I ../)
+import utils "utils"
+
 // TODO Add proper attribution
 // SO Not taken from outside sources
 // S1 https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sets/Sets.dfy
@@ -12,23 +15,6 @@ package sets
 // TODO Improve comments
 // QUES Should we use unicode comments like ∀ x,y : set[int]. |x| ≤ |y|?
 
-// TODO Figure out how to import these from verify.gobra
-// SO
-// Helpers
-// *******
-type Unit struct{}
-
-ghost
-requires b
-decreases
-pure func Asserting(ghost b bool) Unit {
-	return Unit{}
-}
-
-ghost
-ensures false
-decreases _
-func TODO()
 
 // Empty set
 // *********
@@ -54,8 +40,8 @@ ghost
 requires xs == EmptySet()
 ensures IsEmpty(xs)
 decreases
-pure func EmptyLen(xs set[int]) Unit {
-	return Unit{}
+pure func EmptyLen(xs set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
@@ -64,8 +50,8 @@ ghost
 requires IsEmpty(xs)
 ensures xs == EmptySet()
 decreases
-pure func EmptyIsEmptySet(xs set[int]) Unit {
-	return Unit{}
+pure func EmptyIsEmptySet(xs set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3, S4
@@ -74,8 +60,8 @@ ghost
 requires IsEmpty(xs)
 ensures !(e in xs)
 decreases
-pure func NotInEmpty(xs set[int], e int) Unit {
-	return Unit{}
+pure func NotInEmpty(xs set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // Singleton set
@@ -104,8 +90,8 @@ ghost
 requires xs == SingletonSet(e)
 ensures IsSingleton(xs)
 decreases
-pure func SingletonLen(xs set[int], e int) Unit {
-	return Unit{}
+pure func SingletonLen(xs set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // S0
@@ -115,8 +101,8 @@ requires IsSingleton(xs)
 requires e in xs
 ensures xs == SingletonSet(e)
 decreases
-pure func SingletonIsSingletonSet(xs set[int], e int) Unit {
-	return let _ := Choose(xs) in Unit{}
+pure func SingletonIsSingletonSet(xs set[int], e int) utils.Unit {
+	return let _ := Choose(xs) in utils.Unit{}
 }
 
 // S1
@@ -127,8 +113,8 @@ requires a in xs
 requires b in xs
 ensures a == b
 decreases
-pure func SingletonEquality(xs set[int], a int, b int) Unit {
-	return let _ := Choose(xs) in Unit{}
+pure func SingletonEquality(xs set[int], a int, b int) utils.Unit {
+	return let _ := Choose(xs) in utils.Unit{}
 }
 
 // Constructing new sets
@@ -190,8 +176,8 @@ requires IsSingleton(xs)
 requires e in xs
 ensures Choose(xs) == e
 decreases
-pure func ChooseFromSingleton(xs set[int], e int) Unit {
-	return Unit{}
+pure func ChooseFromSingleton(xs set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // General definitions and properties
@@ -209,8 +195,8 @@ pure func AreDisjoint(xs, ys set[int]) bool {
 ghost
 ensures (xs == ys) == (forall e int :: {e in xs} {e in ys} ((e in xs) == (e in ys)))
 decreases
-pure func SetEquality(xs, ys set[int]) Unit {
-	return Unit{}
+pure func SetEquality(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // Subset
@@ -222,8 +208,8 @@ requires e in xs
 requires xs subset ys
 ensures e in ys
 decreases
-pure func InSubset(xs, ys set[int], e int) Unit {
-	return Unit{}
+pure func InSubset(xs, ys set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
@@ -231,8 +217,8 @@ pure func InSubset(xs, ys set[int], e int) Unit {
 ghost
 ensures xs subset xs
 decreases
-pure func SubsetReflexive(xs set[int]) Unit {
-	return Unit{}
+pure func SubsetReflexive(xs set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
@@ -242,8 +228,8 @@ requires xs subset ys
 requires ys subset zs
 ensures xs subset zs
 decreases
-pure func SubsetTransitive(xs, ys, zs set[int]) Unit {
-	return Unit{}
+pure func SubsetTransitive(xs, ys, zs set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S1
@@ -253,8 +239,8 @@ requires xs subset ys
 requires len(xs) == len(ys)
 ensures xs == ys
 decreases
-pure func SubsetEquality(xs, ys set[int]) Unit {
-	return Asserting(len(ys setminus xs) == len(ys) - len(xs))
+pure func SubsetEquality(xs, ys set[int]) utils.Unit {
+	return utils.Asserting(len(ys setminus xs) == len(ys) - len(xs))
 }
 
 // SO
@@ -272,32 +258,32 @@ pure func IsProperSubset(xs, ys set[int]) bool {
 ghost
 ensures (e in (xs union ys)) == ((e in xs) || (e in ys))
 decreases
-pure func InUnionInOne(xs, ys set[int], e int) Unit {
-	return Unit{}
+pure func InUnionInOne(xs, ys set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // Union is commutative.
 ghost
 ensures (xs union ys) == (ys union xs)
 decreases
-pure func UnionCommutativity(xs, ys set[int]) Unit {
-	return Unit{}
+pure func UnionCommutativity(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S2/S4
 ghost
 ensures (xs union ys) union ys == xs union ys
 decreases
-pure func UnionRightIdempotency(xs, ys set[int]) Unit {
-	return Unit{}
+pure func UnionRightIdempotency(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S2/S4
 ghost
 ensures xs union (xs union ys) == xs union ys
 decreases
-pure func UnionLeftIdempotency(xs, ys set[int]) Unit {
-	return Unit{}
+pure func UnionLeftIdempotency(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // Add (union with singleton)
@@ -317,8 +303,8 @@ pure func Add(xs set[int], e int) (res set[int]) {
 ghost
 ensures (a in Add(xs, b)) == ((a == b) || a in xs)
 decreases
-pure func InAdd(xs set[int], a, b int) Unit {
-	return Unit{}
+pure func InAdd(xs set[int], a, b int) utils.Unit {
+	return utils.Unit{}
 }
 
 // S4
@@ -326,8 +312,8 @@ ghost
 requires a in xs
 ensures a in Add(xs, b)
 decreases
-pure func InvarianceInAdd(xs set[int], a, b int) Unit {
-	return Unit{}
+pure func InvarianceInAdd(xs set[int], a, b int) utils.Unit {
+	return utils.Unit{}
 }
 
 // Remove (setminus with singleton)
@@ -347,24 +333,24 @@ pure func Remove(xs set[int], e int) set[int] {
 ghost
 ensures (xs intersection ys) == (ys intersection xs)
 decreases
-pure func IntersectionCommutativity(xs, ys set[int]) Unit {
-	return Unit{}
+pure func IntersectionCommutativity(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S2
 ghost
 ensures (xs intersection ys) intersection ys == (xs intersection ys)
 decreases
-pure func IntersectionRightIdempotency(xs, ys set[int]) Unit {
-	return Unit{}
+pure func IntersectionRightIdempotency(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S2
 ghost
 ensures xs intersection (xs intersection ys) == (xs intersection ys)
 decreases
-pure func IntersectionLeftIdempotency(xs, ys set[int]) Unit {
-	return Unit{}
+pure func IntersectionLeftIdempotency(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 
@@ -374,8 +360,8 @@ pure func IntersectionLeftIdempotency(xs, ys set[int]) Unit {
 ghost
 ensures (e in (xs setminus ys)) == ((e in xs) && !(e in ys))
 decreases
-pure func InSetminus(xs, ys set[int], e int) Unit {
-	return Unit{}
+pure func InSetminus(xs, ys set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // S2
@@ -384,8 +370,8 @@ ghost
 requires e in ys
 ensures !(e in (xs setminus ys))
 decreases
-pure func NotInSetminus(xs, ys set[int], e int) Unit {
-	return Unit{}
+pure func NotInSetminus(xs, ys set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // Relating multiple operations
@@ -394,8 +380,8 @@ pure func NotInSetminus(xs, ys set[int], e int) Unit {
 ghost
 ensures e in (xs intersection ys) == ((e in xs) && (e in ys))
 decreases
-pure func InIntersectionInBoth(xs, ys set[int], e int) Unit {
-	return Unit{}
+pure func InIntersectionInBoth(xs, ys set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 
@@ -405,8 +391,8 @@ requires AreDisjoint(xs, ys)
 ensures (xs union ys) setminus xs == ys
 ensures (xs union ys) setminus ys == xs
 decreases
-pure func DisjointUnionSetminus(xs, ys set[int]) Unit {
-	return Unit{}
+pure func DisjointUnionSetminus(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 
@@ -416,8 +402,8 @@ ghost
 requires e in xs
 ensures Add(Remove(xs, e), e) == xs
 decreases
-pure func AddRemove(xs set[int], e int) Unit {
-	return Unit{}
+pure func AddRemove(xs set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
@@ -426,16 +412,16 @@ pure func AddRemove(xs set[int], e int) Unit {
 ghost
 ensures Remove(Add(xs, e), e) == Remove(xs, e)
 decreases
-pure func RemoveAdd(xs set[int], e int) Unit {
-	return Unit{}
+pure func RemoveAdd(xs set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
 ghost
 ensures Remove(xs, e) subset xs
 decreases
-pure func SubsetRemove(xs set[int], e int) Unit {
-	return Unit{}
+pure func SubsetRemove(xs set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // TODO Should we merge SubsetUnion1 and SubsetUnion2?
@@ -443,16 +429,16 @@ pure func SubsetRemove(xs set[int], e int) Unit {
 ghost
 ensures xs subset (xs union ys)
 decreases
-pure func SubsetUnion1(xs, ys set[int]) Unit {
-	return Unit{}
+pure func SubsetUnion1(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
 ghost
 ensures ys subset (xs union ys)
 decreases
-pure func SubsetUnion2(xs, ys set[int]) Unit {
-	return Unit{}
+pure func SubsetUnion2(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 
@@ -460,24 +446,24 @@ pure func SubsetUnion2(xs, ys set[int]) Unit {
 ghost
 ensures (xs intersection ys) subset xs
 decreases
-pure func SubsetIntersection1(xs, ys set[int]) Unit {
-	return Unit{}
+pure func SubsetIntersection1(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
 ghost
 ensures (xs intersection ys) subset ys
 decreases
-pure func SubsetIntersection2(xs, ys set[int]) Unit {
-	return Unit{}
+pure func SubsetIntersection2(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
 ghost
 ensures (xs setminus ys) subset xs 
 decreases
-pure func SubsetSetminus(xs, ys set[int]) Unit {
-	return Unit{}
+pure func SubsetSetminus(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 
@@ -489,8 +475,8 @@ pure func SubsetSetminus(xs, ys set[int]) Unit {
 ghost
 ensures len(xs) >= 0
 decreases
-pure func NonNegativeLen(xs set[int]) Unit {
-	return Unit{}
+pure func NonNegativeLen(xs set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // TODO Get IsProperSubset case to verify
@@ -501,12 +487,12 @@ pure func NonNegativeLen(xs set[int]) Unit {
 // decreases x, y
 // ensures x subset y ==> len(x) <= len(y)
 // ensures IsProperSubset(x, y) ==> len(x) < len(y)
-// func SubsetLen(x, y set[int]) Unit {
+// func SubsetLen(x, y set[int]) utils.Unit {
 	// if len(x) != 0 {
 		// ghost e := Choose(x)
 		// SubsetLen(x setminus set[int] {e}, y setminus set[int] {e})
 	// }
-	// return Unit{}
+	// return utils.Unit{}
 // }
 
 // S1
@@ -516,14 +502,14 @@ ghost
 ensures len(xs union ys) >= len(xs)
 ensures len(xs union ys) >= len(ys)
 decreases ys
-pure func UnionLenLower(xs, ys set[int]) Unit {
-	return IsEmpty(ys) ? Unit{} :
+pure func UnionLenLower(xs, ys set[int]) utils.Unit {
+	return IsEmpty(ys) ? utils.Unit{} :
 		let y := Choose(ys) in
 		(let yr := Remove(ys, y) in
 		(y in xs ?
 			(let xr := Remove(xs, y) in
-			(let _ := Asserting(xr union yr == Remove(xs union ys, y)) in UnionLenLower(xr, yr))) :
-			(let _ := Asserting(xs union yr == Remove(xs union ys, y)) in UnionLenLower(xs, yr))))
+			(let _ := utils.Asserting(xr union yr == Remove(xs union ys, y)) in UnionLenLower(xr, yr))) :
+			(let _ := utils.Asserting(xs union yr == Remove(xs union ys, y)) in UnionLenLower(xs, yr))))
 }
 
 // S2
@@ -532,8 +518,8 @@ pure func UnionLenLower(xs, ys set[int]) Unit {
 ghost
 ensures len(xs union ys) <= len(xs) + len(ys)
 decreases
-pure func UnionLenUpper(xs, ys set[int]) Unit {
-	return Unit{}
+pure func UnionLenUpper(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S2
@@ -542,10 +528,10 @@ pure func UnionLenUpper(xs, ys set[int]) Unit {
 ghost
 ensures len(xs intersection ys) <= len(xs)
 decreases xs
-pure func IntersectLenUpper(xs, ys set[int]) Unit {
-	return IsEmpty(xs) ? Unit{} :
+pure func IntersectLenUpper(xs, ys set[int]) utils.Unit {
+	return IsEmpty(xs) ? utils.Unit{} :
 		let x := Choose(xs) in
-		(let _ := Asserting((Remove(xs, x)) intersection ys == Remove((xs intersection ys), x)) in
+		(let _ := utils.Asserting((Remove(xs, x)) intersection ys == Remove((xs intersection ys), x)) in
 		(IntersectLenUpper(Remove(xs, x), ys)))
 }
 
@@ -554,16 +540,16 @@ pure func IntersectLenUpper(xs, ys set[int]) Unit {
 ghost
 ensures len(xs setminus ys) <= len(xs)
 decreases
-pure func SetminusLenUpper(xs, ys set[int]) Unit {
-	return Unit{}
+pure func SetminusLenUpper(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S2 (proves slightly different version)
 ghost
 ensures len(xs union ys) == len(xs) + len(ys) - len(xs intersection ys)
 decreases
-pure func UnionLenEq(xs, ys set[int]) Unit {
-	return Unit{}
+pure func UnionLenEq(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S2
@@ -571,8 +557,8 @@ ghost
 ensures len(xs setminus ys) == len(xs) - len(xs intersection ys)
 ensures len(xs setminus ys) + len(ys setminus xs) + len(xs intersection ys) == len(xs union ys)
 decreases
-pure func SetminusLenEq(xs, ys set[int]) Unit {
-	return Unit{}
+pure func SetminusLenEq(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
@@ -580,8 +566,8 @@ ghost
 ensures (e in xs) ==> (len(Add(xs, e)) == len(xs))
 ensures !(e in xs) ==> (len(Add(xs, e)) == len(xs) + 1)
 decreases
-func AddLen(xs set[int], e int) Unit {
-	return Unit{}
+func AddLen(xs set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 // S3
@@ -589,16 +575,16 @@ ghost
 ensures (e in xs) ==> (len(Remove(xs, e)) == len(xs) - 1)
 ensures !(e in xs) ==> (len(Remove(xs, e)) == len(xs))
 decreases
-func RemoveLen(xs set[int], e int) Unit {
-	return Unit{}
+func RemoveLen(xs set[int], e int) utils.Unit {
+	return utils.Unit{}
 }
 
 ghost
 requires AreDisjoint(xs, ys)
 ensures len(xs union ys) == len(xs) + len(ys)
 decreases
-pure func DisjointUnionLen(xs, ys set[int]) Unit {
-	return Unit{}
+pure func DisjointUnionLen(xs, ys set[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // TODO If we do want this; make sure to call it something like BoundedSetLen to be consistent.
