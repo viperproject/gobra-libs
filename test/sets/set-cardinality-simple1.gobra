@@ -1,0 +1,39 @@
+// Adapted from gobra test suite
+package test
+
+// ##(-I ./)
+import stubs "stubs"
+
+func example1(ghost s set[int]) (ghost n int) {
+  n = len(s);
+}
+
+func example2() {
+  // doesn't verify with --disableSetAxiomatization
+  // assert len(set[int] { 1, 2, 3 }) == 3
+  ghost empty := stubs.EmptySet()
+  assert len(empty) == 0
+  //assert stubs.IsEmpty(stubs.EmptySet())
+  
+  ghost xs1 := stubs.Add(empty, 1)
+  ghost xs2 := stubs.Add(xs1, 2)
+  ghost xs3 := stubs.Add(xs2, 3)
+
+  stubs.NotInEmpty(empty, 1)
+  assert !(1 in stubs.EmptySet())
+  assert len(xs1) == 1
+  assert len(xs2) == 2
+  assert len(xs3) == 3
+
+  // doesn't verify with with --disableSetAxiomatization
+  // assert len(set[int] { 1 }) == len(seq[int] { 2 }) -- doesn't verify
+}
+
+ensures n == len(s union set[int] { 42 });
+func example3(ghost s set[int]) (ghost n int) {
+  n = len(s union set[int] { 42 });
+}
+
+requires len(s) == len(t);
+func example4(ghost s set[int], ghost t set[bool]) {
+}

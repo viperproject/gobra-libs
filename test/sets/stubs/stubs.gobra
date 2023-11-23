@@ -1,0 +1,124 @@
+package stubs
+
+type Unit struct{}
+
+// Empty set
+// *********
+// S2
+// A set is empty if it has length 0.
+ghost
+decreases
+pure func IsEmpty(xs set[int]) bool {
+	return len(xs) == 0
+}
+
+// S0
+// Returns an empty set {}.
+ghost
+ensures result == set[int] {}
+ensures len(result) == 0
+decreases
+pure func EmptySet() (result set[int]) {
+	return set[int] {}
+}
+
+// An empty set has length 0.
+ghost
+requires xs == EmptySet()
+ensures IsEmpty(xs)
+decreases
+pure func EmptyLen(xs set[int]) Unit 
+
+// S3
+// A set of length 0 is the empty set.
+ghost
+requires IsEmpty(xs)
+ensures xs == EmptySet()
+decreases
+pure func EmptyIsEmptySet(xs set[int]) Unit
+
+// S3, S4
+// Nothing can be an element of the empty set.
+ghost
+requires IsEmpty(xs)
+ensures !(e in xs)
+decreases
+pure func NotInEmpty(xs set[int], e int) Unit
+
+// Singleton set
+// **************
+// S1
+// A set is a singleton if it has length 1.
+ghost
+decreases
+pure func IsSingleton(xs set[int]) bool {
+	return len(xs) == 1
+}
+
+// SO
+// Returns a singleton set containing x.
+ghost
+ensures IsSingleton(result)
+ensures e in result
+ensures result == set[int] {e}
+decreases
+pure func SingletonSet(e int) (result set[int]) 
+
+// S1
+// A singleton set has a length of 1.
+ghost
+requires xs == SingletonSet(e)
+ensures IsSingleton(xs)
+decreases
+pure func SingletonLen(xs set[int], e int) Unit
+
+// S0
+// If a is in a singleton set x, then x is of the form {a}
+ghost
+requires IsSingleton(xs)
+requires e in xs
+ensures xs == SingletonSet(e)
+decreases
+pure func SingletonIsSingletonSet(xs set[int], e int) Unit
+
+// S1
+// Elements in a singleton set are equal to each other.
+ghost
+requires IsSingleton(xs)
+requires a in xs
+requires b in xs
+ensures a == b
+decreases
+pure func SingletonEquality(xs set[int], a int, b int) Unit
+
+// Add (union with singleton)
+// **************************
+// S3 (add, add_def)
+// Add an element x to the set xs.
+ghost
+// Need this post-condition to verify CardinalAdd
+ensures (e in xs) ==> res == xs
+ensures e in res
+ensures res == xs union SingletonSet(e)
+decreases
+pure func Add(xs set[int], e int) (res set[int])
+
+// S4
+ghost
+ensures (a in Add(xs, b)) == ((a == b) || a in xs)
+decreases
+pure func InAdd(xs set[int], a, b int) Unit
+
+// S4
+ghost
+requires a in xs
+ensures a in Add(xs, b)
+decreases
+pure func InvarianceInAdd(xs set[int], a, b int) Unit
+
+// S3
+ghost
+ensures (e in xs) ==> (len(Add(xs, e)) == len(xs))
+ensures !(e in xs) ==> (len(Add(xs, e)) == len(xs) + 1)
+decreases
+func AddLen(xs set[int], e int) Unit
