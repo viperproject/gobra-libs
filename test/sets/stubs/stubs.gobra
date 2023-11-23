@@ -18,9 +18,7 @@ ghost
 ensures result == set[int] {}
 ensures len(result) == 0
 decreases
-pure func EmptySet() (result set[int]) {
-	return set[int] {}
-}
+pure func EmptySet() (result set[int])
 
 // An empty set has length 0.
 ghost
