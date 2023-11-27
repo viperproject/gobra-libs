@@ -1,0 +1,207 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+
+  This file is inspired by the standard libraries and axiomatisations of the following verifiers:
+  - dafny-lang/libraries: https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sequences/Seq.dfy
+*/
+
+// TODO Group/Sort functions/lemmas
+
+// This package defines lemmas for sequences commonly used in specifications.
+package seqs
+
+import utils "utils"
+
+// Creates a singleton sequence from e.
+ghost
+decreases
+pure func Singleton(e int) seq[int] {
+	return seq[int]{e}
+}
+
+// Appends e to xs.
+ghost
+decreases
+pure func Append(xs seq[int], e int) seq[int] {
+	return xs ++ Singleton(e)
+}
+
+// Returns the first element of a non-empty sequence.
+ghost
+requires len(xs) > 0
+decreases
+pure func First(xs seq[int]) int {
+	return xs[0]
+}
+
+// Returns the subsequence of a non-empty sequence obtained by dropping the
+// first element.
+ghost
+requires len(xs) > 0
+decreases
+pure func DropFirst(xs seq[int]) seq[int] {
+	return xs[1:]
+}
+
+// Returns the last element of a non-empty sequence.e
+ghost
+requires len(xs) > 0
+decreases
+pure func Last(xs seq[int]) int {
+	return xs[len(xs)-1]
+}
+
+// Returns the subsequence of a non-empty sequence obtained by dropping the last
+// element.
+ghost
+requires len(xs) > 0
+decreases
+pure func DropLast(xs seq[int]) seq[int] {
+	return xs[:len(xs)-1]
+}
+
+// Returns true if xs is a prefix of ys.
+ghost
+decreases
+pure func IsPrefix(xs, ys seq[int]) bool {
+	return len(xs) <= len(ys) && xs == ys[:len(xs)]
+}
+
+// Returns true if xs is a suffix of ys.
+ghost
+decreases
+pure func IsSuffix(xs, ys seq[int]) bool {
+	return len(xs) <= len(ys) && xs == ys[len(ys)-len(xs):]
+}
+
+// A sequence that is sliced at the pos-th element, concatenated with that same
+// sequence sliced from the pos-th element, is equal to the original unsliced
+// sequence.
+ghost
+requires 0 <= pos && pos < len(xs)
+ensures xs == xs[:pos] ++ xs[pos:]
+decreases
+pure func SplitConcat(xs seq[int], pos int) utils.Unit {
+	return utils.Unit{}
+}
+
+// Any element in a slice is included in the original sequence. pos is an index
+// into the original sequence xs.
+ghost
+requires 0 <= a && a <= b && b <= len(xs)
+requires slice == xs[a:b]
+// QUES This is technically covered by a >= 0, and unlike Python, Go doesn't
+// seem to allow negative slice. However, keeping this may provide better errors
+// in case a negative pos is passed. Dafny deals with this by using nat. Should
+// we keep this precondition?
+requires pos >= 0
+requires a <= pos && pos < b
+ensures pos - a < len(slice)
+ensures slice[pos-a] == xs[pos]
+decreases
+// QUES Dafny calls this LemmaElementFromSlice. Is there a better one than
+// Dafny's and current name?
+pure func InSliceInOriginal(xs, slice seq[int], a, b, pos int) utils.Unit {
+	return utils.Unit{}
+}
+
+// A slice [a2:b2] of a slice [a1:b1] of a sequence is equal to just a slice
+// [a1+a2:b1+b2] of the original sequence.
+ghost
+requires 0 <= a1 && a1 <= b1 && b1 <= len(xs)
+requires 0 <= a2 && a2 <= b2 && b2 <= a1 - b1
+ensures xs[a1:b1][a2:b2] == xs[a1+a2:b1+b2]
+pure func SliceOfSlice(xs seq[int], a1, b1, a2, b2 int) utils.Unit {
+	return utils.Unit{}
+}
+
+// The concatenation of two subsequences of a non-empty sequence, the first
+// obtained from dropping the last element, the second consisting only of the
+// last element, is the original sequence.
+ghost
+requires len(xs) > 0
+ensures xs == Append(DropLast(xs), Last(xs))
+decreases
+pure func DropLastAppendLast(xs seq[int]) utils.Unit {
+	return utils.Unit{}
+}
+
+// The last element of two concatenated sequences, the second one being
+// non-empty, will be the last element of the latter sequence.
+ghost
+requires len(ys) > 0
+ensures Last(xs ++ ys) == Last(ys)
+decreases
+pure func AppendLast(xs, ys seq[int]) utils.Unit {
+	return utils.Unit{}
+}
+
+// QUES Do we want a ToArray method?
+// QUES Do we want a ToSet method? [<- LemmaCardinalityOfSet,
+// LemmaCardinalityOfEmptySetIs0, LemmaCardinalityOfSetNoDuplicates,
+// LemmaNoDuplicatesCardinalityOfSet]
+// QUES Do we want HasNoDuplicates? If yes, do we need to encode it as a
+// predicate? [<- LemmaMultisetHasNoDuplicates]
+// QUES Do we want LemmaNoDuplicatesInConcat? Establishing that they do not have
+// elements in common between them seems like a pain.
+
+// The concatenation of sequences is associative.
+ghost
+ensures xs ++ (ys ++ zs) == (xs ++ ys) ++ zs
+decreases
+pure func ConcatIsAssociative(xs, ys, zs seq[int]) utils.Unit {
+	return utils.Unit{}
+}
+
+// For an element that occurs at least once in a sequence, the index of its
+// first occurrence is returned.
+ghost
+requires e in xs
+ensures 0 <= result && result < len(xs)
+ensures xs[result] == e
+ensures forall j int :: { xs[j] } (0 <= j && j < result) ==> xs[j] != e
+decreases xs
+pure func IndexOf(xs seq[int], e int) (result int) {
+	return First(xs) == e ? 0 : 1 + IndexOf(xs[1:], e)
+}
+
+// For an element that occurs at least once in a sequence, the index of its last
+// occurrence is returned.
+ghost
+requires e in xs
+ensures 0 <= result && result < len(xs)
+ensures xs[result] == e
+ensures forall j int :: { xs[j] } (result < j && j < len(xs)) ==> xs[j] != e
+decreases xs
+pure func LastIndexOf(xs seq[int], e int) (result int) {
+	return Last(xs) == e ? len(xs) - 1 : LastIndexOf(DropLast(xs), e)
+}
+
+// QUES How useful/hard is an AllIndicesOf?
+
+// Returns a sequence without the element at a given position.
+ghost
+requires 0 <= pos && pos < len(xs)
+ensures len(result) == len(xs) - 1
+ensures forall i int :: { result[i] } { xs[i] } (0 <= i && i < pos) ==> result[i] == xs[i]
+ensures forall i int :: { result[i] } (pos <= i && i < len(xs) - 1) ==> result[i] == xs[i+1]
+decreases
+pure func Remove(xs seq[int], pos int) (result seq[int]) {
+	return xs[:pos] ++ xs[pos+1:]
+}
+
+// QUES This is quite different (and simpler!) than the version from Dafny.
+//   In particular, Dafny returns the same sequence if e is not in xs, and also
+//   ensures some properties regarding sets and multisets. Why, or rather, is
+//   our version fine?
+// If a given element occurs at least once in a sequence, the sequence without
+// its first occurrence is returned.
+//ghost
+//pure func RemoveValue(xs seq[int], e int) seq[int] {
+//	return // use previously defined Remove
+//}
+
+// QUES How useful is a RemoveLastValue?
+// QUES How useful is a RemoveAllValues?
