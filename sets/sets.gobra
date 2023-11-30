@@ -27,16 +27,16 @@ pure func IsEmpty(xs set[int]) bool {
 ghost
 ensures IsEmpty(result)
 decreases
-pure func EmptySet() (result set[int]) {
+pure func Empty() (result set[int]) {
 	return set[int]{}
 }
 
 // There is only one empty set.
 ghost
 requires IsEmpty(xs)
-ensures xs == EmptySet()
+ensures xs == Empty()
 decreases
-pure func EmptySetIsUnique(xs set[int]) utils.Unit {
+pure func EmptyIsUnique(xs set[int]) utils.Unit {
 	return utils.Unit{}
 }
 
@@ -93,7 +93,7 @@ ensures forall i int :: { i in result } (a <= i && i < b) == i in result
 ensures len(result) == b - a
 decreases b - a
 pure func Range(a, b int) (result set[int]) {
-	return a == b ? EmptySet() : Add(Range(a + 1, b), a)
+	return a == b ? Empty() : Add(Range(a + 1, b), a)
 }
 
 // Constructs a set with all integers in the range [0, n).
