@@ -70,8 +70,19 @@ pure func Last(xs seq[int]) int {
 	return xs[len(xs)-1]
 }
 
-// QUES Do we want a prepend/append function instead of explicitly constructing
-//   a singleton before concatenating?
+// Returns a sequence where e has been added to the end of xs.
+ghost
+decreases
+pure func Append(xs seq[int], e int) seq[int] {
+	return xs ++ Singleton(e)
+}
+
+// Returns a sequence where e has been added to the beginning of xs.
+ghost
+decreases
+pure func Prepend(xs seq[int], e int) seq[int] {
+	return Singleton(e) ++ xs
+}
 
 // Returns the subsequence of a non-empty sequence obtained by dropping the last
 // element.
@@ -96,8 +107,8 @@ pure func IsSuffix(xs, ys seq[int]) bool {
 	return len(xs) <= len(ys) && xs == ys[len(ys)-len(xs):]
 }
 
-// A sequence that is sliced at the pos-th element, concatenated with that same
-// sequence sliced from the pos-th element, is equal to the original unsliced
+// A sequence that is split at the pos-th element, concatenated with that same
+// sequence split from the pos-th element, is equal to the original, unsplit
 // sequence.
 ghost
 requires 0 <= pos && pos < len(xs)
@@ -107,33 +118,25 @@ pure func SplitConcat(xs seq[int], pos int) utils.Unit {
 	return utils.Unit{}
 }
 
-// Any element in a slice is included in the original sequence. pos is an index
+// Any element in a subsequence is included in the original sequence. pos is an index
 // into the original sequence xs.
 ghost
-requires 0 <= a && a <= b && b <= len(xs)
-requires slice == xs[a:b]
-// QUES This is technically covered by a >= 0, and unlike Python, Go doesn't
-// seem to allow negative slice. However, keeping this may provide better errors
-// in case a negative pos is passed. Dafny deals with this by using nat. Should
-// we keep this precondition?
-requires pos >= 0
-requires a <= pos && pos < b
-ensures pos - a < len(slice)
-ensures slice[pos-a] == xs[pos]
+requires 0 <= a && a <= pos && pos < b && b <= len(xs)
+requires subseq == xs[a:b]
+ensures pos - a < len(subseq)
+ensures subseq[pos-a] == xs[pos]
 decreases
-// QUES Dafny calls this LemmaElementFromSlice. Is there a better one than
-// Dafny's and current name?
-pure func InSliceInOriginal(xs, slice seq[int], a, b, pos int) utils.Unit {
+pure func InSubseqInSeq(xs, subseq seq[int], a, b, pos int) utils.Unit {
 	return utils.Unit{}
 }
 
-// A slice [a2:b2] of a slice [a1:b1] of a sequence is equal to just a slice
-// [a1+a2:b1+b2] of the original sequence.
+// A subsequence [a2:b2] of a subsequence [a1:b1] is equal to the
+// the subsequence [a1+a2:b1+b2] of the original sequence
 ghost
 requires 0 <= a1 && a1 <= b1 && b1 <= len(xs)
 requires 0 <= a2 && a2 <= b2 && b2 <= a1 - b1
 ensures xs[a1:b1][a2:b2] == xs[a1+a2:b1+b2]
-pure func SliceOfSlice(xs seq[int], a1, b1, a2, b2 int) utils.Unit {
+pure func SubseqOfSubseq(xs seq[int], a1, b1, a2, b2 int) utils.Unit {
 	return utils.Unit{}
 }
 
@@ -142,7 +145,7 @@ pure func SliceOfSlice(xs seq[int], a1, b1, a2, b2 int) utils.Unit {
 // first element, is the original sequence.
 ghost
 requires len(xs) > 0
-ensures xs == Singleton(First(xs)) ++ DropFirst(xs)
+ensures xs == Prepend(DropFirst(xs), First(xs))
 decreases
 pure func DropFirstPrependFirst(xs seq[int]) utils.Unit {
 	return utils.Unit{}
@@ -154,7 +157,7 @@ pure func DropFirstPrependFirst(xs seq[int]) utils.Unit {
 // last element, is the original sequence.
 ghost
 requires len(xs) > 0
-ensures xs == DropLast(xs) ++ Singleton(Last(xs))
+ensures xs == Append(DropLast(xs), Last(xs))
 decreases
 pure func DropLastAppendLast(xs seq[int]) utils.Unit {
 	return utils.Unit{}
@@ -170,14 +173,19 @@ pure func LastOfConcat(xs, ys seq[int]) utils.Unit {
 	return utils.Unit{}
 }
 
-// QUES Do we want a ToArray method?
 // QUES Do we want a ToSet method? [<- LemmaCardinalityOfSet,
 // LemmaCardinalityOfEmptySetIs0, LemmaCardinalityOfSetNoDuplicates,
 // LemmaNoDuplicatesCardinalityOfSet]
+// Yes
 // QUES Do we want HasNoDuplicates? If yes, do we need to encode it as a
 // predicate? [<- LemmaMultisetHasNoDuplicates]
+// Yes
 // QUES Do we want LemmaNoDuplicatesInConcat? Establishing that they do not have
 // elements in common between them seems like a pain.
+// Yes
+
+// TODO Create test where we prove lemmas from here that use sets while disabling
+// set axioms.
 
 // The concatenation of sequences is associative.
 ghost
@@ -211,8 +219,6 @@ pure func LastIndexOf(xs seq[int], e int) (result int) {
 	return Last(xs) == e ? len(xs) - 1 : LastIndexOf(DropLast(xs), e)
 }
 
-// QUES How useful/hard is an AllIndicesOf?
-
 // Returns a sequence without the element at a given position.
 ghost
 requires 0 <= pos && pos < len(xs)
@@ -224,15 +230,10 @@ pure func Remove(xs seq[int], pos int) (result seq[int]) {
 	return xs[:pos] ++ xs[pos+1:]
 }
 
-// QUES This is quite different (and simpler!) than the version from Dafny.
-//   In particular, Dafny returns the same sequence if e is not in xs, and also
-//   ensures some properties regarding sets and multisets. Why, or rather, is
-//   our version fine?
 // If a given element occurs at least once in a sequence, the sequence without
 // its first occurrence is returned.
 ghost
 requires e in xs
-// QUES Are these postconditions needed?
 ensures len(result) == len(xs) - 1
 ensures forall i int :: { result[i] } { xs[i] } (0 <= i && i < IndexOf(xs, e)) ==> result[i] == xs[i]
 ensures forall i int :: { result[i] } (IndexOf(xs, e) <= i && i < len(xs) - 1) ==> result[i] == xs[i+1]
@@ -241,19 +242,14 @@ pure func RemoveValue(xs seq[int], e int) (result seq[int]) {
 	return Remove(xs, IndexOf(xs , e))
 }
 
-// QUES How useful is a RemoveLastValue? (not in Dafny)
-// QUES How useful is a RemoveAllValues? (not in Dafny)
-
 // Inserts an element at a given position and returns the resulting
 // (longer) sequence.
 ghost
 requires 0 <= pos && pos <= len(xs)
 ensures len(result) == len(xs) + 1
-// QUES Dafny has Insert(xs, a, pos)[i] as trigger. Is result[i] equivalent?
 ensures forall i int :: { result[i] } { xs[i] } (0 <= i && i < pos) ==> result[i] == xs[i]
 ensures result[pos] == e
 ensures forall i int :: { xs[i] } (pos <= i && i < len(xs)) ==> result[i+1] == xs[i]
-// TODO Add postcondition for multisets in case we want one
 pure func Insert(xs seq[int], e int, pos int) (result seq[int]) {
 	return xs[:pos] ++ Singleton(e) ++ xs[pos:]
 }
@@ -264,7 +260,7 @@ ensures len(result) == len(xs)
 ensures forall i int :: { result[i] } { xs[len(xs)-i-1] } (0 <= i && i < len(xs)) ==> result[i] == xs[len(xs)-i-1]
 decreases xs
 pure func Reverse(xs seq[int]) (result seq[int]) {
-	return IsEmpty(xs) ? Empty() : Singleton(Last(xs)) ++ Reverse(DropLast(xs))
+	return IsEmpty(xs) ? Empty() : Prepend(Reverse(DropLast(xs)), Last(xs))
 }
 
 // Returns a constant sequence of a given length
@@ -274,10 +270,8 @@ ensures len(result) == length
 ensures forall i int :: { result[i] } (0 <= i && i < len(result)) ==> result[i] == e
 decreases length
 pure func Repeat(e int, length int) (result seq[int]) {
-	return length == 0 ? Empty() : Singleton(e) ++ Repeat(e, length - 1)
+	return length == 0 ? Empty() : Prepend(Repeat(e, length - 1), e)
 }
-
-// QUES How should we deal with Zip/Unzip, considering that we don't have tuples?
 
 // Returns the maximum integer value in a non-empty sequence of integers.
 ghost
@@ -296,15 +290,147 @@ ghost
 requires len(xs) > 0 && len(ys) > 0
 ensures Max(xs ++ ys) >= Max(xs)
 ensures Max(xs ++ ys) >= Max(ys)
-// QUES This ensures is from Dafny; it feels a bit weird, in particular the
-//   trigger. Can/should we break this into something closer to the ensures in Max?
+// QUES The ensures in the Dafny lib is a bit weird.
+// Ask on Dafny Devs <- Done, waiting for answer
 ensures forall k int :: { k in Singleton(Max(xs ++ ys)) } (k in (xs ++ ys)) ==> Max(xs ++ ys) >= k
 decreases xs
-// QUES Why doesn't this verify?
 pure func MaxOfConcat(xs, ys seq[int]) utils.Unit {
-	// TODO Fix indenting if we are done with this proof.
-	return IsSingleton(xs) ? utils.Unit{} :
-	// QUES Is the following a useful lemma to have?
-	let _ := utils.Asserting(DropFirst(xs) ++ ys == DropFirst(xs ++ ys)) in
-	MaxOfConcat(DropFirst(xs), ys)
+	// QUES Is the following a useful lemma to add to the library?
+	return let _ := utils.Asserting(DropFirst(xs ++ ys) == DropFirst(xs) ++ ys) in
+		(IsSingleton(xs) ? utils.Unit{} : MaxOfConcat(DropFirst(xs), ys))
+}
+
+// Returns the minimum integer value in a non-empty sequence of integers.
+ghost
+requires len(xs) > 0
+ensures forall k int :: { k in xs } (k in xs) ==> result <= k
+ensures result in xs
+decreases xs
+pure func Min(xs seq[int]) (result int) {
+	return let _ := DropFirstPrependFirst(xs) in
+		(IsSingleton(xs) ? First(xs) : math.Min(First(xs), Min(DropFirst(xs))))
+}
+
+// The minimum of the concatenation of two non-empty sequences is less than or
+// equal to the minima of its two non-empty subsequences.
+ghost
+requires len(xs) > 0 && len(ys) > 0
+ensures Min(xs ++ ys) <= Min(xs)
+ensures Min(xs ++ ys) <= Min(ys)
+ensures forall k int :: { k in xs ++ ys } (k in xs ++ ys) ==> Min(xs ++ ys) <= k
+decreases xs
+pure func MinOfConcat(xs, ys seq[int]) utils.Unit {
+	return let _ := utils.Asserting(DropFirst(xs ++ ys) == DropFirst(xs) ++ ys) in
+		(IsSingleton(xs) ? utils.Unit{} : MinOfConcat(DropFirst(xs), ys))
+}
+
+// The maximum element in a non-empty sequence is greater than or equal to the
+// maxima of its non-empty subsequences.
+ghost
+requires 0 <= a && a < b && b <= len(xs)
+ensures Max(xs[a:b]) <= Max(xs)
+decreases
+pure func MaxOfSubseq(xs seq[int], a, b int) utils.Unit {
+	return utils.Asserting(Max(xs[a:b]) in xs)
+}
+
+// The minimum element in a non-empty sequence is less than or equal to the
+// minima of its non-empty subsequences.
+ghost
+requires 0 <= a && a < b && b <= len(xs)
+ensures Min(xs[a:b]) >= Min(xs)
+decreases
+pure func MinOfSubseq(xs seq[int], a, b int) utils.Unit {
+	return utils.Asserting(Min(xs[a:b]) in xs)
+}
+
+// TODO In case we implement generic sequences somehow, update the following
+// definitions to leverage those (e.g., generic First)
+
+// Flattens a sequence of sequences into a single sequence by concatenating
+// subsequences, starting from the first element.
+ghost
+decreases xs
+pure func Flatten(xs seq[seq[int]]) seq[int] {
+	return len(xs) == 0 ? Empty() : xs[0] ++ Flatten(xs[1:])
+}
+
+// Flattening sequences of sequences if distributive over concatenation.
+ghost
+ensures Flatten(xs ++ ys) == Flatten(xs) ++ Flatten(ys)
+decreases xs
+pure func FlattenConcat(xs, ys seq[seq[int]]) utils.Unit {
+	return len(xs) == 0 ? utils.Unit{} :
+		let _ := utils.Asserting((xs ++ ys)[1:] == xs[1:] ++ ys) in
+		FlattenConcat(xs[1:], ys)
+}
+
+// Flattens a sequence of sequences into a single sequence by concatenating 
+// subsequences in reverse order, i.e. starting from the last element.
+// QUES With this description I thought [[1, 2], [3, 4]] gets turned into
+// [3, 4, 1, 2]. But this is not what happens; instead, it gets turned into
+// [1, 2, 3, 4]. How should we make this clear?
+ghost
+decreases xs
+// QUES Dafny calls this FlattenReverse. I think that is a bit confusing, as it
+// could mean we first Flatten, and then Reverse, which is not the same. Which
+// name should we choose? Or maybe there is a different name that is better?
+pure func ReversedFlatten(xs seq[seq[int]]) seq[int] {
+	return len(xs) == 0 ? Empty() : ReversedFlatten(xs[:len(xs)-1]) ++ xs[len(xs)-1]
+}
+
+// Flattening sequences of sequences in reverse order is distributive over
+// concatentation.
+ghost
+ensures ReversedFlatten(xs ++ ys) == ReversedFlatten(xs) ++ ReversedFlatten(ys)
+decreases ys
+pure func ReversedFlattenConcat(xs, ys seq[seq[int]]) utils.Unit {
+	return len(ys) == 0 ? utils.Unit{} :
+		let _ := utils.Asserting((xs ++ ys)[:len(xs++ys)-1] == xs ++ ys[:len(ys)-1]) in
+		ReversedFlattenConcat(xs, ys[:len(ys)-1])
+}
+
+// Flattening a sequence containing a single sequence yields the sequence within.
+ghost
+ensures Flatten(seq[seq[int]]{xs}) == xs
+decreases
+pure func FlattenSingleton(xs seq[int]) utils.Unit {
+	// QUES Why do I need to assert the definition of Flatten? assert len(seq[seq[int]]{xs}) != 0 isn't enough.
+	return utils.Asserting(Flatten(seq[seq[int]]{xs}) == seq[seq[int]]{xs}[0] ++ Flatten(seq[seq[int]]{xs}[1:]))
+}
+	
+// Flattening sequences of sequences in order (starting from the beginning)
+// and in reverse order (starting from the end) results in the same sequence.
+ghost
+ensures Flatten(xs) == ReversedFlatten(xs)
+decreases xs
+// QUES Can we shorten the name somehow?
+pure func FlattenAndReversedFlattenAreEquivalent(xs seq[seq[int]]) utils.Unit {
+	return len(xs) == 0 ? utils.Unit{} :
+		(let _ := FlattenAndReversedFlattenAreEquivalent(xs[:len(xs)-1]) in
+		(let _ := FlattenSingleton(xs[len(xs)-1]) in
+		(let _ := FlattenConcat(xs[:len(xs)-1], seq[seq[int]]{xs[len(xs)-1]}) in
+			utils.Asserting(xs == xs[:len(xs)-1] ++ seq[seq[int]]{xs[len(xs)-1]}))))
+}
+
+// The length of a flattened sequence of sequences xs is greater than or equal
+// to any of the lengths of the elements of xs.
+ghost
+requires 0 <= i && i < len(xs)
+ensures len(ReversedFlatten(xs)) >= len(xs[i])
+decreases xs
+// QUES How to shorten this?
+pure func FlattenLengthGeSingleElementLength(xs seq[seq[int]], i int) utils.Unit {
+	return i >= len(xs) - 1 ? utils.Unit{} : FlattenLengthGeSingleElementLength(xs[:len(xs)-1], i)
+}
+
+// The length of a flattened sequence of sequences xs is less than or equal to
+// the length of xs multiplied by a number not smaller than the length of the 
+// longest sequence in xs.
+ghost
+requires forall i int :: { len(xs[i]) } (0 <= i && i < len(xs)) ==> (len(xs[i]) <= j)
+ensures len(ReversedFlatten(xs)) <= len(xs) * j
+decreases xs
+pure func FlattenLengthLeMul(xs seq[seq[int]], j int) utils.Unit {
+	return len(xs) == 0 ? utils.Unit{} : FlattenLengthLeMul(xs[:len(xs)-1], j)
 }
