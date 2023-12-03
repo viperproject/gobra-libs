@@ -14,6 +14,7 @@ package seqs
 
 import utils "utils"
 import math ""
+import sets "sets"
 
 // A sequence is empty if it has length 0.
 ghost
@@ -173,10 +174,103 @@ pure func LastOfConcat(xs, ys seq[int]) utils.Unit {
 	return utils.Unit{}
 }
 
-// QUES Do we want a ToSet method? [<- LemmaCardinalityOfSet,
-// LemmaCardinalityOfEmptySetIs0, LemmaCardinalityOfSetNoDuplicates,
-// LemmaNoDuplicatesCardinalityOfSet]
-// Yes
+// Converts a sequence to a set.
+ghost
+decreases xs
+pure func ToSet(xs seq[int]) set[int] {
+	return len(xs) == 0 ? sets.Empty() : sets.Add(ToSet(DropLast(xs)), Last(xs))
+}
+
+// If an element is contained in a sequence, it will also be contained in the
+// corresponding set.
+ghost
+requires e in xs
+ensures e in ToSet(xs)
+decreases xs
+// QUES If I remove pure, this expression doesn't verify anymore. However, the
+//   equivalent (?) expression using if/else would still verify. Why?
+pure func InSeqInSet(xs seq[int], e int) utils.Unit {
+	return (len(xs) <= 1 || Last(xs) == e) ? utils.Unit{} : InSeqInSet(DropLast(xs), e)
+}
+
+// If an element is not contained in a sequence, it will not be contained in the
+// corresponding set.
+ghost
+requires !(e in xs)
+ensures !(e in ToSet(xs))
+decreases xs
+pure func NotInSeqNotInSet(xs seq[int], e int) utils.Unit {
+	return len(xs) == 0 ? utils.Unit{} : NotInSeqNotInSet(DropLast(xs), e)
+}
+
+// The cardinality of a set of elements is always less than or equal to that of
+// the full sequence of elements.
+ghost
+ensures len(ToSet(xs)) <= len(xs)
+decreases xs
+pure func SetLen(xs seq[int]) utils.Unit {
+	return len(xs) == 0 ? utils.Unit{} : SetLen(DropLast(xs))
+}
+
+// A sequence is of length 0 if and only if its conversion to a set results in
+// the empty set.
+ghost
+ensures (len(ToSet(xs)) == 0) == (len(xs) == 0)
+decreases
+// QUES Dafny called this CardinalityOfEmptySetIs0. What name should we choose?
+pure func EmptySeqEmptySet(xs seq[int]) utils.Unit {
+	return utils.Unit{}
+}
+
+// Returns true if there are no duplicate values in the sequence.
+ghost
+decreases
+pure func HasNoDuplicates(xs seq[int]) bool {
+	return forall i, j int :: { xs[i], xs[j] } (0 <= i && i < j && j < len(xs)) ==> xs[i] != xs[j]
+}
+
+// If a sequence does not contain duplicates, dropping the first or last value
+// yields a sequence that does not contain the dropped value.
+ghost
+requires len(xs) > 0
+requires HasNoDuplicates(xs)
+ensures !(First(xs) in DropFirst(xs))
+ensures !(Last(xs) in DropLast(xs))
+decreases
+// INFO Not too happy with the name.
+pure func DropExcludesValue(xs seq[int]) utils.Unit {
+	return utils.Unit{}
+}
+
+// A sequence with no duplicates converts to a set of the same cardinality.
+ghost
+requires HasNoDuplicates(xs)
+ensures len(ToSet(xs)) == len(xs)
+decreases xs
+// INFO Dafny called this CardinalityOfSetNoDuplicates.
+pure func NoDuplicateEqualSetLen(xs seq[int]) utils.Unit {
+	return len(xs) == 0 ? utils.Unit{} :
+	(let _ := NoDuplicateEqualSetLen(DropLast(xs)) in
+	(let _ := DropExcludesValue(xs) in
+		NotInSeqNotInSet(DropLast(xs), Last(xs))))
+}
+
+// TODO Continue with  LemmaNoDuplicatesCardinalityOfSet
+
+// If sequences xs and ys don't have duplicates and there are no 
+// elements in common between them, then the concatenated sequence xs + ys 
+// will not contain duplicates either.
+// TODO Proof this using NoDuplicateEqualSetLen, and EqualSetLenNoDuplicate
+// ghost
+// requires HasNoDuplicates(xs)
+// requires HasNoDuplicates(ys)
+// // QUES Dafny uses multisets here, and I am not sure why. Is using sets fine?
+// requires sets.AreDisjoint(ToSet(xs), ToSet(ys))
+// ensures HasNoDuplicates(xs ++ ys)
+// decreases
+// func NoDuplicatesInConcat(xs, ys seq[int]) {
+// }
+
 // QUES Do we want HasNoDuplicates? If yes, do we need to encode it as a
 // predicate? [<- LemmaMultisetHasNoDuplicates]
 // Yes
