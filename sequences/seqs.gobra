@@ -7,7 +7,15 @@
   - dafny-lang/libraries: https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sequences/Seq.dfy
 */
 
+// NOTE https://github.com/viperproject/gobra/blob/9f38d64dc4dbc0dcad2de5d333200a8fd92bcb9d/src/main/scala/viper/gobra/translator/library/tos/SeqToSetImpl.scala#L12
+// NOTE https://github.com/viperproject/gobra/blob/9f38d64dc4dbc0dcad2de5d333200a8fd92bcb9d/src/main/scala/viper/gobra/translator/library/tos/SeqToMultisetImpl.scala#L13
+
+// TODO Instead of giving ToSet explicitly, use set(xs)?
+// TODO If SeqToSet is part of Gobra, it is not being disabled with our flag, right?
 // TODO Group/Sort functions/lemmas
+// TODO Make proofs with return ? : pattern consistently formatted (spaces,
+//   newlines, indents, parentheses, etc.,)
+// TODO LemmaMultisetHasNoDuplicates
 
 // This package defines lemmas for sequences commonly used in specifications.
 package seqs
@@ -174,6 +182,29 @@ pure func LastOfConcat(xs, ys seq[int]) utils.Unit {
 	return utils.Unit{}
 }
 
+
+// Concatenating two sequences and then dropping the first element is equivalent
+// to dropping the first element of the first sequence and then concatenating
+// the sequences.
+ghost
+requires len(xs) > 0
+ensures DropFirst(xs ++ ys) == DropFirst(xs) ++ ys
+decreases
+pure func ConcatDropFirst(xs, ys seq[int]) utils.Unit {
+	return utils.Unit{}
+}
+
+// Concatenating two sequences and then dropping the last element is equivalent
+// to dropping the last element of the second sequence and then concatenating
+// the sequences.
+ghost
+requires len(ys) > 0
+ensures DropLast(xs ++ ys) == xs ++ DropLast(ys)
+decreases
+pure func ConcatDropLast(xs, ys seq[int]) utils.Unit {
+	return utils.Unit{}
+}
+
 // Converts a sequence to a set.
 ghost
 decreases xs
@@ -248,35 +279,64 @@ requires HasNoDuplicates(xs)
 ensures len(ToSet(xs)) == len(xs)
 decreases xs
 // INFO Dafny called this CardinalityOfSetNoDuplicates.
-pure func NoDuplicateEqualSetLen(xs seq[int]) utils.Unit {
+pure func NoDuplicatesEqualSetLen(xs seq[int]) utils.Unit {
 	return len(xs) == 0 ? utils.Unit{} :
-	(let _ := NoDuplicateEqualSetLen(DropLast(xs)) in
+	(let _ := NoDuplicatesEqualSetLen(DropLast(xs)) in
 	(let _ := DropExcludesValue(xs) in
 		NotInSeqNotInSet(DropLast(xs), Last(xs))))
 }
 
-// TODO Continue with  LemmaNoDuplicatesCardinalityOfSet
+// A sequence with length equal to the cardinality of its set has no duplicates.
+ghost
+requires len(ToSet(xs)) == len(xs)
+ensures HasNoDuplicates(xs)
+decreases xs
+// INFO Dafny calls this NoDuplicatesCardinalityOfSet.
+pure func EqualSetLenNoDuplicates(xs seq[int]) utils.Unit {
+	return len(xs) == 0 ? utils.Unit{} :
+		(Last(xs) in DropLast(xs) ?
+			(let _ := InSeqInSet(DropLast(xs), Last(xs)) in
+				SetLen(DropLast(xs))) :
+			(let _ := NotInSeqNotInSet(DropLast(xs), Last(xs)) in
+				EqualSetLenNoDuplicates(DropLast(xs))))
+}
 
-// If sequences xs and ys don't have duplicates and there are no 
-// elements in common between them, then the concatenated sequence xs + ys 
+// Converting the concatenation of two sequences into a set is equivalent to
+// converting each sequence into a set and then taking their union.
+ghost
+ensures ToSet(xs ++ ys) == ToSet(xs) union ToSet(ys)
+decreases ys
+pure func ConcatToSet(xs, ys seq[int]) utils.Unit {
+	return len(ys) == 0 ? utils.Unit{} :
+	let _ := ConcatDropLast(xs, ys) in
+	ConcatToSet(xs, DropLast(ys))
+}
+
+
+// If sequences xs and ys don't have duplicates and there are no
+// elements in common between them, then the concatenated sequence xs + ys
 // will not contain duplicates either.
 // TODO Proof this using NoDuplicateEqualSetLen, and EqualSetLenNoDuplicate
-// ghost
-// requires HasNoDuplicates(xs)
-// requires HasNoDuplicates(ys)
-// // QUES Dafny uses multisets here, and I am not sure why. Is using sets fine?
-// requires sets.AreDisjoint(ToSet(xs), ToSet(ys))
-// ensures HasNoDuplicates(xs ++ ys)
-// decreases
-// func NoDuplicatesInConcat(xs, ys seq[int]) {
-// }
+ghost
+requires HasNoDuplicates(xs)
+requires HasNoDuplicates(ys)
+// QUES Dafny uses multisets here and in the proof, and I am not sure why.
+requires sets.AreDisjoint(ToSet(xs), ToSet(ys))
+ensures HasNoDuplicates(xs ++ ys)
+decreases
+pure func NoDuplicatesInConcat(xs, ys seq[int]) utils.Unit {
+	return let _ := ConcatToSet(xs, ys) in
+	let _ := NoDuplicatesEqualSetLen(xs) in
+	let _ := NoDuplicatesEqualSetLen(ys) in
+	let _ := sets.DisjointUnionLen(ToSet(xs), ToSet(ys)) in
+	EqualSetLenNoDuplicates(xs ++ ys)
+}
 
-// QUES Do we want HasNoDuplicates? If yes, do we need to encode it as a
-// predicate? [<- LemmaMultisetHasNoDuplicates]
-// Yes
-// QUES Do we want LemmaNoDuplicatesInConcat? Establishing that they do not have
-// elements in common between them seems like a pain.
-// Yes
+// Given a sequence with no duplicates, each element occurs only 
+// once in its conversion to a multiset.
+//ghost
+//requires HasNoDuplicates(xs)
+//ensures 
 
 // TODO Create test where we prove lemmas from here that use sets while disabling
 // set axioms.
@@ -390,7 +450,7 @@ ensures forall k int :: { k in Singleton(Max(xs ++ ys)) } (k in (xs ++ ys)) ==> 
 decreases xs
 pure func MaxOfConcat(xs, ys seq[int]) utils.Unit {
 	// QUES Is the following a useful lemma to add to the library?
-	return let _ := utils.Asserting(DropFirst(xs ++ ys) == DropFirst(xs) ++ ys) in
+	return let _ := ConcatDropFirst(xs, ys) in
 		(IsSingleton(xs) ? utils.Unit{} : MaxOfConcat(DropFirst(xs), ys))
 }
 
@@ -414,7 +474,7 @@ ensures Min(xs ++ ys) <= Min(ys)
 ensures forall k int :: { k in xs ++ ys } (k in xs ++ ys) ==> Min(xs ++ ys) <= k
 decreases xs
 pure func MinOfConcat(xs, ys seq[int]) utils.Unit {
-	return let _ := utils.Asserting(DropFirst(xs ++ ys) == DropFirst(xs) ++ ys) in
+	return let _ := ConcatDropFirst(xs, ys) in
 		(IsSingleton(xs) ? utils.Unit{} : MinOfConcat(DropFirst(xs), ys))
 }
 
@@ -459,7 +519,7 @@ pure func FlattenConcat(xs, ys seq[seq[int]]) utils.Unit {
 		FlattenConcat(xs[1:], ys)
 }
 
-// Flattens a sequence of sequences into a single sequence by concatenating 
+// Flattens a sequence of sequences into a single sequence by concatenating
 // subsequences in reverse order, i.e. starting from the last element.
 // QUES With this description I thought [[1, 2], [3, 4]] gets turned into
 // [3, 4, 1, 2]. But this is not what happens; instead, it gets turned into
@@ -492,7 +552,7 @@ pure func FlattenSingleton(xs seq[int]) utils.Unit {
 	// QUES Why do I need to assert the definition of Flatten? assert len(seq[seq[int]]{xs}) != 0 isn't enough.
 	return utils.Asserting(Flatten(seq[seq[int]]{xs}) == seq[seq[int]]{xs}[0] ++ Flatten(seq[seq[int]]{xs}[1:]))
 }
-	
+
 // Flattening sequences of sequences in order (starting from the beginning)
 // and in reverse order (starting from the end) results in the same sequence.
 ghost
@@ -519,7 +579,7 @@ pure func FlattenLengthGeSingleElementLength(xs seq[seq[int]], i int) utils.Unit
 }
 
 // The length of a flattened sequence of sequences xs is less than or equal to
-// the length of xs multiplied by a number not smaller than the length of the 
+// the length of xs multiplied by a number not smaller than the length of the
 // longest sequence in xs.
 ghost
 requires forall i int :: { len(xs[i]) } (0 <= i && i < len(xs)) ==> (len(xs[i]) <= j)
