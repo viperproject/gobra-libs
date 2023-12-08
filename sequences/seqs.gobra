@@ -7,22 +7,11 @@
   - dafny-lang/libraries: https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sequences/Seq.dfy
 */
 
-// NOTE https://github.com/viperproject/gobra/blob/9f38d64dc4dbc0dcad2de5d333200a8fd92bcb9d/src/main/scala/viper/gobra/translator/library/tos/SeqToSetImpl.scala#L12
-// NOTE https://github.com/viperproject/gobra/blob/9f38d64dc4dbc0dcad2de5d333200a8fd92bcb9d/src/main/scala/viper/gobra/translator/library/tos/SeqToMultisetImpl.scala#L13
-
-// TODO Instead of giving ToSet explicitly, use set(xs)?
-// TODO If SeqToSet is part of Gobra, it is not being disabled with our flag, right?
-// TODO Group/Sort functions/lemmas
-// TODO Make proofs with return ? : pattern consistently formatted (spaces,
-//   newlines, indents, parentheses, etc.,)
-// TODO LemmaMultisetHasNoDuplicates
-
 // This package defines lemmas for sequences commonly used in specifications.
 package seqs
 
 import utils "utils"
 import math ""
-import sets "sets"
 
 // A sequence is empty if it has length 0.
 ghost
@@ -71,26 +60,30 @@ pure func DropFirst(xs seq[int]) seq[int] {
 	return xs[1:]
 }
 
+// Returns a sequence where e has been added to the beginning of xs.
+ghost
+decreases
+pure func Prepend(xs seq[int], e int) seq[int] {
+	return Singleton(e) ++ xs
+}
+
+// The concatenation of two subsequences of a non-empty sequence, the first
+// consisting only of the first element, the second obtained from dropping the
+// first element, is the original sequence.
+ghost
+requires len(xs) > 0
+ensures xs == Prepend(DropFirst(xs), First(xs))
+decreases
+pure func DropFirstPrependFirst(xs seq[int]) utils.Unit {
+	return utils.Unit{}
+}
+
 // Returns the last element of a non-empty sequence.e
 ghost
 requires len(xs) > 0
 decreases
 pure func Last(xs seq[int]) int {
 	return xs[len(xs)-1]
-}
-
-// Returns a sequence where e has been added to the end of xs.
-ghost
-decreases
-pure func Append(xs seq[int], e int) seq[int] {
-	return xs ++ Singleton(e)
-}
-
-// Returns a sequence where e has been added to the beginning of xs.
-ghost
-decreases
-pure func Prepend(xs seq[int], e int) seq[int] {
-	return Singleton(e) ++ xs
 }
 
 // Returns the subsequence of a non-empty sequence obtained by dropping the last
@@ -100,6 +93,24 @@ requires len(xs) > 0
 decreases
 pure func DropLast(xs seq[int]) seq[int] {
 	return xs[:len(xs)-1]
+}
+
+// Returns a sequence where e has been added to the end of xs.
+ghost
+decreases
+pure func Append(xs seq[int], e int) seq[int] {
+	return xs ++ Singleton(e)
+}
+
+// The concatenation of two subsequences of a non-empty sequence, the first
+// obtained from dropping the last element, the second consisting only of the
+// last element, is the original sequence.
+ghost
+requires len(xs) > 0
+ensures xs == Append(DropLast(xs), Last(xs))
+decreases
+pure func DropLastAppendLast(xs seq[int]) utils.Unit {
+	return utils.Unit{}
 }
 
 // Returns true if xs is a prefix of ys.
@@ -114,17 +125,6 @@ ghost
 decreases
 pure func IsSuffix(xs, ys seq[int]) bool {
 	return len(xs) <= len(ys) && xs == ys[len(ys)-len(xs):]
-}
-
-// A sequence that is split at the pos-th element, concatenated with that same
-// sequence split from the pos-th element, is equal to the original, unsplit
-// sequence.
-ghost
-requires 0 <= pos && pos < len(xs)
-ensures xs == xs[:pos] ++ xs[pos:]
-decreases
-pure func SplitConcat(xs seq[int], pos int) utils.Unit {
-	return utils.Unit{}
 }
 
 // Any element in a subsequence is included in the original sequence. pos is an index
@@ -149,26 +149,22 @@ pure func SubseqOfSubseq(xs seq[int], a1, b1, a2, b2 int) utils.Unit {
 	return utils.Unit{}
 }
 
-// The concatenation of two subsequences of a non-empty sequence, the first
-// consisting only of the first element, the second obtained from dropping the
-// first element, is the original sequence.
+// The concatenation of sequences is associative.
 ghost
-requires len(xs) > 0
-ensures xs == Prepend(DropFirst(xs), First(xs))
+ensures xs ++ (ys ++ zs) == (xs ++ ys) ++ zs
 decreases
-pure func DropFirstPrependFirst(xs seq[int]) utils.Unit {
+pure func ConcatIsAssociative(xs, ys, zs seq[int]) utils.Unit {
 	return utils.Unit{}
 }
 
-
-// The concatenation of two subsequences of a non-empty sequence, the first
-// obtained from dropping the last element, the second consisting only of the
-// last element, is the original sequence.
+// A sequence that is split at the pos-th element, concatenated with that same
+// sequence split from the pos-th element, is equal to the original, unsplit
+// sequence.
 ghost
-requires len(xs) > 0
-ensures xs == Append(DropLast(xs), Last(xs))
+requires 0 <= pos && pos < len(xs)
+ensures xs == xs[:pos] ++ xs[pos:]
 decreases
-pure func DropLastAppendLast(xs seq[int]) utils.Unit {
+pure func SplitConcat(xs seq[int], pos int) utils.Unit {
 	return utils.Unit{}
 }
 
@@ -181,7 +177,6 @@ decreases
 pure func LastOfConcat(xs, ys seq[int]) utils.Unit {
 	return utils.Unit{}
 }
-
 
 // Concatenating two sequences and then dropping the first element is equivalent
 // to dropping the first element of the first sequence and then concatenating
@@ -205,54 +200,6 @@ pure func ConcatDropLast(xs, ys seq[int]) utils.Unit {
 	return utils.Unit{}
 }
 
-// Converts a sequence to a set.
-ghost
-decreases xs
-pure func ToSet(xs seq[int]) set[int] {
-	return len(xs) == 0 ? sets.Empty() : sets.Add(ToSet(DropLast(xs)), Last(xs))
-}
-
-// If an element is contained in a sequence, it will also be contained in the
-// corresponding set.
-ghost
-requires e in xs
-ensures e in ToSet(xs)
-decreases xs
-// QUES If I remove pure, this expression doesn't verify anymore. However, the
-//   equivalent (?) expression using if/else would still verify. Why?
-pure func InSeqInSet(xs seq[int], e int) utils.Unit {
-	return (len(xs) <= 1 || Last(xs) == e) ? utils.Unit{} : InSeqInSet(DropLast(xs), e)
-}
-
-// If an element is not contained in a sequence, it will not be contained in the
-// corresponding set.
-ghost
-requires !(e in xs)
-ensures !(e in ToSet(xs))
-decreases xs
-pure func NotInSeqNotInSet(xs seq[int], e int) utils.Unit {
-	return len(xs) == 0 ? utils.Unit{} : NotInSeqNotInSet(DropLast(xs), e)
-}
-
-// The cardinality of a set of elements is always less than or equal to that of
-// the full sequence of elements.
-ghost
-ensures len(ToSet(xs)) <= len(xs)
-decreases xs
-pure func SetLen(xs seq[int]) utils.Unit {
-	return len(xs) == 0 ? utils.Unit{} : SetLen(DropLast(xs))
-}
-
-// A sequence is of length 0 if and only if its conversion to a set results in
-// the empty set.
-ghost
-ensures (len(ToSet(xs)) == 0) == (len(xs) == 0)
-decreases
-// QUES Dafny called this CardinalityOfEmptySetIs0. What name should we choose?
-pure func EmptySeqEmptySet(xs seq[int]) utils.Unit {
-	return utils.Unit{}
-}
-
 // Returns true if there are no duplicate values in the sequence.
 ghost
 decreases
@@ -270,82 +217,6 @@ ensures !(Last(xs) in DropLast(xs))
 decreases
 // INFO Not too happy with the name.
 pure func DropExcludesValue(xs seq[int]) utils.Unit {
-	return utils.Unit{}
-}
-
-// A sequence with no duplicates converts to a set of the same cardinality.
-ghost
-requires HasNoDuplicates(xs)
-ensures len(ToSet(xs)) == len(xs)
-decreases xs
-// INFO Dafny called this CardinalityOfSetNoDuplicates.
-pure func NoDuplicatesEqualSetLen(xs seq[int]) utils.Unit {
-	return len(xs) == 0 ? utils.Unit{} :
-	(let _ := NoDuplicatesEqualSetLen(DropLast(xs)) in
-	(let _ := DropExcludesValue(xs) in
-		NotInSeqNotInSet(DropLast(xs), Last(xs))))
-}
-
-// A sequence with length equal to the cardinality of its set has no duplicates.
-ghost
-requires len(ToSet(xs)) == len(xs)
-ensures HasNoDuplicates(xs)
-decreases xs
-// INFO Dafny calls this NoDuplicatesCardinalityOfSet.
-pure func EqualSetLenNoDuplicates(xs seq[int]) utils.Unit {
-	return len(xs) == 0 ? utils.Unit{} :
-		(Last(xs) in DropLast(xs) ?
-			(let _ := InSeqInSet(DropLast(xs), Last(xs)) in
-				SetLen(DropLast(xs))) :
-			(let _ := NotInSeqNotInSet(DropLast(xs), Last(xs)) in
-				EqualSetLenNoDuplicates(DropLast(xs))))
-}
-
-// Converting the concatenation of two sequences into a set is equivalent to
-// converting each sequence into a set and then taking their union.
-ghost
-ensures ToSet(xs ++ ys) == ToSet(xs) union ToSet(ys)
-decreases ys
-pure func ConcatToSet(xs, ys seq[int]) utils.Unit {
-	return len(ys) == 0 ? utils.Unit{} :
-	let _ := ConcatDropLast(xs, ys) in
-	ConcatToSet(xs, DropLast(ys))
-}
-
-
-// If sequences xs and ys don't have duplicates and there are no
-// elements in common between them, then the concatenated sequence xs + ys
-// will not contain duplicates either.
-// TODO Proof this using NoDuplicateEqualSetLen, and EqualSetLenNoDuplicate
-ghost
-requires HasNoDuplicates(xs)
-requires HasNoDuplicates(ys)
-// QUES Dafny uses multisets here and in the proof, and I am not sure why.
-requires sets.AreDisjoint(ToSet(xs), ToSet(ys))
-ensures HasNoDuplicates(xs ++ ys)
-decreases
-pure func NoDuplicatesInConcat(xs, ys seq[int]) utils.Unit {
-	return let _ := ConcatToSet(xs, ys) in
-	let _ := NoDuplicatesEqualSetLen(xs) in
-	let _ := NoDuplicatesEqualSetLen(ys) in
-	let _ := sets.DisjointUnionLen(ToSet(xs), ToSet(ys)) in
-	EqualSetLenNoDuplicates(xs ++ ys)
-}
-
-// Given a sequence with no duplicates, each element occurs only 
-// once in its conversion to a multiset.
-//ghost
-//requires HasNoDuplicates(xs)
-//ensures 
-
-// TODO Create test where we prove lemmas from here that use sets while disabling
-// set axioms.
-
-// The concatenation of sequences is associative.
-ghost
-ensures xs ++ (ys ++ zs) == (xs ++ ys) ++ zs
-decreases
-pure func ConcatIsAssociative(xs, ys, zs seq[int]) utils.Unit {
 	return utils.Unit{}
 }
 
@@ -417,7 +288,7 @@ pure func Reverse(xs seq[int]) (result seq[int]) {
 	return IsEmpty(xs) ? Empty() : Prepend(Reverse(DropLast(xs)), Last(xs))
 }
 
-// Returns a constant sequence of a given length
+// Returns a constant sequence of a given length.
 ghost
 requires length >= 0
 ensures len(result) == length
@@ -435,7 +306,7 @@ ensures result in xs
 decreases xs
 pure func Max(xs seq[int]) (result int) {
 	return let _ := DropFirstPrependFirst(xs) in
-		(IsSingleton(xs) ? First(xs) : math.Max(First(xs), Max(DropFirst(xs))))
+	(IsSingleton(xs) ? First(xs) : math.Max(First(xs), Max(DropFirst(xs))))
 }
 
 // The maximum of the concatenation of two non-empty sequences is greater than
@@ -444,14 +315,11 @@ ghost
 requires len(xs) > 0 && len(ys) > 0
 ensures Max(xs ++ ys) >= Max(xs)
 ensures Max(xs ++ ys) >= Max(ys)
-// QUES The ensures in the Dafny lib is a bit weird.
-// Ask on Dafny Devs <- Done, waiting for answer
-ensures forall k int :: { k in Singleton(Max(xs ++ ys)) } (k in (xs ++ ys)) ==> Max(xs ++ ys) >= k
+ensures forall k int :: { k in xs ++ ys } (k in (xs ++ ys)) ==> Max(xs ++ ys) >= k
 decreases xs
 pure func MaxOfConcat(xs, ys seq[int]) utils.Unit {
-	// QUES Is the following a useful lemma to add to the library?
 	return let _ := ConcatDropFirst(xs, ys) in
-		(IsSingleton(xs) ? utils.Unit{} : MaxOfConcat(DropFirst(xs), ys))
+	(IsSingleton(xs) ? utils.Unit{} : MaxOfConcat(DropFirst(xs), ys))
 }
 
 // Returns the minimum integer value in a non-empty sequence of integers.
@@ -462,7 +330,7 @@ ensures result in xs
 decreases xs
 pure func Min(xs seq[int]) (result int) {
 	return let _ := DropFirstPrependFirst(xs) in
-		(IsSingleton(xs) ? First(xs) : math.Min(First(xs), Min(DropFirst(xs))))
+	(IsSingleton(xs) ? First(xs) : math.Min(First(xs), Min(DropFirst(xs))))
 }
 
 // The minimum of the concatenation of two non-empty sequences is less than or
@@ -475,7 +343,7 @@ ensures forall k int :: { k in xs ++ ys } (k in xs ++ ys) ==> Min(xs ++ ys) <= k
 decreases xs
 pure func MinOfConcat(xs, ys seq[int]) utils.Unit {
 	return let _ := ConcatDropFirst(xs, ys) in
-		(IsSingleton(xs) ? utils.Unit{} : MinOfConcat(DropFirst(xs), ys))
+	(IsSingleton(xs) ? utils.Unit{} : MinOfConcat(DropFirst(xs), ys))
 }
 
 // The maximum element in a non-empty sequence is greater than or equal to the
@@ -515,8 +383,8 @@ ensures Flatten(xs ++ ys) == Flatten(xs) ++ Flatten(ys)
 decreases xs
 pure func FlattenConcat(xs, ys seq[seq[int]]) utils.Unit {
 	return len(xs) == 0 ? utils.Unit{} :
-		let _ := utils.Asserting((xs ++ ys)[1:] == xs[1:] ++ ys) in
-		FlattenConcat(xs[1:], ys)
+	let _ := utils.Asserting((xs ++ ys)[1:] == xs[1:] ++ ys) in
+	FlattenConcat(xs[1:], ys)
 }
 
 // Flattens a sequence of sequences into a single sequence by concatenating
@@ -540,8 +408,8 @@ ensures ReversedFlatten(xs ++ ys) == ReversedFlatten(xs) ++ ReversedFlatten(ys)
 decreases ys
 pure func ReversedFlattenConcat(xs, ys seq[seq[int]]) utils.Unit {
 	return len(ys) == 0 ? utils.Unit{} :
-		let _ := utils.Asserting((xs ++ ys)[:len(xs++ys)-1] == xs ++ ys[:len(ys)-1]) in
-		ReversedFlattenConcat(xs, ys[:len(ys)-1])
+	let _ := utils.Asserting((xs ++ ys)[:len(xs++ys)-1] == xs ++ ys[:len(ys)-1]) in
+	ReversedFlattenConcat(xs, ys[:len(ys)-1])
 }
 
 // Flattening a sequence containing a single sequence yields the sequence within.
@@ -561,10 +429,10 @@ decreases xs
 // QUES Can we shorten the name somehow?
 pure func FlattenAndReversedFlattenAreEquivalent(xs seq[seq[int]]) utils.Unit {
 	return len(xs) == 0 ? utils.Unit{} :
-		(let _ := FlattenAndReversedFlattenAreEquivalent(xs[:len(xs)-1]) in
+	(let _ := FlattenAndReversedFlattenAreEquivalent(xs[:len(xs)-1]) in
 		(let _ := FlattenSingleton(xs[len(xs)-1]) in
-		(let _ := FlattenConcat(xs[:len(xs)-1], seq[seq[int]]{xs[len(xs)-1]}) in
-			utils.Asserting(xs == xs[:len(xs)-1] ++ seq[seq[int]]{xs[len(xs)-1]}))))
+			(let _ := FlattenConcat(xs[:len(xs)-1], seq[seq[int]]{xs[len(xs)-1]}) in
+				utils.Asserting(xs == xs[:len(xs)-1] ++ seq[seq[int]]{xs[len(xs)-1]}))))
 }
 
 // The length of a flattened sequence of sequences xs is greater than or equal
