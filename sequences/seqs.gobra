@@ -10,8 +10,8 @@
 // This package defines lemmas for sequences commonly used in specifications.
 package seqs
 
-import utils "utils"
-import math "math"
+import "util"
+import "math"
 
 // A sequence is empty if it has length 0.
 ghost
@@ -71,8 +71,8 @@ ghost
 requires len(xs) > 0
 ensures xs == Prepend(DropFirst(xs), First(xs))
 decreases
-pure func DropFirstPrependFirst(xs seq[int]) utils.Unit {
-	return utils.Unit{}
+pure func DropFirstPrependFirst(xs seq[int]) util.Unit {
+	return util.Unit{}
 }
 
 // Returns the last element of a non-empty sequence.
@@ -103,8 +103,8 @@ ghost
 requires len(xs) > 0
 ensures xs == Append(DropLast(xs), Last(xs))
 decreases
-pure func DropLastAppendLast(xs seq[int]) utils.Unit {
-	return utils.Unit{}
+pure func DropLastAppendLast(xs seq[int]) util.Unit {
+	return util.Unit{}
 }
 
 // Returns true if xs is a prefix of ys.
@@ -129,8 +129,8 @@ requires subseq == xs[a:b]
 ensures pos - a < len(subseq)
 ensures subseq[pos-a] == xs[pos]
 decreases
-pure func InSubseqInSeq(xs, subseq seq[int], a, b, pos int) utils.Unit {
-	return utils.Unit{}
+pure func InSubseqInSeq(xs, subseq seq[int], a, b, pos int) util.Unit {
+	return util.Unit{}
 }
 
 // A subsequence [a2:b2] of a subsequence [a1:b1] is equal to the
@@ -140,16 +140,16 @@ requires 0 <= a1 && a1 <= b1 && b1 <= len(xs)
 requires 0 <= a2 && a2 <= b2 && b2 <= a1 - b1
 ensures xs[a1:b1][a2:b2] == xs[a1+a2:b1+b2]
 decreases _
-pure func SubseqOfSubseq(xs seq[int], a1, b1, a2, b2 int) utils.Unit {
-	return utils.Unit{}
+pure func SubseqOfSubseq(xs seq[int], a1, b1, a2, b2 int) util.Unit {
+	return util.Unit{}
 }
 
 // The concatenation of sequences is associative.
 ghost
 ensures xs ++ (ys ++ zs) == (xs ++ ys) ++ zs
 decreases
-pure func ConcatIsAssociative(xs, ys, zs seq[int]) utils.Unit {
-	return utils.Unit{}
+pure func ConcatIsAssociative(xs, ys, zs seq[int]) util.Unit {
+	return util.Unit{}
 }
 
 // Splitting and then concatenating a sequence preserves it.
@@ -157,32 +157,32 @@ ghost
 requires 0 <= pos && pos < len(xs)
 ensures xs == xs[:pos] ++ xs[pos:]
 decreases
-pure func SplitConcat(xs seq[int], pos int) utils.Unit {
-	return utils.Unit{}
+pure func SplitConcat(xs seq[int], pos int) util.Unit {
+	return util.Unit{}
 }
 
 ghost
 requires len(ys) > 0
 ensures Last(xs ++ ys) == Last(ys)
 decreases
-pure func LastOfConcat(xs, ys seq[int]) utils.Unit {
-	return utils.Unit{}
+pure func LastOfConcat(xs, ys seq[int]) util.Unit {
+	return util.Unit{}
 }
 
 ghost
 requires len(xs) > 0
 ensures DropFirst(xs ++ ys) == DropFirst(xs) ++ ys
 decreases
-pure func ConcatDropFirst(xs, ys seq[int]) utils.Unit {
-	return utils.Unit{}
+pure func ConcatDropFirst(xs, ys seq[int]) util.Unit {
+	return util.Unit{}
 }
 
 ghost
 requires len(ys) > 0
 ensures DropLast(xs ++ ys) == xs ++ DropLast(ys)
 decreases
-pure func ConcatDropLast(xs, ys seq[int]) utils.Unit {
-	return utils.Unit{}
+pure func ConcatDropLast(xs, ys seq[int]) util.Unit {
+	return util.Unit{}
 }
 
 // Returns true if there are no duplicate values in the sequence.
@@ -200,8 +200,8 @@ requires HasNoDuplicates(xs)
 ensures !(First(xs) in DropFirst(xs))
 ensures !(Last(xs) in DropLast(xs))
 decreases
-pure func DropExcludesValue(xs seq[int]) utils.Unit {
-	return utils.Unit{}
+pure func DropExcludesValue(xs seq[int]) util.Unit {
+	return util.Unit{}
 }
 
 // Returns the index of the first occurrence of e in xs.
@@ -298,9 +298,9 @@ ensures Max(xs ++ ys) >= Max(xs)
 ensures Max(xs ++ ys) >= Max(ys)
 ensures forall k int :: { k in xs ++ ys } (k in (xs ++ ys)) ==> Max(xs ++ ys) >= k
 decreases xs
-pure func MaxOfConcat(xs, ys seq[int]) utils.Unit {
+pure func MaxOfConcat(xs, ys seq[int]) util.Unit {
 	return let _ := ConcatDropFirst(xs, ys) in
-	(IsSingleton(xs) ? utils.Unit{} : MaxOfConcat(DropFirst(xs), ys))
+	(IsSingleton(xs) ? util.Unit{} : MaxOfConcat(DropFirst(xs), ys))
 }
 
 // Returns the minimum of a non-empty sequence.
@@ -322,9 +322,9 @@ ensures Min(xs ++ ys) <= Min(xs)
 ensures Min(xs ++ ys) <= Min(ys)
 ensures forall k int :: { k in xs ++ ys } (k in xs ++ ys) ==> Min(xs ++ ys) <= k
 decreases xs
-pure func MinOfConcat(xs, ys seq[int]) utils.Unit {
+pure func MinOfConcat(xs, ys seq[int]) util.Unit {
 	return let _ := ConcatDropFirst(xs, ys) in
-	(IsSingleton(xs) ? utils.Unit{} : MinOfConcat(DropFirst(xs), ys))
+	(IsSingleton(xs) ? util.Unit{} : MinOfConcat(DropFirst(xs), ys))
 }
 
 // The maximum element in a non-empty sequence is greater than or equal to the
@@ -333,8 +333,8 @@ ghost
 requires 0 <= a && a < b && b <= len(xs)
 ensures Max(xs[a:b]) <= Max(xs)
 decreases
-pure func MaxOfSubseq(xs seq[int], a, b int) utils.Unit {
-	return utils.Asserting(Max(xs[a:b]) in xs)
+pure func MaxOfSubseq(xs seq[int], a, b int) util.Unit {
+	return util.Asserting(Max(xs[a:b]) in xs)
 }
 
 // The minimum element in a non-empty sequence is less than or equal to the
@@ -343,8 +343,8 @@ ghost
 requires 0 <= a && a < b && b <= len(xs)
 ensures Min(xs[a:b]) >= Min(xs)
 decreases
-pure func MinOfSubseq(xs seq[int], a, b int) utils.Unit {
-	return utils.Asserting(Min(xs[a:b]) in xs)
+pure func MinOfSubseq(xs seq[int], a, b int) util.Unit {
+	return util.Asserting(Min(xs[a:b]) in xs)
 }
 
 // Flattens a sequence of sequences into a single sequence.
@@ -358,9 +358,9 @@ pure func Flatten(xs seq[seq[int]]) seq[int] {
 ghost
 ensures Flatten(xs ++ ys) == Flatten(xs) ++ Flatten(ys)
 decreases xs
-pure func FlattenConcat(xs, ys seq[seq[int]]) utils.Unit {
-	return len(xs) == 0 ? utils.Unit{} :
-	let _ := utils.Asserting((xs ++ ys)[1:] == xs[1:] ++ ys) in
+pure func FlattenConcat(xs, ys seq[seq[int]]) util.Unit {
+	return len(xs) == 0 ? util.Unit{} :
+	let _ := util.Asserting((xs ++ ys)[1:] == xs[1:] ++ ys) in
 	FlattenConcat(xs[1:], ys)
 }
 
@@ -368,9 +368,9 @@ pure func FlattenConcat(xs, ys seq[seq[int]]) utils.Unit {
 ghost
 ensures Flatten(seq[seq[int]]{xs}) == xs
 decreases
-pure func FlattenSingleton(xs seq[int]) utils.Unit {
+pure func FlattenSingleton(xs seq[int]) util.Unit {
 	// QUES Why do I need to assert the definition of Flatten? assert len(seq[seq[int]]{xs}) != 0 isn't enough.
-	return utils.Asserting(Flatten(seq[seq[int]]{xs}) == seq[seq[int]]{xs}[0] ++ Flatten(seq[seq[int]]{xs}[1:]))
+	return util.Asserting(Flatten(seq[seq[int]]{xs}) == seq[seq[int]]{xs}[0] ++ Flatten(seq[seq[int]]{xs}[1:]))
 }
 
 // The length of a flattened sequence of sequences xs is greater than or equal
@@ -379,8 +379,8 @@ ghost
 requires 0 <= i && i < len(xs)
 ensures len(Flatten(xs)) >= len(xs[i])
 decreases xs
-pure func FlattenLengthGeSingleElementLength(xs seq[seq[int]], i int) utils.Unit {
-	return i <= 0 ? utils.Unit{} : FlattenLengthGeSingleElementLength(xs[1:], i-1)
+pure func FlattenLengthGeSingleElementLength(xs seq[seq[int]], i int) util.Unit {
+	return i <= 0 ? util.Unit{} : FlattenLengthGeSingleElementLength(xs[1:], i-1)
 }
 
 // The length of a flattened sequence of sequences xs is less than or equal to
@@ -390,6 +390,6 @@ ghost
 requires forall i int :: { len(xs[i]) } (0 <= i && i < len(xs)) ==> (len(xs[i]) <= j)
 ensures len(Flatten(xs)) <= len(xs) * j
 decreases xs
-pure func FlattenLengthLeMul(xs seq[seq[int]], j int) utils.Unit {
-	return len(xs) == 0 ? utils.Unit{} : FlattenLengthLeMul(xs[1:], j)
+pure func FlattenLengthLeMul(xs seq[seq[int]], j int) util.Unit {
+	return len(xs) == 0 ? util.Unit{} : FlattenLengthLeMul(xs[1:], j)
 }
