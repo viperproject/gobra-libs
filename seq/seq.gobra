@@ -8,7 +8,7 @@
 */
 
 // This package defines lemmas for sequences commonly used in specifications.
-package seqs
+package seq
 
 import "util"
 import "math"
