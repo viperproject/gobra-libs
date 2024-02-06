@@ -8,7 +8,7 @@
 */
 
 // This package defines lemmas for sequences commonly used in specifications.
-package seq
+package seqs
 
 import "util"
 import "math"
@@ -122,7 +122,6 @@ pure func IsSuffix(xs, ys seq[int]) bool {
 }
 
 // Any element in a subsequence is included in the original sequence.
-// pos is a valid index of xs.
 ghost
 requires 0 <= a && a <= pos && pos < b && b <= len(xs)
 requires subseq == xs[a:b]
@@ -222,8 +221,8 @@ ensures 0 <= result && result < len(xs)
 ensures xs[result] == e
 ensures forall j int :: { xs[j] } (result < j && j < len(xs)) ==> xs[j] != e
 decreases xs
-pure func LastIndexOf(xs seq[int], e int) (result int) {
-	return Last(xs) == e ? len(xs) - 1 : LastIndexOf(DropLast(xs), e)
+pure func IndexOfLast(xs seq[int], e int) (result int) {
+	return Last(xs) == e ? len(xs) - 1 : IndexOfLast(DropLast(xs), e)
 }
 
 // Returns a sequence without the element at a given position.
@@ -242,7 +241,8 @@ ghost
 requires e in xs
 ensures len(result) == len(xs) - 1
 ensures forall i int :: { result[i] } { xs[i] } (0 <= i && i < IndexOf(xs, e)) ==> result[i] == xs[i]
-ensures forall i int :: { result[i] } (IndexOf(xs, e) <= i && i < len(xs) - 1) ==> result[i] == xs[i+1]
+ensures forall i int :: { result[i] } (IndexOf(xs, e) <= i && i < len(xs) - 1) ==>
+	result[i] == xs[i+1]
 decreases
 pure func RemoveValue(xs seq[int], e int) (result seq[int]) {
 	return Remove(xs, IndexOf(xs , e))
@@ -263,7 +263,8 @@ pure func Insert(xs seq[int], e int, pos int) (result seq[int]) {
 // Reverses the sequence.
 ghost
 ensures len(result) == len(xs)
-ensures forall i int :: { result[i] } { xs[len(xs)-i-1] } (0 <= i && i < len(xs)) ==> result[i] == xs[len(xs)-i-1]
+ensures forall i int :: { result[i] } { xs[len(xs)-i-1] } (0 <= i && i < len(xs)) ==>
+	result[i] == xs[len(xs)-i-1]
 decreases xs
 pure func Reverse(xs seq[int]) (result seq[int]) {
 	return IsEmpty(xs) ? Empty() : Prepend(Reverse(DropLast(xs)), Last(xs))

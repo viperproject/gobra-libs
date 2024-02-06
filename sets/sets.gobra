@@ -12,7 +12,7 @@
 */
 
 // This package defines lemmas for sets commonly used in specifications.
-package set
+package sets
 
 import "util"
 
