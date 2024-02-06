@@ -139,6 +139,7 @@ ghost
 requires 0 <= a1 && a1 <= b1 && b1 <= len(xs)
 requires 0 <= a2 && a2 <= b2 && b2 <= a1 - b1
 ensures xs[a1:b1][a2:b2] == xs[a1+a2:b1+b2]
+decreases _
 pure func SubseqOfSubseq(xs seq[int], a1, b1, a2, b2 int) utils.Unit {
 	return utils.Unit{}
 }
@@ -254,6 +255,7 @@ ensures len(result) == len(xs) + 1
 ensures forall i int :: { result[i] } { xs[i] } (0 <= i && i < pos) ==> result[i] == xs[i]
 ensures result[pos] == e
 ensures forall i int :: { xs[i] } (pos <= i && i < len(xs)) ==> result[i+1] == xs[i]
+decreases _
 pure func Insert(xs seq[int], e int, pos int) (result seq[int]) {
 	return xs[:pos] ++ Singleton(e) ++ xs[pos:]
 }
