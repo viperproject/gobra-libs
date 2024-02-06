@@ -22,6 +22,7 @@ const Uncallable bool = false
 
 ghost
 requires false
+decreases _
 func Unreachable()
 
 ghost
@@ -36,7 +37,7 @@ func TODO()
 
 ghost
 requires b
-decreases
+decreases _
 pure func Asserting(ghost b bool) Unit {
 	return Unit{}
 }
