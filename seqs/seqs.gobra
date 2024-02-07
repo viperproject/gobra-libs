@@ -125,7 +125,6 @@ pure func IsSuffix(xs, ys seq[int]) bool {
 ghost
 requires 0 <= a && a <= pos && pos < b && b <= len(xs)
 requires subseq == xs[a:b]
-ensures pos - a < len(subseq)
 ensures subseq[pos-a] == xs[pos]
 decreases
 pure func InSubseqInSeq(xs, subseq seq[int], a, b, pos int) util.Unit {
@@ -204,25 +203,63 @@ pure func DropExcludesValue(xs seq[int]) util.Unit {
 }
 
 // Returns the index of the first occurrence of e in xs.
+// Use IndexOfReturnsFirst to instantiate the fact that the resulting index is
+// of the first occurrence.
 ghost
 requires e in xs
 ensures 0 <= result && result < len(xs)
 ensures xs[result] == e
-ensures forall j int :: { xs[j] } (0 <= j && j < result) ==> xs[j] != e
 decreases xs
 pure func IndexOf(xs seq[int], e int) (result int) {
-	return First(xs) == e ? 0 : 1 + IndexOf(xs[1:], e)
+	return First(xs) == e ? 0 : 1 + IndexOf(DropFirst(xs), e)
+}
+
+// IndexOf returns the first occurrence of e in xs.
+ghost
+requires e in xs
+requires 0 <= i && i < IndexOf(xs, e)
+ensures xs[i] != e
+decreases
+pure func IndexOfReturnsFirst(xs seq[int], e int, i int) util.Unit {
+	return quantifiedIndexOfReturnsFirst(xs, e)
+}
+
+ghost
+requires e in xs
+ensures forall i int :: { xs[i] } (0 <= i && i < IndexOf(xs, e)) ==> xs[i] != e
+decreases xs
+pure func quantifiedIndexOfReturnsFirst(xs seq[int], e int) util.Unit {
+	return First(xs) == e ? util.Unit{} : quantifiedIndexOfReturnsFirst(DropFirst(xs), e)
 }
 
 // Returns the index of the last occurrence of e in xs.
+// Use IndexOfLastReturnsLast to instantiate the fact the the resulting index is
+// of the last occurrence.
 ghost
 requires e in xs
 ensures 0 <= result && result < len(xs)
 ensures xs[result] == e
-ensures forall j int :: { xs[j] } (result < j && j < len(xs)) ==> xs[j] != e
 decreases xs
 pure func IndexOfLast(xs seq[int], e int) (result int) {
 	return Last(xs) == e ? len(xs) - 1 : IndexOfLast(DropLast(xs), e)
+}
+
+// IndexOfLast returns the last occurrence of e in xs.
+ghost
+requires e in xs
+requires IndexOfLast(xs, e) < i && i < len(xs)
+ensures xs[i] != e
+decreases
+pure func IndexOfLastReturnsLast(xs seq[int], e int, i int) util.Unit {
+	return quantifiedIndexOfLastReturnsLast(xs, e)
+}
+
+ghost
+requires e in xs
+ensures forall i int :: { xs[i] } (IndexOfLast(xs, e) < i && i < len(xs)) ==> xs[i] != e
+decreases xs
+pure func quantifiedIndexOfLastReturnsLast(xs seq[int], e int) util.Unit {
+	return Last(xs) == e ? util.Unit{} : quantifiedIndexOfLastReturnsLast(DropLast(xs), e)
 }
 
 // Returns a sequence without the element at a given position.
