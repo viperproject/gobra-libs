@@ -407,7 +407,8 @@ ghost
 ensures Flatten(seq[seq[int]]{xs}) == xs
 decreases
 pure func FlattenSingleton(xs seq[int]) util.Unit {
-	// QUES Why do I need to assert the definition of Flatten? assert len(seq[seq[int]]{xs}) != 0 isn't enough.
+	// This manually asserts the body of Flatten. For more information, see
+	// https://github.com/viperproject/silicon/issues/803
 	return util.Asserting(Flatten(seq[seq[int]]{xs}) == seq[seq[int]]{xs}[0] ++ Flatten(seq[seq[int]]{xs}[1:]))
 }
 
