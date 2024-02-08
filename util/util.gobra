@@ -22,22 +22,22 @@ const Uncallable bool = false
 
 ghost
 requires false
-decreases _
-func Unreachable()
+decreases
+func Unreachable() { }
 
 ghost
 ensures false
-decreases _
+decreases
 func IgnoreBranch()
 
 ghost
 ensures false
-decreases _
+decreases
 func TODO()
 
 ghost
 requires b
-decreases _
+decreases
 pure func Asserting(ghost b bool) Unit {
 	return Unit{}
 }
