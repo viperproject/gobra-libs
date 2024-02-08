@@ -300,7 +300,7 @@ pure func Insert(xs seq[int], e int, pos int) (result seq[int]) {
 // Reverses the sequence.
 ghost
 ensures len(result) == len(xs)
-ensures forall i int :: { result[i] } { xs[len(xs)-i-1] } (0 <= i && i < len(xs)) ==>
+ensures forall i int :: { result[i] } (0 <= i && i < len(xs)) ==>
 	result[i] == xs[len(xs)-i-1]
 decreases xs
 pure func Reverse(xs seq[int]) (result seq[int]) {
