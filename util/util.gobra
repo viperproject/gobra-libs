@@ -22,16 +22,17 @@ const Uncallable bool = false
 
 ghost
 requires false
-func Unreachable()
+decreases
+func Unreachable() { }
 
 ghost
 ensures false
-decreases _
+decreases
 func IgnoreBranch()
 
 ghost
 ensures false
-decreases _
+decreases
 func TODO()
 
 ghost
