@@ -407,9 +407,9 @@ ghost
 ensures Flatten(seq[seq[int]]{xs}) == xs
 decreases
 pure func FlattenSingleton(xs seq[int]) util.Unit {
-	// This manually asserts the body of Flatten. For more information, see
-	// https://github.com/viperproject/silicon/issues/803
-	return util.Asserting(Flatten(seq[seq[int]]{xs}) == seq[seq[int]]{xs}[0] ++ Flatten(seq[seq[int]]{xs}[1:]))
+	// See https://github.com/viperproject/silicon/issues/803 for an explanation
+	// of this proof.
+	return util.Asserting(Flatten(seq[seq[int]]{xs}[1:]) == Empty())
 }
 
 // The length of a flattened sequence of sequences xs is greater than or equal
