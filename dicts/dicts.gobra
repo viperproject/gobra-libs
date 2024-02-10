@@ -11,8 +11,71 @@
 // in specifications.
 package dicts
 
+import "util"
+import "sets"
+
 /// Dafny
 // Skip Get: No Option<>
 // Skip ToImap: No Imap
 
-// TODO: Implement RemoveKeys using Restrict
+// A dictionary is empty if its (domain's) cardinality is zero.
+ghost
+decreases
+pure func IsEmpty(d dict[int]int) bool {
+	return len(d) == 0
+}
+
+// Returns the empty dictionary.
+ghost
+ensures IsEmpty(result)
+decreases
+pure func Empty() (result dict[int]int) {
+	return dict[int]int{}
+}
+
+// QUES We structure Remove, RemoveKeys and Restrict a bit differently
+// than Dafny. Are the differences ok?
+
+// Keep all key-value pairs corresponding to the set of keys provided.
+ghost
+ensures forall x int :: {result[x]} (x in domain(d) && x in xs) ==>
+	(x in domain(result) && result[x] == d[x])
+ensures forall x int :: {x in domain(result)} x in domain(result) ==>
+	(x in domain(d) && x in xs)
+ensures domain(result) == xs intersection domain(d)
+opaque
+decreases xs
+pure func Restrict(d dict[int]int, xs set[int]) (result dict[int]int) {
+	return let ys := (xs intersection domain(d)) in
+		(sets.IsEmpty(ys) ? Empty() :
+			(let y := sets.Choose(ys) in
+			(let yr := sets.Remove(ys, y) in
+			(let _ := sets.IntersectLenUpper(xs, domain(d)) in
+			 Restrict(d, yr)[y = d[y]]))))
+}
+
+// Remove all key-value pairs corresponding to the set of keys provided.
+ghost
+decreases
+pure func RemoveKeys(d dict[int]int, xs set[int]) (result dict[int]int) {
+	return Restrict(d, domain(d) setminus xs)
+}
+
+// Remove a key-value pair. Returns unmodified dictionary if key is not found.
+ghost
+decreases
+pure func Remove(d dict[int]int, x int) (result dict[int]int) {
+	return Restrict(d, sets.SingletonSet(x))
+}
+
+// TODO prove this
+// TODO turn into pure
+// Removing x from the dictionary may reduce the cardinality by 1.
+ghost
+ensures len(Remove(d, x)) <= len(d)
+ensures x in domain(d) ==> len(Remove(d, x)) == len(d) - 1
+ensures !(x in domain(d)) ==> len(Remove(d, x)) == len(d)
+decreases
+func RemoveLen(d dict[int]int, x int) util.Unit {
+	return util.Unit{}
+}

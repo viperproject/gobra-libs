@@ -72,7 +72,7 @@ requires e in xs
 ensures xs == SingletonSet(e)
 decreases
 pure func SingletonIsSingletonSet(xs set[int], e int) util.Unit {
-	return let _ := choose(xs) in util.Unit{}
+	return let _ := Choose(xs) in util.Unit{}
 }
 
 // Elements in a singleton set are equal to each other.
@@ -83,7 +83,7 @@ requires b in xs
 ensures a == b
 decreases
 pure func SingletonEquality(xs set[int], a int, b int) util.Unit {
-	return let _ := choose(xs) in util.Unit{}
+	return let _ := Choose(xs) in util.Unit{}
 }
 
 // Constructs a set with all integers in the range [a, b).
@@ -114,7 +114,7 @@ ensures forall i int :: {i # result} (!(i in s)) ==> ((i # result) == 0)
 decreases s
 pure func ToMultiset(s set[int]) (result mset[int]) {
 	return IsEmpty(s) ? mset[int] {} :
-		let x := choose(s) in
+		let x := Choose(s) in
 		((mset[int] {}) union (mset[int] {x})) union ToMultiset(Remove(s, x))
 }
 
@@ -124,7 +124,7 @@ requires !IsEmpty(xs)
 ensures e in xs
 ensures IsSingleton(xs) ==> xs == SingletonSet(e)
 decreases
-pure func choose(xs set[int]) (e int)
+pure func Choose(xs set[int]) (e int)
 
 // Returns whether xs and ys are disjoint sets.
 ghost
@@ -373,10 +373,10 @@ pure func SubsetLen(xs, ys set[int]) util.Unit {
 	return (!(xs subset ys) || len(xs) == 0) ? util.Unit{} :
 		len(xs) == len(ys) ?
 			let _ := SubsetEquality(xs, ys) in
-			(let e := choose(xs) in
+			(let e := Choose(xs) in
 			(SubsetLen(Remove(xs, e), Remove(ys, e)))) :
 
-			let e:= choose(xs) in
+			let e:= Choose(xs) in
 			(SubsetLen(Remove(xs, e), Remove(ys, e)))			
 }
 
@@ -388,7 +388,7 @@ ensures len(xs union ys) >= len(ys)
 decreases ys
 pure func UnionLenLower(xs, ys set[int]) util.Unit {
 	return IsEmpty(ys) ? util.Unit{} :
-		let y := choose(ys) in
+		let y := Choose(ys) in
 		(let yr := Remove(ys, y) in
 		(y in xs ?
 			(let xr := Remove(xs, y) in
@@ -412,7 +412,7 @@ ensures len(xs intersection ys) <= len(xs)
 decreases xs
 pure func IntersectLenUpper(xs, ys set[int]) util.Unit {
 	return IsEmpty(xs) ? util.Unit{} :
-		let x := choose(xs) in
+		let x := Choose(xs) in
 		(let _ := util.Asserting((Remove(xs, x)) intersection ys == Remove((xs intersection ys), x)) in
 		(IntersectLenUpper(Remove(xs, x), ys)))
 }
