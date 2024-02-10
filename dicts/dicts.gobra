@@ -1,0 +1,18 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+
+  This file is inspired by the standard libraries and axiomatisations of the following verifiers:
+  - dafny-lang/dafny: https://github.com/dafny-lang/dafny/blob/master/Source/DafnyStandardLibraries/src/Std/Collections/Map.dfy
+*/
+
+// This package defines lemmas for mathematical maps (aka dictionaries) commonly used
+// in specifications.
+package dicts
+
+/// Dafny
+// Skip Get: No Option<>
+// Skip ToImap: No Imap
+
+// TODO: Implement RemoveKeys using Restrict
