@@ -23,7 +23,9 @@ const Uncallable bool = false
 ghost
 requires false
 decreases
-func Unreachable() { }
+pure func Unreachable() Unit {
+	return Unit{}
+}
 
 ghost
 ensures false
