@@ -63,19 +63,60 @@ pure func RemoveKeys(d dict[int]int, xs set[int]) (result dict[int]int) {
 
 // Remove a key-value pair. Returns unmodified dictionary if key is not found.
 ghost
+ensures len(result) <= len(d)
+ensures x in domain(d) ==> len(result) == len(d) - 1
+ensures !(x in domain(d)) ==> len(result) == len(d)
 decreases
+// QUES For these properties a proof is required. There are few things we can do:
+// - Separate properties into different lemma: Calling remove doesnt call its proof, but it is less convenient.
+// - Make RemoveKeys(d, sets.SingletonSet(x)) part of the spec and make the function opaque:
+//   This would make the API a bit inconsistent (RemoveKeys for example doesn't have that)
+// - Keep it as is: Whenever someone calls Remove, the proof is instantiated as well.
 pure func Remove(d dict[int]int, x int) (result dict[int]int) {
-	return Restrict(d, sets.SingletonSet(x))
+	return let ys := (sets.Remove(domain(d), x)) in
+		let _ := util.Asserting(ys intersection domain(d) == ys) in
+		RemoveKeys(d, sets.SingletonSet(x))
 }
 
-// TODO prove this
-// TODO turn into pure
-// Removing x from the dictionary may reduce the cardinality by 1.
+// True iff x maps to the same value or does not exist in d1 and d2.
 ghost
-ensures len(Remove(d, x)) <= len(d)
-ensures x in domain(d) ==> len(Remove(d, x)) == len(d) - 1
-ensures !(x in domain(d)) ==> len(Remove(d, x)) == len(d)
 decreases
-func RemoveLen(d dict[int]int, x int) util.Unit {
-	return util.Unit{}
+pure func EqualOnKey(d1, d2 dict[int]int, x int) bool {
+	return !(x in domain(d1) || x in domain(d2)) || (x in domain(d1) && x in domain(d2) && d1[x] == d2[x])
+}
+
+// True iff and only if d1 is a subset of d2.
+ghost
+decreases
+pure func IsSubset(d1, d2 dict[int]int) bool {
+	return domain(d1) subset domain(d2) &&
+		forall x int :: {EqualOnKey(d1, d2, x)} {x in domain(d1)} (x in domain(d1)) ==>
+		EqualOnKey(d1, d2, x)
+}
+
+// TODO turn opaque pure
+// Union of two maps. Does not require disjoint domains: on the intersection,
+// values from the second map are chosen.
+ghost
+ensures domain(result) == domain(d1) union domain(d2)
+ensures forall x int :: {result[x]} (x in domain(d2)) ==> result[x] == d2[x]
+ensures forall x int :: {result[x]}  (!(x in domain(d2)) && x in domain(d1)) ==>
+	result[x] == d1[x]
+decreases domain(d1) union domain(d2)
+func Union(d1, d2 dict[int]int) (result dict[int]int) {
+	xs := domain(d1) union domain(d2)
+	if sets.IsEmpty(xs) {
+		return Empty()
+	} else {
+		x := sets.Choose(xs)
+		c1 := Remove(d1, x)
+		c2 := Remove(d2, x)
+		sets.RemoveUnionLen(domain(d1), domain(d2), x)
+
+		if x in domain(d2) {
+			return Union(c1, c2)[x = d2[x]]
+		} else {
+			return Union(c1, c2)[x = d1[x]]
+		}
+	}
 }

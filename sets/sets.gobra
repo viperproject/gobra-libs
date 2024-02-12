@@ -446,7 +446,7 @@ ghost
 ensures (e in xs) ==> (len(Add(xs, e)) == len(xs))
 ensures !(e in xs) ==> (len(Add(xs, e)) == len(xs) + 1)
 decreases
-func AddLen(xs set[int], e int) util.Unit {
+pure func AddLen(xs set[int], e int) util.Unit {
 	return util.Unit{}
 }
 
@@ -456,8 +456,25 @@ ghost
 ensures (e in xs) ==> (len(Remove(xs, e)) == len(xs) - 1)
 ensures !(e in xs) ==> (len(Remove(xs, e)) == len(xs))
 decreases
-func RemoveLen(xs set[int], e int) util.Unit {
+pure func RemoveLen(xs set[int], e int) util.Unit {
 	return util.Unit{}
+}
+
+// Remove is right distributive over union.
+ghost
+ensures Remove(xs union ys, e) == Remove(xs, e) union Remove(ys, e)
+decreases
+pure func RemoveUnion(xs, ys set[int], e int) util.Unit {
+	return util.Unit{}
+}
+
+// If e is in (xs union ys), removing it from both sets reduces the cardinality by 1.
+ghost
+requires e in (xs union ys)
+ensures len(Remove(xs, e) union Remove(ys, e)) == len(xs union ys) - 1
+decreases
+pure func RemoveUnionLen(xs, ys set[int], e int) util.Unit {
+	return RemoveUnion(xs, ys, e)
 }
 
 // If xs and ys are disjoint, the cardinality of their union is equal to the
