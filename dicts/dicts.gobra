@@ -94,7 +94,6 @@ pure func IsSubset(d1, d2 dict[int]int) bool {
 		EqualOnKey(d1, d2, x)
 }
 
-// TODO turn opaque pure
 // Union of two maps. Does not require disjoint domains: on the intersection,
 // values from the second map are chosen.
 ghost
@@ -102,21 +101,14 @@ ensures domain(result) == domain(d1) union domain(d2)
 ensures forall x int :: {result[x]} (x in domain(d2)) ==> result[x] == d2[x]
 ensures forall x int :: {result[x]}  (!(x in domain(d2)) && x in domain(d1)) ==>
 	result[x] == d1[x]
+opaque
 decreases domain(d1) union domain(d2)
-func Union(d1, d2 dict[int]int) (result dict[int]int) {
-	xs := domain(d1) union domain(d2)
-	if sets.IsEmpty(xs) {
-		return Empty()
-	} else {
-		x := sets.Choose(xs)
-		c1 := Remove(d1, x)
-		c2 := Remove(d2, x)
-		sets.RemoveUnionLen(domain(d1), domain(d2), x)
-
-		if x in domain(d2) {
-			return Union(c1, c2)[x = d2[x]]
-		} else {
-			return Union(c1, c2)[x = d1[x]]
-		}
-	}
+pure func Union(d1, d2 dict[int]int) (result dict[int]int) {
+	return let xs := domain(d1) union domain(d2) in
+		(sets.IsEmpty(xs) ? Empty() :
+			let x := sets.Choose(xs) in
+			let c1 := Remove(d1, x) in
+			let c2 := Remove(d2, x) in
+			let _ := sets.RemoveUnionLen(domain(d1), domain(d2), x) in
+			(x in domain(d2) ? Union(c1, c2)[x = d2[x]] : Union(c1, c2)[x = d1[x]]))
 }
