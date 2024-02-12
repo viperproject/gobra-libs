@@ -70,7 +70,7 @@ decreases
 // QUES For these properties a proof is required. There are few things we can do:
 // - Separate properties into different lemma: Calling remove doesnt call its proof, but it is less convenient.
 // - Make RemoveKeys(d, sets.SingletonSet(x)) part of the spec and make the function opaque:
-//   This would make the API a bit inconsistent (RemoveKeys for example doesn't have that)
+//   This would make the API a bit inconsistent (RemoveKeys for example doesn't have that) - although we could change RemoveKeys accordingly (seems like this is what Dafny does)
 // - Keep it as is: Whenever someone calls Remove, the proof is instantiated as well.
 pure func Remove(d dict[int]int, x int) (result dict[int]int) {
 	return let ys := (sets.Remove(domain(d), x)) in
@@ -81,7 +81,7 @@ pure func Remove(d dict[int]int, x int) (result dict[int]int) {
 // True iff x maps to the same value or does not exist in d1 and d2.
 ghost
 decreases
-pure func EqualOnKey(d1, d2 dict[int]int, x int) bool {
+pure func IsEqualOnKey(d1, d2 dict[int]int, x int) bool {
 	return !(x in domain(d1) || x in domain(d2)) || (x in domain(d1) && x in domain(d2) && d1[x] == d2[x])
 }
 
@@ -90,12 +90,12 @@ ghost
 decreases
 pure func IsSubset(d1, d2 dict[int]int) bool {
 	return domain(d1) subset domain(d2) &&
-		forall x int :: {EqualOnKey(d1, d2, x)} {x in domain(d1)} (x in domain(d1)) ==>
-		EqualOnKey(d1, d2, x)
+		forall x int :: {IsEqualOnKey(d1, d2, x)} {x in domain(d1)} (x in domain(d1)) ==>
+		IsEqualOnKey(d1, d2, x)
 }
 
-// Union of two maps. Does not require disjoint domains: on the intersection,
-// values from the second map are chosen.
+// Union of two dictionaries. Does not require disjoint domains: on the intersection,
+// values from the second dictionary are chosen.
 ghost
 ensures domain(result) == domain(d1) union domain(d2)
 ensures forall x int :: {result[x]} (x in domain(d2)) ==> result[x] == d2[x]
@@ -111,4 +111,37 @@ pure func Union(d1, d2 dict[int]int) (result dict[int]int) {
 			let c2 := Remove(d2, x) in
 			let _ := sets.RemoveUnionLen(domain(d1), domain(d2), x) in
 			(x in domain(d2) ? Union(c1, c2)[x = d2[x]] : Union(c1, c2)[x = d1[x]]))
+}
+
+ghost
+requires sets.AreDisjoint(domain(d1), domain(d2))
+ensures len(Union(d1, d2)) == len(d1) + len(d2)
+decreases
+pure func DisjointUnionLen(d1, d2 dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// True iff a dictionary is injective.
+ghost
+opaque
+decreases
+pure func IsInjective(d dict[int]int) bool {
+	return forall x, y int :: {d[x], d[y]} (x != y && x in domain(d) && y in domain(d)) ==>
+		d[x] == d[y]
+}
+
+// TODO: Go through the Dafny version again, which is quite different.
+// Dafny's Invert is opaque and has
+// map y | y in m.Values :: var x :| x in m.Keys && m[x] == y; x as its body.
+// TODO: make opaque?
+// Swap dictionary keys and values. Values are not required to be unique: no promises
+// on which key is chosen on the intersection.
+ghost
+// QUES Shouldn't decreases d be equivalent to this (or at least fail type checking?)
+decreases len(d)
+pure func Invert(d dict[int]int) (result dict[int]int) {
+	return IsEmpty(d) ? Empty() :
+		(let key := sets.Choose(domain(d)) in
+		(let c := Remove(d, key) in
+		Invert(c)[d[key] = key]))
 }
