@@ -5,6 +5,9 @@
 
   This file is inspired by the standard libraries and axiomatisations of the following verifiers:
   - dafny-lang/dafny: https://github.com/dafny-lang/dafny/blob/master/Source/DafnyStandardLibraries/src/Std/Collections/Map.dfy
+  - verus-lang/verus:
+    - https://github.com/verus-lang/verus/blob/main/source/pervasive/map_lib.rs
+    - https://github.com/verus-lang/verus/blob/main/source/pervasive/map.rs
 */
 
 // This package defines lemmas for mathematical maps (aka dictionaries) commonly used
@@ -197,7 +200,7 @@ pure func Total(d dict[int]int) bool {
 ghost
 opaque
 decreases
-pure func Monotonic(d dict[int]int) bool {
+pure func IsMonotonic(d dict[int]int) bool {
 	return forall x, y int :: {d[x], d[y]} (x in domain(d) && y in domain(d) && x <= y) ==>
 		d[x] <= d[y]
 }
@@ -206,8 +209,59 @@ pure func Monotonic(d dict[int]int) bool {
 ghost
 opaque
 decreases
-pure func MonotonicFrom(d dict[int]int, start int) {
+pure func IsMonotonicFrom(d dict[int]int, start int) bool {
 	return forall x, y int :: {d[x], d[y]} (x in domain(d) && y in domain(d) && start <= x && x <= y) ==>
 		d[x] <= d[y]
 
 }
+// Verus: map_lib.rs
+// is_full -> Total
+// is_empty -> IsEmpty
+// contains_key(dict, key) -> key in domain(dict)
+// contains_value(dict, value) -> value in range(dict)
+// values(dict) -> domain(dict)
+// contains_pair(dict, key, value) -> dict[key] == value
+// submap_of, spec_le, le -> IsSubset
+// union_prefer_right -> Union
+// remove_keys -> RemoveKeys
+// restrict -> Restrict
+// is_equal_on_key -> IsEqualOnKey
+
+// True iff d1 and d2 agree on all keys that their domains share.
+ghost
+decreases
+pure func Agree(d1, d2 dict[int]int) bool {
+	return forall x int :: {d1[x], d2[x]} x in (domain(d1) intersection domain(d2)) ==>
+		d1[x] == d2[x]
+}
+
+// map_entries: skip (no higher order functions)
+// map_values: skip (no higher order functions)
+// invert -> Invert
+// lemma_remove_key_len: part of Remove's spec
+
+// QUES Do we want this lemma? Not sure whether it is useful.
+// The domain of a map after removing a key is equivalent to removing
+// the key from the domain of the original map.
+ghost
+ensures domain(Remove(d, key)) == sets.Remove(domain(d), key)
+decreases
+pure func RemoveEquivalency(d dict[int]int, key int) util.Unit {
+	return util.Unit{}
+}
+
+// TODO RemoveKeysLen
+// QUES Should this be a separate lemma or part of RemoveKeys?
+// QUES Should we prove properties for Restrict?
+
+// lemma_invert_is_injective -> InvertIsInjective
+// is_monotonic -> IsMonotonic
+// is_monotonic_from -> IsMonotonicFrom
+// lemma_disjoint_union_size -> DisjointUnionLen
+// lemma_map_new_domain: skip (construction not applicable)
+// lemma_map_new_values: skip (construction not applicable)
+// lemma_map_properties: skip (previous two quantified)
+// lemma_values_finite: skip (no infinite dicts)
+
+// Verus: map.rs
+
