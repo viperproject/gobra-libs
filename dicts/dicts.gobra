@@ -127,7 +127,7 @@ opaque
 decreases
 pure func IsInjective(d dict[int]int) bool {
 	return forall x, y int :: {d[x], d[y]} (x != y && x in domain(d) && y in domain(d)) ==>
-		d[x] == d[y]
+		d[x] != d[y]
 }
 
 // TODO: Go through the Dafny version again, which is quite different.
@@ -136,12 +136,50 @@ pure func IsInjective(d dict[int]int) bool {
 // TODO: make opaque?
 // Swap dictionary keys and values. Values are not required to be unique: no promises
 // on which key is chosen on the intersection.
-ghost
-// QUES Shouldn't decreases d be equivalent to this (or at least fail type checking?)
-decreases len(d)
-pure func Invert(d dict[int]int) (result dict[int]int) {
-	return IsEmpty(d) ? Empty() :
-		(let key := sets.Choose(domain(d)) in
-		(let c := Remove(d, key) in
-		Invert(c)[d[key] = key]))
-}
+// ghost
+// ensures domain(result) == range(d)
+// // I think the following follows from the forall
+// // ensures range(result) subset domain(d)
+// // QUES Maybe {d[result[x]]} instead?
+// // ensures forall x int :: {result[x]} x in domain(result) ==> d[result[x]] == x
+// // QUES Shouldn't decreases d be equivalent to this (or at least fail type checking?)
+// decreases len(d)
+// func Invert(d dict[int]int) (result dict[int]int) {
+// 	if IsEmpty(d) {
+// 		result := Empty()
+// 		assert domain(result) == range(d)
+// 		return result
+// 	} else {
+// 		key := sets.Choose(domain(d))
+// 		c := Remove(d, key)
+// 		invertC := Invert(c)
+// 		result := invertC[d[key] = key]
+// 		assert domain(result) == sets.Add(domain(invertC), d[key])
+// 		assert sets.Add(domain(invertC), d[key]) == sets.Add(range(c), d[key])
+// 		assert range(c) == sets.Remove(range(d), key)
+// 		assert sets.Add(range(c), d[key]) == range(d)
+// 		return result
+// 	}
+// }
+
+// I feel like I need this helper for Invert
+// ghost
+// requires key in domain(d)
+// ensures sets.Add(range(Remove(d, key)), d[key]) == range(d)
+// decreases
+// func Helper(d dict[int]int, key int) {
+// 	assert d[key] in range(d)
+// 	temp := Remove(d, key)
+// 	// XOR
+// 	assert (range(temp) == range(d)) != (range(temp) == sets.Remove(range(d), key))
+// }
+
+// TODO Prove this
+// Inverted maps are injective.
+// ghost
+// ensures IsInjective(Invert(d))
+// decreases
+// func InvertIsInjective(d dict[int]int) {
+// 	inverted := reveal Invert(d)
+// 	reveal IsInjective(inverted)
+// }
