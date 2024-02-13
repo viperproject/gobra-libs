@@ -192,7 +192,7 @@ pure func IsInjective(d dict[int]int) bool {
 ghost
 opaque
 decreases
-pure func Total(d dict[int]int) bool {
+pure func IsTotal(d dict[int]int) bool {
 	return forall x int :: {d[x]} {x in domain(d)} x in domain(d)
 }
 
@@ -240,7 +240,7 @@ pure func Agree(d1, d2 dict[int]int) bool {
 // invert -> Invert
 // lemma_remove_key_len: part of Remove's spec
 
-// QUES Do we want this lemma? Not sure whether it is useful.
+// NOTE: Not very confident on the use of this lemma
 // The domain of a map after removing a key is equivalent to removing
 // the key from the domain of the original map.
 ghost
@@ -264,4 +264,78 @@ pure func RemoveEquivalency(d dict[int]int, key int) util.Unit {
 // lemma_values_finite: skip (no infinite dicts)
 
 // Verus: map.rs
+// empty -> Empty
+// total: skip (construction not applicable)
+// new: skip (construction not applicable)
+// dom -> domain
+// index, spec_index -> []
+// insert(dict, key, value) -> dict[key = value]
+// remove -> Remove
+// len -> len
+// tracked_*: skip (doesnt look applicable)
+// axiom_map_index_decreases_*: skip (assuming its termination which we dont consider in the standard lib)
 
+// NOTE: I am not really confident in the usefulness of these functions
+// adapted from Verus' map.rs
+
+// The domain of the empty dictionary is the empty set.
+ghost
+requires IsEmpty(d)
+ensures domain(d) == sets.Empty()
+decreases
+pure func EmptyDictEmptyDomain(d dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// The domain of a dictionary after inserting a key-value pair is equivalent to
+// inserting the key into the original map's domain set.
+ghost
+ensures domain(d[key = value]) == sets.Add(domain(d), key)
+decreases
+pure func InsertDomain(d dict[int]int, key, value int) util.Unit {
+	return util.Unit{}
+}
+
+// Inserting value at key in d results in a dictionary that maps key to value.
+ghost
+ensures d[key = value][key] == value
+decreases
+pure func InsertSame(d dict[int] int, key, value int) util.Unit {
+	return util.Unit{}
+}
+
+// Inserting value at key2 does not change the value mapped to by any other keys in d.
+ghost
+requires key1 in domain(d)
+requires key1 != key2
+ensures d[key2 = value][key1] == d[key1]
+decreases
+pure func InsertDifferent(d dict[int]int, key1, key2, value int) util.Unit {
+	return util.Unit{}
+}
+
+// axiom_map_remove_domain -> RemoveEquivalency
+
+// Removing a key-value pair from a dictionary does not change the value mapped to
+// by any other keys in the map.
+ghost
+requires key1 in domain(d)
+requires key1 != key2
+ensures Remove(d, key2)[key1] == d[key1]
+decreases
+pure func RemoveDifferent(d dict[int]int, key1, key2 int) util.Unit {
+	return util.Unit{}
+}
+
+// Two maps are equivalent if their domains are equivalent and every key in their
+// domains map to the same value.
+ghost
+ensures (d1 == d2) ==
+	(domain(d1) == domain(d2) && forall x int :: {d1[x], d2[x]} x in domain(d1) ==>	d1[x] == d2[x])
+decreases
+pure func ExtEqual(d1, d2 dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// axiom_map_ext_equal_deep: skip (we don't have deep equality)
+// Skipped macros
