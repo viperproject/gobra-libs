@@ -130,6 +130,7 @@ pure func IsInjective(d dict[int]int) bool {
 		d[x] != d[y]
 }
 
+/// TODO Invert seems to be a bit involved. Skipping it for now.
 // TODO: Go through the Dafny version again, which is quite different.
 // Dafny's Invert is opaque and has
 // map y | y in m.Values :: var x :| x in m.Keys && m[x] == y; x as its body.
@@ -170,12 +171,12 @@ pure func IsInjective(d dict[int]int) bool {
 // func Helper(d dict[int]int, key int) {
 // 	assert d[key] in range(d)
 // 	temp := Remove(d, key)
-// 	// XOR
+// 	// != corresponds to XOR (i think); fails atm
 // 	assert (range(temp) == range(d)) != (range(temp) == sets.Remove(range(d), key))
 // }
 
 // TODO Prove this
-// Inverted maps are injective.
+// Inverted dictionaries are injective.
 // ghost
 // ensures IsInjective(Invert(d))
 // decreases
@@ -183,3 +184,30 @@ pure func IsInjective(d dict[int]int) bool {
 // 	inverted := reveal Invert(d)
 // 	reveal IsInjective(inverted)
 // }
+
+// True iff a dictionary contains all valid keys.
+ghost
+opaque
+decreases
+pure func Total(d dict[int]int) bool {
+	return forall x int :: {d[x]} {x in domain(d)} x in domain(d)
+}
+
+// True iff a dictionary is monotonic.
+ghost
+opaque
+decreases
+pure func Monotonic(d dict[int]int) bool {
+	return forall x, y int :: {d[x], d[y]} (x in domain(d) && y in domain(d) && x <= y) ==>
+		d[x] <= d[y]
+}
+
+// True iff a dictionary is monotonic. Only considers keys greater than or equal to start.
+ghost
+opaque
+decreases
+pure func MonotonicFrom(d dict[int]int, start int) {
+	return forall x, y int :: {d[x], d[y]} (x in domain(d) && y in domain(d) && start <= x && x <= y) ==>
+		d[x] <= d[y]
+
+}
