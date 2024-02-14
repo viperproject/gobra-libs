@@ -8,6 +8,7 @@
   - verus-lang/verus:
     - https://github.com/verus-lang/verus/blob/main/source/pervasive/map_lib.rs
     - https://github.com/verus-lang/verus/blob/main/source/pervasive/map.rs
+  - viperproject/silicon: https://github.com/viperproject/silicon/blob/master/src/main/resources/dafny_axioms/maps.vpr
 */
 
 // This package defines lemmas for mathematical maps (aka dictionaries) commonly used
@@ -432,7 +433,24 @@ pure func InsertUpdateLen(d dict[int]int, x, y int) util.Unit {
 	return util.Unit{}
 }
 
-// TODO Continue with Silicon: Values axioms
+// If a value is in the range of a dictionary, there exists a corresponding key.
+ghost
+requires y in range(d)
+ensures exists x int :: x in domain(d) && d[x] == y
+decreases
+pure func ValueHasKey(d dict[int]int, y int) util.Unit {
+	return util.Unit{}
+}
+
+// If a value is in the domain of a dictionary, the corresponding value is in its range.
+ghost
+requires x in domain(d)
+ensures d[x] in range(d)
+decreases
+pure func KeyMapsToRange(d dict[int]int, x int) util.Unit {
+	return util.Unit{}
+}
+
 // TODO Convert quantifier in spec to argument if possible
 // (check sets.gobra and seqs.gobra; probably only keep it if it is part of
 // a definition, not a property
