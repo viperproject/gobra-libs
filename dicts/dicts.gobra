@@ -9,6 +9,9 @@
     - https://github.com/verus-lang/verus/blob/main/source/pervasive/map_lib.rs
     - https://github.com/verus-lang/verus/blob/main/source/pervasive/map.rs
   - viperproject/silicon: https://github.com/viperproject/silicon/blob/master/src/main/resources/dafny_axioms/maps.vpr
+  - why3:
+    - https://www.why3.org/stdlib/fmap.html
+    - https://www.why3.org/stdlib/map.html
 */
 
 // This package defines lemmas for mathematical maps (aka dictionaries) commonly used
@@ -22,11 +25,11 @@ import "sets"
 // Skip Get: No Option<>
 // Skip ToImap: No Imap
 
-// A dictionary is empty if its (domain's) cardinality is zero.
+// A dictionary is empty if its domain is empty.
 ghost
 decreases
 pure func IsEmpty(d dict[int]int) bool {
-	return len(d) == 0
+	return sets.IsEmpty(domain(d))
 }
 
 // Returns the empty dictionary.
@@ -221,8 +224,8 @@ decreases
 pure func IsMonotonicFrom(d dict[int]int, start int) bool {
 	return forall x, y int :: {d[x], d[y]} (x in domain(d) && y in domain(d) && start <= x && x <= y) ==>
 		d[x] <= d[y]
-
 }
+
 // Verus: map_lib.rs
 // is_full -> Total
 // is_empty -> IsEmpty
@@ -249,13 +252,12 @@ pure func Agree(d1, d2 dict[int]int) bool {
 // invert -> Invert
 // lemma_remove_key_len: part of Remove's spec
 
-// NOTE: Not very confident on the use of this lemma
 // The domain of a map after removing a key is equivalent to removing
 // the key from the domain of the original map.
 ghost
 ensures domain(Remove(d, key)) == sets.Remove(domain(d), key)
 decreases
-pure func RemoveEquivalency(d dict[int]int, key int) util.Unit {
+pure func RemoveDomain(d dict[int]int, key int) util.Unit {
 	return util.Unit{}
 }
 
@@ -450,6 +452,75 @@ decreases
 pure func KeyMapsToRange(d dict[int]int, x int) util.Unit {
 	return util.Unit{}
 }
+
+// Why3 (fmap)
+// ==, extensionality -> ExtEqual
+// mem k m -> k in domain(m)
+// mapsto k v m -> k in domain(m) && m[k] == v
+// mem_mapsto: skip (doesn't seem useful)
+// is_empty -> IsEmpty
+// mk, mk_*: skip (construction doesn't apply)
+// empty, is_empty_empty -> Empty
+// [<-], add k v m -> m[k = v]
+// add_contents_k -> UpdateSame
+// add_contents_other -> UpdateDifferent
+// add_domain -> InsertDomain
+// find k, find_def -> m[k]
+// remove k m -> Remove(m, k)
+// remove_contents -> RemoveDifferent
+// remove_domain -> RemoveDomain
+// size m -> len(m)
+
+// NOTE fmap (applicative maps) may be interesting when implementing gomaps
+
+// Why3 (map)
+// [], get f x -> f[x]
+// [<-], set f x v -> f[x = v]
+// const: skip (cannot come up with feasible implementation)
+// ==, extensionality -> ExtEqual
+// sorted_sub -> IsMonotonicFromTo
+
+// True iff a dictionary is monotonic. Only considers keys in the interval [start, end).
+ghost
+opaque
+decreases
+pure func IsMonotonicFromTo(d dict[int]int, start, end int) bool {
+	return forall x, y int :: {d[x], d[y]} (x in domain(d) && y in domain(d) && start <= x && x <= y && y < end) ==>
+		d[x] <= d[y]
+}
+
+// map_eq_sub -> IsEqualFromTo
+
+// True iff two dictionaries are equal in the interval [start, end).
+ghost
+opaque
+decreases
+pure func IsEqualFromTo(d1, d2 dict[int]int, start, end int) bool {
+	return forall x int :: {d1[x], d2[x]} (start <= x && x < end) ==>
+		x in domain(d1) && x in domain(d2) && d1[x] == d2[x]
+}
+
+// exchange, exchange_set -> Swap
+// NOTE Why3's exchange accepts an interval, while our implementation does not; it is
+// probably possible to get the same or similar behavior using Restrict.
+
+// Returns a dictionary with the values at k1 and k2 swapped.
+ghost
+requires k1 in domain(d) && k2 in domain(d)
+ensures domain(result) == domain(d)
+ensures result[k1] == d[k2] && result[k2] == d[k1]
+ensures forall k int :: {result[k]} (k in domain(d) && k != k1 && k != k2) ==>
+	result[k] == d[k]
+decreases
+pure func Swap(d dict[int]int, k1, k2 int) (result dict[int]int) {
+	return d[k1 = d[k2]][k2 = d[k1]]
+}
+
+// sum: skip (no sum operation available for sets)
+
+// TODO Continue with number of occurrences (maybe useful to define a function which
+// returns the set of keys with the same value and then take the cardinality of that;
+// may be useful also for Invert.
 
 // TODO Convert quantifier in spec to argument if possible
 // (check sets.gobra and seqs.gobra; probably only keep it if it is part of
