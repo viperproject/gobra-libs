@@ -14,6 +14,11 @@
     - https://www.why3.org/stdlib/map.html
 */
 
+// TODO (at the end) Organize definitions: Remove duplicates, merge similar ones, place related ones together
+
+// QUES I plan on making the naming of variables consistent (e.g. keys and values: x/y, or k/v, or key/value);
+// Is there any convention that is particularly "good"?
+
 // This package defines lemmas for mathematical maps (aka dictionaries) commonly used
 // in specifications.
 package dicts
@@ -145,61 +150,6 @@ pure func IsInjective(d dict[int]int) bool {
 		d[x] != d[y]
 }
 
-/// TODO Invert seems to be a bit involved. Skipping it for now.
-// TODO: Go through the Dafny version again, which is quite different.
-// Dafny's Invert is opaque and has
-// map y | y in m.Values :: var x :| x in m.Keys && m[x] == y; x as its body.
-// TODO: make opaque?
-// Swap dictionary keys and values. Values are not required to be unique: no promises
-// on which key is chosen on the intersection.
-// ghost
-// ensures domain(result) == range(d)
-// // I think the following follows from the forall
-// // ensures range(result) subset domain(d)
-// // QUES Maybe {d[result[x]]} instead?
-// // ensures forall x int :: {result[x]} x in domain(result) ==> d[result[x]] == x
-// // QUES Shouldn't decreases d be equivalent to this (or at least fail type checking?)
-// decreases len(d)
-// func Invert(d dict[int]int) (result dict[int]int) {
-// 	if IsEmpty(d) {
-// 		result := Empty()
-// 		assert domain(result) == range(d)
-// 		return result
-// 	} else {
-// 		key := sets.Choose(domain(d))
-// 		c := Remove(d, key)
-// 		invertC := Invert(c)
-// 		result := invertC[d[key] = key]
-// 		assert domain(result) == sets.Add(domain(invertC), d[key])
-// 		assert sets.Add(domain(invertC), d[key]) == sets.Add(range(c), d[key])
-// 		assert range(c) == sets.Remove(range(d), key)
-// 		assert sets.Add(range(c), d[key]) == range(d)
-// 		return result
-// 	}
-// }
-
-// I feel like I need this helper for Invert
-// ghost
-// requires key in domain(d)
-// ensures sets.Add(range(Remove(d, key)), d[key]) == range(d)
-// decreases
-// func Helper(d dict[int]int, key int) {
-// 	assert d[key] in range(d)
-// 	temp := Remove(d, key)
-// 	// != corresponds to XOR (i think); fails atm
-// 	assert (range(temp) == range(d)) != (range(temp) == sets.Remove(range(d), key))
-// }
-
-// TODO Prove this
-// Inverted dictionaries are injective.
-// ghost
-// ensures IsInjective(Invert(d))
-// decreases
-// func InvertIsInjective(d dict[int]int) {
-// 	inverted := reveal Invert(d)
-// 	reveal IsInjective(inverted)
-// }
-
 // True iff a dictionary contains all valid keys.
 ghost
 opaque
@@ -261,10 +211,6 @@ pure func RemoveDomain(d dict[int]int, key int) util.Unit {
 	return util.Unit{}
 }
 
-// TODO RemoveKeysLen
-// QUES Should this be a separate lemma or part of RemoveKeys?
-// QUES Should we prove properties for Restrict?
-
 // lemma_invert_is_injective -> InvertIsInjective
 // is_monotonic -> IsMonotonic
 // is_monotonic_from -> IsMonotonicFrom
@@ -285,9 +231,6 @@ pure func RemoveDomain(d dict[int]int, key int) util.Unit {
 // len -> len
 // tracked_*: skip (doesnt look applicable)
 // axiom_map_index_decreases_*: skip (assuming its termination which we dont consider in the standard lib)
-
-// NOTE: I am not really confident in the usefulness of these functions
-// adapted from Verus' map.rs
 
 // The domain of the empty dictionary is the empty set.
 ghost
@@ -371,9 +314,10 @@ pure func DomainLenEq(d dict[int]int) util.Unit {
 // If two dictionaries are disjoint there is no key that is in both of their domains.
 ghost
 requires AreDisjoint(d1, d2)
+// QUES Should I move the x to the argument list and get rid of the quantifier?
 ensures forall x int :: {x in domain(d1)} {x in domain(d2)} !(x in domain(d1) && x in domain(d2))
 decreases
-pure func DisjointNoSharedKey(d1, d2 dict[int]int) util.Unit {
+pure func DisjointNoSharedKey(d1, d2 dict[int]int, x int) util.Unit {
 	return util.Unit{}
 }
 
@@ -501,9 +445,9 @@ pure func IsEqualFromTo(d1, d2 dict[int]int, start, end int) bool {
 }
 
 // exchange, exchange_set -> Swap
-// NOTE Why3's exchange accepts an interval, while our implementation does not; it is
-// probably possible to get the same or similar behavior using Restrict. Why does Why3
-// accept an interval?
+
+// QUES Many of Why3 definitions on int maps restrict themselves to an interval.
+// Is this an approach we should adopt too? Or should we keep it general?
 
 // Returns a dictionary with the values at k1 and k2 swapped.
 ghost
@@ -533,10 +477,6 @@ pure func Keys(d dict[int]int, v int) (result set[int]) {
 	
 }
 
-// NOTE Why3's occurrences accepts an interval similar to before, while
-// we do not do that.
-
-
 // Returns the number of occurences of the value in the map.
 ghost
 decreases
@@ -544,7 +484,10 @@ pure func Occurrences(d dict[int]int, v int) int {
 	return len(Keys(d, v))
 }
 
-// QUES Do we want such a function?
+// QUES The following functions were difficult to port/prove or didn't seem
+// particularly useful to me (or both). Which ones (if any) should we keep
+// (and potentially modify)?
+
 // True iff d1 and d2 are permutations of each other.
 // ghost
 // opaque
@@ -565,27 +508,26 @@ pure func Occurrences(d dict[int]int, v int) int {
 // }
 
 // NOTE Why3 limits this to dictionaries with domain [0, n)
-
 // True iff a dictionary is surjective
-ghost
-opaque
-decreases
-pure func IsSurjective(d dict[int]int) bool {
-	// QUES What would be good triggers?
-	return forall y int :: (exists x int :: x in domain(d) && d[x] == y)
-}
+// ghost
+// opaque
+// decreases
+// pure func IsSurjective(d dict[int]int) bool {
+// 	// QUES What would be good triggers?
+// 	return forall y int :: (exists x int :: x in domain(d) && d[x] == y)
+// }
 
 // True iff d maps [0, n) to [0, n)
-ghost
-opaque
-decreases
-pure func IsRange(d dict[int]int, n int) bool {
-	// QUES What would be good triggers?
-	return forall x int :: (0 <= x && x < n) ==> (x in domain(d) && 0 <= d[x] && d[x] < n)
-}
+// ghost
+// opaque
+// decreases
+// pure func IsRange(d dict[int]int, n int) bool {
+// 	// QUES What would be good triggers?
+// 	return forall x int :: (0 <= x && x < n) ==> (x in domain(d) && 0 <= d[x] && d[x] < n)
+// }
 
-// Cannot show injective_surjective: Why3 limits definition of injectivity and surjectivity two finite intervals, while Dafny only defines injectivity (on the entire space)
-
+// Cannot show injective_surjective: Why3 limits definition of injectivity and surjectivity
+// two finite intervals, while Dafny only defines injectivity (on the entire space)
 
 // NOTE Proof does not work.
 // v can occur at most once as a value in injective dictionaries.
@@ -597,11 +539,67 @@ pure func IsRange(d dict[int]int, n int) bool {
 // 	reveal IsInjective(d)
 // }
 
+// Dafny: Invert
+/// TODO Invert seems to be a bit involved. Skipping it for now.
+// TODO: Go through the Dafny version again, which is quite different.
+// Dafny's Invert is opaque and has
+// map y | y in m.Values :: var x :| x in m.Keys && m[x] == y; x as its body.
+// TODO: make opaque?
+// Swap dictionary keys and values. Values are not required to be unique: no promises
+// on which key is chosen on the intersection.
+// ghost
+// ensures domain(result) == range(d)
+// // I think the following follows from the forall
+// // ensures range(result) subset domain(d)
+// // QUES Maybe {d[result[x]]} instead?
+// // ensures forall x int :: {result[x]} x in domain(result) ==> d[result[x]] == x
+// // QUES Shouldn't decreases d be equivalent to this (or at least fail type checking?)
+// decreases len(d)
+// func Invert(d dict[int]int) (result dict[int]int) {
+// 	if IsEmpty(d) {
+// 		result := Empty()
+// 		assert domain(result) == range(d)
+// 		return result
+// 	} else {
+// 		key := sets.Choose(domain(d))
+// 		c := Remove(d, key)
+// 		invertC := Invert(c)
+// 		result := invertC[d[key] = key]
+// 		assert domain(result) == sets.Add(domain(invertC), d[key])
+// 		assert sets.Add(domain(invertC), d[key]) == sets.Add(range(c), d[key])
+// 		assert range(c) == sets.Remove(range(d), key)
+// 		assert sets.Add(range(c), d[key]) == range(d)
+// 		return result
+// 	}
+// }
 
-// TODO Convert quantifier in spec to argument if possible
-// (check sets.gobra and seqs.gobra; probably only keep it if it is part of
-// a definition, not a property
-// TODO Make naming of variables consistent (e.g. how we name keys and values)
-// TODO Organize definitions: Remove duplicates, merge similar ones, place related ones together
-// TODO Write lemmas on how functions like Invert, Keys, Occurrences behave when
-// we modify the map through updates, and remove, etc.
+// I feel like I need this helper for Invert
+// ghost
+// requires key in domain(d)
+// ensures sets.Add(range(Remove(d, key)), d[key]) == range(d)
+// decreases
+// func Helper(d dict[int]int, key int) {
+// 	assert d[key] in range(d)
+// 	temp := Remove(d, key)
+// 	// != corresponds to XOR (i think); fails atm
+// 	assert (range(temp) == range(d)) != (range(temp) == sets.Remove(range(d), key))
+// }
+
+// TODO Prove this
+// Inverted dictionaries are injective.
+// ghost
+// ensures IsInjective(Invert(d))
+// decreases
+// func InvertIsInjective(d dict[int]int) {
+// 	inverted := reveal Invert(d)
+// 	reveal IsInjective(inverted)
+// }
+
+// QUES Do we want to add a lemma for the length of RemoveKeys (at the moment
+// we only have one for Remove); what about Restrict?
+
+// Potential more lemmas:
+// - Length of RemoveKeys (at the moment we only have one for Remove)
+// - Length of Restrict
+// - How do functions like Invert, Keys, Occurrences behave when we modify the map through updates
+//   and Restrict/Remove? (+ vice versa)
