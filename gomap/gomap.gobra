@@ -1,0 +1,73 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+*/
+
+// This package defines Go maps and their associated operations in terms of
+// mathematical maps (dictionaries).
+package gomap
+
+import "dicts"
+
+// Converts a Go map to a mathematical map (dictionary).
+ghost
+requires acc(m, _)
+ensures domain(result) == domain(m)
+ensures forall k int :: {result[k]} k in domain(m) ==> result[k] == m[k]
+decreases
+// QUES Is it possible to make this non-abstract?
+pure func ToDict(m map[int]int) (result dict[int]int)
+
+// Returns a new map.
+ensures acc(result)
+ensures ToDict(result) == dicts.Empty()
+func Make() (result map[int]int) {
+	return make(map[int]int)
+}
+
+// Updates the key to the value.
+requires acc(m)
+ensures acc(m)
+ensures ToDict(m) == ToDict(old(m))[k = v]
+func Update(m map[int]int, k, v int) {
+	m[k] = v
+}
+
+// Returns the value stored under the key.
+requires acc(m, _)
+ensures k in domain(m) ==> result == ToDict(m)[k]
+ensures !(k in domain(m)) ==> result == 0
+decreases
+pure func Get(m map[int]int, k int) (result int) {
+	return m[k]
+}
+
+// Returns the number of items in a map.
+requires acc(m, _)
+ensures result == len(ToDict(m))
+decreases
+pure func Length(m map[int]int) (result int) {
+	return len(m)
+}
+
+// QUES Why doesn't delete work? It should according to https://go.dev/blog/maps
+// requires acc(m)
+// ensures acc(m)
+// ensures ToDict(m) == dicts.Remove(ToDict(old(m)), k)
+// func Remove(m map[int]int, k int) {
+// 	delete(m, k)
+// }
+
+// Returns the value stored under the key and whether it exists.
+requires acc(m, 1/2)
+ensures acc(m, 1/2)
+ensures k in domain(m) ==> value == ToDict(m)[k] && ok
+ensures !(k in domain(m)) ==> value == 0 && !ok
+// Cannot be pure, since pure functions must have exactly on result argument.
+func GetExists(m map[int]int, k int) (value int, ok bool) {
+	return m[k]
+}
+
+// QUES Can/Should we encode range?
+// QUES Can/Should we encode map literals?
