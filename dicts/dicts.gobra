@@ -502,7 +502,8 @@ pure func IsEqualFromTo(d1, d2 dict[int]int, start, end int) bool {
 
 // exchange, exchange_set -> Swap
 // NOTE Why3's exchange accepts an interval, while our implementation does not; it is
-// probably possible to get the same or similar behavior using Restrict.
+// probably possible to get the same or similar behavior using Restrict. Why does Why3
+// accept an interval?
 
 // Returns a dictionary with the values at k1 and k2 swapped.
 ghost
@@ -518,12 +519,89 @@ pure func Swap(d dict[int]int, k1, k2 int) (result dict[int]int) {
 
 // sum: skip (no sum operation available for sets)
 
-// TODO Continue with number of occurrences (maybe useful to define a function which
-// returns the set of keys with the same value and then take the cardinality of that;
-// may be useful also for Invert.
+// Returns the set of keys from the given dictionary that map to the specified value.
+ghost
+// QUES Is this trigger good?
+ensures forall k int :: {k in result} (k in domain(d) && d[k] == v) == (k in result)
+opaque
+decreases len(d)
+pure func Keys(d dict[int]int, v int) (result set[int]) {
+	return IsEmpty(d) ? sets.Empty() :
+		(let x := sets.Choose(domain(d)) in
+		(let subKeys := Keys(Remove(d, x), v) in
+		(d[x] == v ? sets.Add(subKeys, x) : subKeys)))
+	
+}
+
+// NOTE Why3's occurrences accepts an interval similar to before, while
+// we do not do that.
+
+
+// Returns the number of occurences of the value in the map.
+ghost
+decreases
+pure func Occurrences(d dict[int]int, v int) int {
+	return len(Keys(d, v))
+}
+
+// QUES Do we want such a function?
+// True iff d1 and d2 are permutations of each other.
+// ghost
+// opaque
+// decreases
+// pure func ArePermutations(d1, d2 dict[int]int) bool {
+// 	return forall v int :: Occurrences(d1, v) == Occurrences(d2, v)
+// }
+
+// NOTE Does not work. Probably because of something with triggering.
+// Permutation is transitive.
+// ghost
+// requires ArePermutations(d1, d2) && ArePermutations(d2, d3)
+// ensures ArePermutations(d1, d3)
+// decreases
+// func PermutationsAreTransitive(d1, d2, d3 dict[int]int) {
+// 	reveal ArePermutations(d1, d2)
+// 	reveal ArePermutations(d2, d3)
+// }
+
+// NOTE Why3 limits this to dictionaries with domain [0, n)
+
+// True iff a dictionary is surjective
+ghost
+opaque
+decreases
+pure func IsSurjective(d dict[int]int) bool {
+	// QUES What would be good triggers?
+	return forall y int :: (exists x int :: x in domain(d) && d[x] == y)
+}
+
+// True iff d maps [0, n) to [0, n)
+ghost
+opaque
+decreases
+pure func IsRange(d dict[int]int, n int) bool {
+	// QUES What would be good triggers?
+	return forall x int :: (0 <= x && x < n) ==> (x in domain(d) && 0 <= d[x] && d[x] < n)
+}
+
+// Cannot show injective_surjective: Why3 limits definition of injectivity and surjectivity two finite intervals, while Dafny only defines injectivity (on the entire space)
+
+
+// NOTE Proof does not work.
+// v can occur at most once as a value in injective dictionaries.
+// ghost
+// requires IsInjective(d)
+// ensures Occurrences(d, v) <= 1
+// decreases
+// func InjectiveOccurrences(d dict[int]int, v int) {
+// 	reveal IsInjective(d)
+// }
+
 
 // TODO Convert quantifier in spec to argument if possible
 // (check sets.gobra and seqs.gobra; probably only keep it if it is part of
 // a definition, not a property
 // TODO Make naming of variables consistent (e.g. how we name keys and values)
 // TODO Organize definitions: Remove duplicates, merge similar ones, place related ones together
+// TODO Write lemmas on how functions like Invert, Keys, Occurrences behave when
+// we modify the map through updates, and remove, etc.
