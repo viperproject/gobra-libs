@@ -88,7 +88,7 @@ pure func IsEqualOnKey(d1, d2 dict[int]int, k int) bool {
 		(k in domain(d1) && k in domain(d2) && d1[k] == d2[k])
 }
 
-// True iff and only if d1 is a subset of d2.
+// True iff if d1 is a subset of d2.
 ghost
 decreases
 pure func IsSubset(d1, d2 dict[int]int) bool {
