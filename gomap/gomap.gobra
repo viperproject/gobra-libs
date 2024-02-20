@@ -16,7 +16,6 @@ requires acc(m, _)
 ensures domain(result) == domain(m)
 ensures forall k int :: {result[k]} k in domain(m) ==> result[k] == m[k]
 decreases
-// QUES Is it possible to make this non-abstract?
 pure func ToDict(m map[int]int) (result dict[int]int)
 
 // Returns a new map.
@@ -43,22 +42,6 @@ pure func Get(m map[int]int, k int) (result int) {
 	return m[k]
 }
 
-// Returns the number of items in a map.
-requires acc(m, _)
-ensures result == len(ToDict(m))
-decreases
-pure func Length(m map[int]int) (result int) {
-	return len(m)
-}
-
-// QUES Why doesn't delete work? It should according to https://go.dev/blog/maps
-// requires acc(m)
-// ensures acc(m)
-// ensures ToDict(m) == dicts.Remove(ToDict(old(m)), k)
-// func Remove(m map[int]int, k int) {
-// 	delete(m, k)
-// }
-
 // Returns the value stored under the key and whether it exists.
 requires acc(m, 1/2)
 ensures acc(m, 1/2)
@@ -69,5 +52,70 @@ func GetExists(m map[int]int, k int) (value int, ok bool) {
 	return m[k]
 }
 
-// QUES Can/Should we encode range?
-// QUES Can/Should we encode map literals?
+// True iff the key exists.
+requires acc(m, 1/2)
+ensures acc(m, 1/2)
+ensures result == k in domain(ToDict(m))
+// Cannot be pure, since there let _, ok := m[k] in ok would be ghost.
+func Exists(m map[int]int, k int) (result bool) {
+	_, ok := GetExists(m, k)
+	return ok
+}
+
+// Returns the number of items in a map.
+requires acc(m, _)
+ensures result == len(ToDict(m))
+decreases
+pure func Length(m map[int]int) (result int) {
+	return len(m)
+}
+
+// A map is empty if its length is 0.
+requires acc(m, _)
+ensures result == dicts.IsEmpty(ToDict(m))
+decreases
+pure func IsEmpty(m map[int]int) (result bool) {
+	return len(m) == 0
+}
+
+// skip dicts.Get: option is ghost (results in Logic error: ghost classification on unsafe node)
+// skip Restrict, RemoveKeys, Remove: requires creation of new map
+
+// True iff k maps to the same value or is not in the domains of m1 and m2.
+requires acc(m1, 1/2)
+requires acc(m2, 1/2)
+ensures acc(m1, 1/2)
+ensures acc(m2, 1/2)
+ensures result == dicts.IsEqualOnKey(ToDict(m1), ToDict(m2), k)
+func IsEqualOnKey(m1, m2 map[int]int, k int) (result bool) {
+	// QUES If I don't factor out Exists like this, I cannot prove the postcondition. Why?
+	// Calling exists multiple times shouldn't change anything, as we only get read-only access
+	// to heaps and nothing else.
+	exists1 := Exists(m1, k)
+	exists2 := Exists(m2, k)
+	return !(exists1 || exists2) ||
+		(exists1 && exists2 && Get(m1, k) == Get(m2, k))
+}
+
+// True iff m1 is a subset of m2.
+requires acc(m1, 1/2)
+requires acc(m2, 1/2)
+ensures acc(m1, 1/2)
+ensures acc(m2, 1/2)
+ensures result == dicts.IsSubset(ToDict(m1), ToDict(m2))
+func IsSubset(m1, m2 map[int]int) (result bool) {
+	invariant acc(m1, 1/2)
+	invariant acc(m2, 1/2)
+	invariant visited subset domain(ToDict(m2))
+	invariant forall k int :: k in visited ==> dicts.IsEqualOnKey(ToDict(m1), ToDict(m2), k)
+	for k := range m1 with visited {
+		assert acc(m1, 1/2)
+		v1 := Get(m1, k)
+		v2, ok := GetExists(m2, k)
+		if v1 != v2 || !ok {
+			return false
+		}
+	}
+	
+	return true
+}
