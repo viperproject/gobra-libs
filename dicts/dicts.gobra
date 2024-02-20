@@ -26,10 +26,6 @@ package dicts
 import "util"
 import "sets"
 
-/// Dafny
-// Skip Get: No Option<>
-// Skip ToImap: No Imap
-
 // A dictionary is empty if its domain is empty.
 ghost
 decreases
@@ -43,6 +39,12 @@ ensures IsEmpty(result)
 decreases
 pure func Empty() (result dict[int]int) {
 	return dict[int]int{}
+}
+
+ghost
+decreases
+pure func Get(d dict[int]int, k int) option[int] {
+	return k in domain(d) ? some(d[k]) : none[int]
 }
 
 // QUES We structure Remove, RemoveKeys and Restrict a bit differently
@@ -79,22 +81,18 @@ ensures len(result) <= len(d)
 ensures x in domain(d) ==> len(result) == len(d) - 1
 ensures !(x in domain(d)) ==> len(result) == len(d)
 decreases
-// QUES For these properties a proof is required. There are few things we can do:
-// - Separate properties into different lemma: Calling remove doesnt call its proof, but it is less convenient.
-// - Make RemoveKeys(d, sets.SingletonSet(x)) part of the spec and make the function opaque:
-//   This would make the API a bit inconsistent (RemoveKeys for example doesn't have that) - although we could change RemoveKeys accordingly (seems like this is what Dafny does)
-// - Keep it as is: Whenever someone calls Remove, the proof is instantiated as well.
 pure func Remove(d dict[int]int, x int) (result dict[int]int) {
 	return let ys := (sets.Remove(domain(d), x)) in
 		let _ := util.Asserting(ys intersection domain(d) == ys) in
 		RemoveKeys(d, sets.SingletonSet(x))
 }
 
-// True iff x maps to the same value or does not exist in d1 and d2.
+// True iff x maps to the same value or is not in the domains of d1 and d2.
 ghost
 decreases
 pure func IsEqualOnKey(d1, d2 dict[int]int, x int) bool {
-	return !(x in domain(d1) || x in domain(d2)) || (x in domain(d1) && x in domain(d2) && d1[x] == d2[x])
+	return !(x in domain(d1) ||x in domain(d2)) ||
+		(x in domain(d1) && x in domain(d2) && d1[x] == d2[x])
 }
 
 // True iff and only if d1 is a subset of d2.
@@ -254,7 +252,17 @@ pure func InsertDomain(d dict[int]int, key, value int) util.Unit {
 ghost
 ensures d[key = value][key] == value
 decreases
-pure func UpdateSame(d dict[int] int, key, value int) util.Unit {
+pure func UpdateSame(d dict[int]int, key, value int) util.Unit {
+	return util.Unit{}
+}
+
+// Reassigning the corresponding value to a key does not change the dictionary.
+ghost
+requires k in domain(d)
+requires v == d[k]
+ensures d[k = v] == d
+decreases
+pure func UpdateEqual(d dict[int]int, k, v int) util.Unit {
 	return util.Unit{}
 }
 
@@ -314,8 +322,7 @@ pure func DomainLenEq(d dict[int]int) util.Unit {
 // If two dictionaries are disjoint there is no key that is in both of their domains.
 ghost
 requires AreDisjoint(d1, d2)
-// QUES Should I move the x to the argument list and get rid of the quantifier?
-ensures forall x int :: {x in domain(d1)} {x in domain(d2)} !(x in domain(d1) && x in domain(d2))
+ensures !(x in domain(d1) && x in domain(d2))
 decreases
 pure func DisjointNoSharedKey(d1, d2 dict[int]int, x int) util.Unit {
 	return util.Unit{}
@@ -429,8 +436,9 @@ ghost
 opaque
 decreases
 pure func IsMonotonicFromTo(d dict[int]int, start, end int) bool {
-	return forall x, y int :: {d[x], d[y]} (x in domain(d) && y in domain(d) && start <= x && x <= y && y < end) ==>
-		d[x] <= d[y]
+	return forall x, y int :: {d[x], d[y]} (x in domain(d) &&
+		 				y in domain(d) &&
+		 				start <= x && x <= y && y < end) ==> d[x] <= d[y]
 }
 
 // map_eq_sub -> IsEqualFromTo
@@ -439,7 +447,7 @@ pure func IsMonotonicFromTo(d dict[int]int, start, end int) bool {
 ghost
 opaque
 decreases
-pure func IsEqualFromTo(d1, d2 dict[int]int, start, end int) bool {
+pure func IsEqualInRange(d1, d2 dict[int]int, start, end int) bool {
 	return forall x int :: {d1[x], d2[x]} (start <= x && x < end) ==>
 		x in domain(d1) && x in domain(d2) && d1[x] == d2[x]
 }
@@ -465,7 +473,6 @@ pure func Swap(d dict[int]int, k1, k2 int) (result dict[int]int) {
 
 // Returns the set of keys from the given dictionary that map to the specified value.
 ghost
-// QUES Is this trigger good?
 ensures forall k int :: {k in result} (k in domain(d) && d[k] == v) == (k in result)
 opaque
 decreases len(d)
@@ -529,15 +536,76 @@ pure func Occurrences(d dict[int]int, v int) int {
 // Cannot show injective_surjective: Why3 limits definition of injectivity and surjectivity
 // two finite intervals, while Dafny only defines injectivity (on the entire space)
 
+// TODO turn pure
+// Remove preserves the injectivity of a dictionary.
+ghost
+requires IsInjective(d)
+ensures IsInjective(Remove(d, k))
+decreases
+func RemovePreservesInjectivity(d dict[int]int, k int) {
+	reveal IsInjective(d)
+	reveal IsInjective(Remove(d, k))
+}
+
+// TODO turn pure
+// After removing a key, the corresponding value occurs one less time.
+ghost
+requires k in domain(d)
+ensures Occurrences(Remove(d, k), d[k]) == Occurrences(d, d[k]) - 1
+decreases
+// QUES The name of this feels a bit misleading; it sounds like we remove
+// occurrences of something.
+func RemoveOccurrences(d dict[int]int, k int) {
+	ks1 := reveal Keys(d, d[k])
+	ks2 := reveal Keys(Remove(d, k), d[k])
+	assert ks2 == sets.Remove(ks1, k)
+}
+
+// TODO turn pure
+// Adding a new key-value pair increases the occurrence of the value by one.
+ghost
+requires !(k in domain(d))
+ensures Occurrences(d[k = v], v) == Occurrences(d, v) + 1
+decreases
+func AddOccurrences(d dict[int]int, k, v int) {
+	ks1 := reveal Keys(d, v)
+	ks2 := reveal Keys(d[k = v], v)
+	assert ks2 == sets.Add(ks1, k)
+}
+
+// TODO turn pure
+// Updating a key to a new value results in an additional occurrences for the
+// new value, and one less occurrence for the old value.
+ghost
+requires k in domain(d)
+requires v != d[k]
+ensures Occurrences(d[k = v], v) == Occurrences(d, v) + 1
+ensures Occurrences(d[k = v], d[k]) == Occurrences(d, d[k]) - 1
+decreases
+func UpdateOccurrences(d dict[int]int, k, v int) {
+	ks1v := reveal Keys(d, v)
+	ks1dk := reveal Keys(d, d[k])
+	ks2v := reveal Keys(d[k = v], v)
+	ks2dk := reveal Keys(d[k = v], d[k])
+	assert ks2v == sets.Add(ks1v, k)
+	assert ks2dk == sets.Remove(ks1dk, k)
+}
+
 // NOTE Proof does not work.
 // v can occur at most once as a value in injective dictionaries.
-// ghost
-// requires IsInjective(d)
-// ensures Occurrences(d, v) <= 1
-// decreases
-// func InjectiveOccurrences(d dict[int]int, v int) {
-// 	reveal IsInjective(d)
-// }
+ghost
+requires IsInjective(d)
+ensures Occurrences(d, v) <= 1
+decreases len(d)
+func InjectiveOccurrences(d dict[int]int, v int) {
+	if !sets.IsEmpty(Keys(d, v)) {
+		k := sets.Choose(Keys(d, v))
+		c := Remove(d, k)
+		RemovePreservesInjectivity(d, k)
+		InjectiveOccurrences(c, v)
+		reveal IsInjective(d)
+	}
+}
 
 // Dafny: Invert
 /// TODO Invert seems to be a bit involved. Skipping it for now.
@@ -578,7 +646,7 @@ pure func Occurrences(d dict[int]int, v int) int {
 // requires key in domain(d)
 // ensures sets.Add(range(Remove(d, key)), d[key]) == range(d)
 // decreases
-// func Helper(d dict[int]int, key int) {
+// func helper(d dict[int]int, key int) {
 // 	assert d[key] in range(d)
 // 	temp := Remove(d, key)
 // 	// != corresponds to XOR (i think); fails atm
