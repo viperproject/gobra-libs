@@ -298,7 +298,7 @@ pure func DisjointNoSharedKey(d1, d2 dict[int]int, k int) util.Unit {
 // If two dictionaries are not disjoint, there exists a key that is in both of their domains.
 ghost
 requires !AreDisjoint(d1, d2)
-ensures exists k int :: k in domain(d1) && k in domain(d2)
+ensures exists k int :: {k in domain(d1), k in domain(d2)} k in domain(d1) && k in domain(d2)
 decreases
 pure func NotDisjointSharedKey(d1, d2 dict[int]int) util.Unit {
 	return util.Unit{}
@@ -325,7 +325,7 @@ pure func NotInEmpty(d dict[int]int, k int) util.Unit {
 // There exists a key in a non-empty dictionary.
 ghost
 requires !IsEmpty(d)
-ensures exists k int :: k in domain(d)
+ensures exists k int :: {k in domain(d)} k in domain(d)
 decreases
 pure func NotEmptyKeyExists(d dict[int]int, k int) util.Unit {
 	return util.Unit{}
@@ -353,7 +353,7 @@ pure func InsertUpdateLen(d dict[int]int, k, v int) util.Unit {
 // If a value is in the range of a dictionary, there exists a corresponding key.
 ghost
 requires v in range(d)
-ensures exists k int :: k in domain(d) && d[k] == v
+ensures exists k int :: {k in domain(d)} k in domain(d) && d[k] == v
 decreases
 pure func ValueHasKey(d dict[int]int, v int) util.Unit {
 	return util.Unit{}
