@@ -16,7 +16,7 @@ import "util"
 ghost
 requires acc(m, _)
 ensures domain(result) == domain(m)
-ensures forall k int :: {result[k]} k in domain(m) ==> result[k] == m[k]
+ensures forall k int :: {result[k]} {k in domain(m)} k in domain(m) ==> result[k] == m[k]
 decreases
 pure func ToDict(m map[int]int) (result dict[int]int)
 
@@ -135,7 +135,8 @@ ensures result == dicts.IsMonotonicFrom(ToDict(m), start)
 opaque
 decreases
 pure func IsMonotonicFrom(m map[int]int, start int) (result bool) {
-	return forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && start <= k1 && k1 <= k2) ==>
+	return let _ := reveal dicts.IsMonotonicFrom(ToDict(m), start) in
+	forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && start <= k1 && k1 <= k2) ==>
 		m[k1] <= m[k2]
 }
 
@@ -146,7 +147,8 @@ ensures result == dicts.IsMonotonicFromTo(ToDict(m), start, end)
 opaque
 decreases
 pure func IsMonotonicFromTo(m map[int]int, start, end int) (result bool) {
-	return forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) &&
+	return let _ := reveal dicts.IsMonotonicFromTo(ToDict(m), start, end) in
+	forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) &&
 						    k2 in domain(m) &&
 		 				    start <= k1 && k1 <= k2 && k2 < end) ==> m[k1] <= m[k2]
 }
@@ -159,8 +161,9 @@ ensures result == dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end)
 opaque
 decreases
 pure func IsEqualInRange(m1, m2 map[int]int, start, end int) (result bool) {
-	return forall k int :: {m1[k], m2[k]} (start <= k && k < end) ==>
-		k in domain(m1) && k in domain(m2) && m1[k] == m2[k]
+	return let _ := reveal dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end) in
+	(forall k int :: {m1[k], m2[k]} (start <= k && k < end) ==>
+		k in domain(m1) && k in domain(m2) && m1[k] == m2[k])
 }
 
 // True iff m1 and m2 agree on all keys that their domains share.
