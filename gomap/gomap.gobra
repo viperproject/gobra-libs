@@ -9,6 +9,8 @@
 package gomap
 
 import "dicts"
+import "sets"
+import "util"
 
 // Converts a Go map to a mathematical map (dictionary).
 ghost
@@ -42,26 +44,6 @@ pure func Get(m map[int]int, k int) (result int) {
 	return m[k]
 }
 
-// Returns the value stored under the key and whether it exists.
-requires acc(m, 1/2)
-ensures acc(m, 1/2)
-ensures k in domain(m) ==> value == ToDict(m)[k] && ok
-ensures !(k in domain(m)) ==> value == 0 && !ok
-// Cannot be pure, since pure functions must have exactly on result argument.
-func GetExists(m map[int]int, k int) (value int, ok bool) {
-	return m[k]
-}
-
-// True iff the key exists.
-requires acc(m, 1/2)
-ensures acc(m, 1/2)
-ensures result == k in domain(ToDict(m))
-// Cannot be pure, since there let _, ok := m[k] in ok would be ghost.
-func Exists(m map[int]int, k int) (result bool) {
-	_, ok := GetExists(m, k)
-	return ok
-}
-
 // Returns the number of items in a map.
 requires acc(m, _)
 ensures result == len(ToDict(m))
@@ -78,44 +60,136 @@ pure func IsEmpty(m map[int]int) (result bool) {
 	return len(m) == 0
 }
 
-// skip dicts.Get: option is ghost (results in Logic error: ghost classification on unsafe node)
-// skip Restrict, RemoveKeys, Remove: requires creation of new map
+// Retrieves the value associated with the key, if present, as an option.
+ghost
+requires acc(m, _)
+decreases
+pure func GetOption(m map[int]int, k int) (result option[int]) {
+	return dicts.Get(ToDict(m), k)
+}
 
 // True iff k maps to the same value or is not in the domains of m1 and m2.
-requires acc(m1, 1/2)
-requires acc(m2, 1/2)
-ensures acc(m1, 1/2)
-ensures acc(m2, 1/2)
+ghost
+requires acc(m1, _)
+requires acc(m2, _)
 ensures result == dicts.IsEqualOnKey(ToDict(m1), ToDict(m2), k)
-func IsEqualOnKey(m1, m2 map[int]int, k int) (result bool) {
-	// QUES If I don't factor out Exists like this, I cannot prove the postcondition. Why?
-	// Calling exists multiple times shouldn't change anything, as we only get read-only access
-	// to heaps and nothing else.
-	exists1 := Exists(m1, k)
-	exists2 := Exists(m2, k)
-	return !(exists1 || exists2) ||
-		(exists1 && exists2 && Get(m1, k) == Get(m2, k))
+decreases
+pure func IsEqualOnKey(m1, m2 map[int]int, k int) (result bool) {
+	return !(k in domain(m1) || k in domain(m2)) ||
+		(k in domain(m1) && k in domain(m2) && m1[k] == m2[k])
 }
 
 // True iff m1 is a subset of m2.
-requires acc(m1, 1/2)
-requires acc(m2, 1/2)
-ensures acc(m1, 1/2)
-ensures acc(m2, 1/2)
+ghost
+requires acc(m1, _)
+requires acc(m2, _)
 ensures result == dicts.IsSubset(ToDict(m1), ToDict(m2))
-func IsSubset(m1, m2 map[int]int) (result bool) {
-	invariant acc(m1, 1/2)
-	invariant acc(m2, 1/2)
-	invariant visited subset domain(ToDict(m2))
-	invariant forall k int :: k in visited ==> dicts.IsEqualOnKey(ToDict(m1), ToDict(m2), k)
-	for k := range m1 with visited {
-		assert acc(m1, 1/2)
-		v1 := Get(m1, k)
-		v2, ok := GetExists(m2, k)
-		if v1 != v2 || !ok {
-			return false
-		}
-	}
-	
-	return true
+decreases
+pure func IsSubset(m1, m2 map[int]int) (result bool) {
+	return domain(m1) subset domain(m2) &&
+		forall k int :: {IsEqualOnKey(m1, m2, k)} {k in domain(m1)} (k in domain(m1)) ==>
+		IsEqualOnKey(m1, m2, k)
+}
+
+// Maps are disjoint iff their domains are disjoint.
+ghost
+requires acc(m1, _)
+requires acc(m2, _)
+ensures result == dicts.AreDisjoint(ToDict(m1), ToDict(m2))
+decreases
+pure func AreDisjoint(m1, m2 map[int]int) (result bool) {
+	return sets.AreDisjoint(domain(m1), domain(m2))
+}
+
+// True iff a map is injective.
+ghost
+requires acc(m, _)
+// QUES This postcondition (and many of the following) don't verify either. Since
+// Agree also does not verify even though it is not opaque, I would guess
+// it has something to do with forall/triggers (even though IsSubset verifies just fine)
+ensures result == dicts.IsInjective(ToDict(m))
+opaque
+decreases
+pure func IsInjective(m map[int]int) (result bool) {
+	return let _ := reveal dicts.IsInjective(ToDict(m)) in
+	forall k1, k2 int :: {m[k1], m[k2]} (k1 != k2 && k1 in domain(m) && k2 in domain(m)) ==>
+		m[k1] != m[k2]
+}
+
+// True iff a map is monotonic.
+ghost
+requires acc(m, _)
+ensures result == dicts.IsMonotonic(ToDict(m))
+opaque
+decreases
+pure func IsMonotonic(m map[int]int) (result bool) {
+	return let _ := reveal dicts.IsMonotonic(ToDict(m)) in
+	forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && k1 <= k2) ==>
+		m[k1] <= m[k2]
+}
+
+// True iff a map is monotonic. Only considers keys greater than or equal to start.
+ghost
+requires acc(m, _)
+ensures result == dicts.IsMonotonicFrom(ToDict(m), start)
+opaque
+decreases
+pure func IsMonotonicFrom(m map[int]int, start int) (result bool) {
+	return forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && start <= k1 && k1 <= k2) ==>
+		m[k1] <= m[k2]
+}
+
+// True iff a map is monotonic. Only considers keys in the interval [start, end).
+ghost
+requires acc(m, _)
+ensures result == dicts.IsMonotonicFromTo(ToDict(m), start, end)
+opaque
+decreases
+pure func IsMonotonicFromTo(m map[int]int, start, end int) (result bool) {
+	return forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) &&
+						    k2 in domain(m) &&
+		 				    start <= k1 && k1 <= k2 && k2 < end) ==> m[k1] <= m[k2]
+}
+
+// True iff two maps are equal in the interval [start, end).
+ghost
+requires acc(m1, _)
+requires acc(m2, _)
+ensures result == dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end)
+opaque
+decreases
+pure func IsEqualInRange(m1, m2 map[int]int, start, end int) (result bool) {
+	return forall k int :: {m1[k], m2[k]} (start <= k && k < end) ==>
+		k in domain(m1) && k in domain(m2) && m1[k] == m2[k]
+}
+
+// True iff m1 and m2 agree on all keys that their domains share.
+ghost
+requires acc(m1, _)
+requires acc(m2, _)
+ensures result == dicts.Agree(ToDict(m1), ToDict(m2))
+decreases
+pure func Agree(m1, m2 map[int]int) (result bool) {
+	return forall k int :: {m1[k], m2[k]} k in (domain(m1) intersection domain(m2)) ==>
+		m1[k] == m2[k]
+}
+
+// Returns the set of keys from m that map to the specified value.
+ghost
+requires acc(m, _)
+ensures forall k int :: {k in result} (k in domain(m) && m[k] == v) == (k in result)
+decreases len(m)
+pure func Keys(m map[int]int, v int) (result set[int]) {
+	// Since we don't have access to Remove for gomaps, we define this
+	// using ToDict. Note the lack of opaque in the function.
+	return dicts.Keys(ToDict(m), v)
+}
+
+// Returns the number of occurences of the value in the map.
+ghost
+requires acc(m, _)
+ensures result == dicts.Occurrences(ToDict(m), v)
+decreases
+pure func Occurrences(m map[int]int, v int) (result int) {
+	return len(Keys(m, v))
 }

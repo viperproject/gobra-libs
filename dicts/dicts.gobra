@@ -190,8 +190,8 @@ pure func IsEqualInRange(d1, d2 dict[int]int, start, end int) bool {
 ghost
 decreases
 pure func Agree(d1, d2 dict[int]int) bool {
-	return forall k1 int :: {d1[k1], d2[k1]} k1 in (domain(d1) intersection domain(d2)) ==>
-		d1[k1] == d2[k1]
+	return forall k int :: {d1[k], d2[k]} k in (domain(d1) intersection domain(d2)) ==>
+		d1[k] == d2[k]
 }
 
 // The domain of a map after removing a key is equivalent to removing
@@ -393,7 +393,7 @@ pure func Keys(d dict[int]int, v int) (result set[int]) {
 	
 }
 
-// Returns the number of occurences of the value in the map.
+// Returns the number of occurences of the value in the dictionary.
 ghost
 decreases
 pure func Occurrences(d dict[int]int, v int) int {
