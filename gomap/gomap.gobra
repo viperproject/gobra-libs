@@ -104,9 +104,6 @@ pure func AreDisjoint(m1, m2 map[int]int) (result bool) {
 // True iff a map is injective.
 ghost
 requires acc(m, _)
-// QUES This postcondition (and many of the following) don't verify either. Since
-// Agree also does not verify even though it is not opaque, I would guess
-// it has something to do with forall/triggers (even though IsSubset verifies just fine)
 ensures result == dicts.IsInjective(ToDict(m))
 opaque
 decreases
@@ -157,6 +154,7 @@ pure func IsMonotonicFromTo(m map[int]int, start, end int) (result bool) {
 ghost
 requires acc(m1, _)
 requires acc(m2, _)
+// QUES Does not verify
 ensures result == dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end)
 opaque
 decreases
@@ -170,6 +168,7 @@ pure func IsEqualInRange(m1, m2 map[int]int, start, end int) (result bool) {
 ghost
 requires acc(m1, _)
 requires acc(m2, _)
+// QUES Does not verify
 ensures result == dicts.Agree(ToDict(m1), ToDict(m2))
 decreases
 pure func Agree(m1, m2 map[int]int) (result bool) {
