@@ -182,7 +182,7 @@ ghost
 opaque
 decreases
 pure func IsEqualInRange(d1, d2 dict[int]int, start, end int) bool {
-	return forall k int :: {d1[k], d2[k]} (start <= k && k < end) ==>
+	return forall k int :: {d1[k], d2[k]} {k in domain(d1)} {k in domain(d2)}(start <= k && k < end) ==>
 		k in domain(d1) && k in domain(d2) && d1[k] == d2[k]
 }
 
