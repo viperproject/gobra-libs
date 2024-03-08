@@ -20,39 +20,8 @@ ensures forall k int :: {result[k]} {k in domain(m)} k in domain(m) ==> result[k
 decreases
 pure func ToDict(m map[int]int) (result dict[int]int)
 
-// Returns a new map.
-ensures acc(result)
-ensures ToDict(result) == dicts.Empty()
-func Make() (result map[int]int) {
-	return make(map[int]int)
-}
-
-// Updates the key to the value.
-requires acc(m)
-ensures acc(m)
-ensures ToDict(m) == ToDict(old(m))[k = v]
-func Update(m map[int]int, k, v int) {
-	m[k] = v
-}
-
-// Returns the value stored under the key.
-requires acc(m, _)
-ensures k in domain(m) ==> result == ToDict(m)[k]
-ensures !(k in domain(m)) ==> result == 0
-decreases
-pure func Get(m map[int]int, k int) (result int) {
-	return m[k]
-}
-
-// Returns the number of items in a map.
-requires acc(m, _)
-ensures result == len(ToDict(m))
-decreases
-pure func Length(m map[int]int) (result int) {
-	return len(m)
-}
-
 // A map is empty if its length is 0.
+ghost
 requires acc(m, _)
 ensures result == dicts.IsEmpty(ToDict(m))
 decreases
@@ -87,8 +56,8 @@ ensures result == dicts.IsSubset(ToDict(m1), ToDict(m2))
 decreases
 pure func IsSubset(m1, m2 map[int]int) (result bool) {
 	return domain(m1) subset domain(m2) &&
-		forall k int :: {IsEqualOnKey(m1, m2, k)} {k in domain(m1)} (k in domain(m1)) ==>
-		IsEqualOnKey(m1, m2, k)
+			forall k int :: {IsEqualOnKey(m1, m2, k)} {k in domain(m1)} (k in domain(m1)) ==>
+				IsEqualOnKey(m1, m2, k)
 }
 
 // Maps are disjoint iff their domains are disjoint.
@@ -101,7 +70,6 @@ pure func AreDisjoint(m1, m2 map[int]int) (result bool) {
 	return sets.AreDisjoint(domain(m1), domain(m2))
 }
 
-// True iff a map is injective.
 ghost
 requires acc(m, _)
 ensures result == dicts.IsInjective(ToDict(m))
@@ -109,11 +77,10 @@ opaque
 decreases
 pure func IsInjective(m map[int]int) (result bool) {
 	return let _ := reveal dicts.IsInjective(ToDict(m)) in
-	forall k1, k2 int :: {m[k1], m[k2]} (k1 != k2 && k1 in domain(m) && k2 in domain(m)) ==>
-		m[k1] != m[k2]
+		forall k1, k2 int :: {m[k1], m[k2]} (k1 != k2 && k1 in domain(m) && k2 in domain(m)) ==>
+			m[k1] != m[k2]
 }
 
-// True iff a map is monotonic.
 ghost
 requires acc(m, _)
 ensures result == dicts.IsMonotonic(ToDict(m))
@@ -121,11 +88,11 @@ opaque
 decreases
 pure func IsMonotonic(m map[int]int) (result bool) {
 	return let _ := reveal dicts.IsMonotonic(ToDict(m)) in
-	forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && k1 <= k2) ==>
-		m[k1] <= m[k2]
+		forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && k1 <= k2) ==>
+			m[k1] <= m[k2]
 }
 
-// True iff a map is monotonic. Only considers keys greater than or equal to start.
+// True iff a map is monotonic in the range [start, +∞)
 ghost
 requires acc(m, _)
 ensures result == dicts.IsMonotonicFrom(ToDict(m), start)
@@ -133,11 +100,11 @@ opaque
 decreases
 pure func IsMonotonicFrom(m map[int]int, start int) (result bool) {
 	return let _ := reveal dicts.IsMonotonicFrom(ToDict(m), start) in
-	forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && start <= k1 && k1 <= k2) ==>
-		m[k1] <= m[k2]
+		forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && start <= k1 && k1 <= k2) ==>
+			m[k1] <= m[k2]
 }
 
-// True iff a map is monotonic. Only considers keys in the interval [start, end).
+// True iff a map is monotonic in the interval [start, end).
 ghost
 requires acc(m, _)
 ensures result == dicts.IsMonotonicFromTo(ToDict(m), start, end)
@@ -145,9 +112,10 @@ opaque
 decreases
 pure func IsMonotonicFromTo(m map[int]int, start, end int) (result bool) {
 	return let _ := reveal dicts.IsMonotonicFromTo(ToDict(m), start, end) in
-	forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) &&
-						    k2 in domain(m) &&
-		 				    start <= k1 && k1 <= k2 && k2 < end) ==> m[k1] <= m[k2]
+		forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) &&
+						     k2 in domain(m) &&
+		 				     start <= k1 && k1 <= k2 && k2 < end) ==>
+							m[k1] <= m[k2]
 }
 
 // True iff two maps are equal in the interval [start, end).
@@ -159,8 +127,8 @@ opaque
 decreases
 pure func IsEqualInRange(m1, m2 map[int]int, start, end int) (result bool) {
 	return let _ := reveal dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end) in
-	(forall k int :: {m1[k], m2[k]} {k in domain(m1)} {k in domain(m2)} (start <= k && k < end) ==>
-		k in domain(m1) && k in domain(m2) && m1[k] == m2[k])
+		(forall k int :: {m1[k], m2[k]} {k in domain(m1)} {k in domain(m2)} (start <= k && k < end) ==>
+			k in domain(m1) && k in domain(m2) && m1[k] == m2[k])
 }
 
 // True iff m1 and m2 agree on all keys that their domains share.
@@ -171,7 +139,7 @@ ensures result == dicts.Agree(ToDict(m1), ToDict(m2))
 decreases
 pure func Agree(m1, m2 map[int]int) (result bool) {
 	return forall k int :: {m1[k], m2[k]} k in (domain(m1) intersection domain(m2)) ==>
-		m1[k] == m2[k]
+			m1[k] == m2[k]
 }
 
 // Returns the set of keys from m that map to the specified value.
