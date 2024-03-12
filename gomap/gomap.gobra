@@ -13,6 +13,12 @@ import "sets"
 import "util"
 
 // Converts a Go map to a mathematical map (dictionary).
+//
+// This function is abstract since at the moment there is no good way to
+// iteratively create a dictionary from a map: using Go's range would
+// require us to update the dict in the loop which isn't possible. Calling
+// ToDict recursively by creating a submap of m would have side-effects,
+// which isn't possible in a pure function.
 ghost
 requires acc(m, _)
 ensures domain(result) == domain(m)
@@ -71,9 +77,9 @@ pure func AreDisjoint(m1, m2 map[int]int) (result bool) {
 }
 
 ghost
+opaque
 requires acc(m, _)
 ensures result == dicts.IsInjective(ToDict(m))
-opaque
 decreases
 pure func IsInjective(m map[int]int) (result bool) {
 	return let _ := reveal dicts.IsInjective(ToDict(m)) in
@@ -82,9 +88,9 @@ pure func IsInjective(m map[int]int) (result bool) {
 }
 
 ghost
+opaque
 requires acc(m, _)
 ensures result == dicts.IsMonotonic(ToDict(m))
-opaque
 decreases
 pure func IsMonotonic(m map[int]int) (result bool) {
 	return let _ := reveal dicts.IsMonotonic(ToDict(m)) in
@@ -94,9 +100,9 @@ pure func IsMonotonic(m map[int]int) (result bool) {
 
 // True iff a map is monotonic in the range [start, +∞)
 ghost
+opaque
 requires acc(m, _)
 ensures result == dicts.IsMonotonicFrom(ToDict(m), start)
-opaque
 decreases
 pure func IsMonotonicFrom(m map[int]int, start int) (result bool) {
 	return let _ := reveal dicts.IsMonotonicFrom(ToDict(m), start) in
@@ -106,9 +112,9 @@ pure func IsMonotonicFrom(m map[int]int, start int) (result bool) {
 
 // True iff a map is monotonic in the interval [start, end).
 ghost
+opaque
 requires acc(m, _)
 ensures result == dicts.IsMonotonicFromTo(ToDict(m), start, end)
-opaque
 decreases
 pure func IsMonotonicFromTo(m map[int]int, start, end int) (result bool) {
 	return let _ := reveal dicts.IsMonotonicFromTo(ToDict(m), start, end) in
@@ -120,10 +126,10 @@ pure func IsMonotonicFromTo(m map[int]int, start, end int) (result bool) {
 
 // True iff two maps are equal in the interval [start, end).
 ghost
+opaque
 requires acc(m1, _)
 requires acc(m2, _)
 ensures result == dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end)
-opaque
 decreases
 pure func IsEqualInRange(m1, m2 map[int]int, start, end int) (result bool) {
 	return let _ := reveal dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end) in
