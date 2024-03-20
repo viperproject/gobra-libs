@@ -147,7 +147,7 @@ ghost
 opaque
 decreases
 pure func IsTotal(d dict[int]int) bool {
-	return forall k int :: {d[k]} {k in domain(d)} k in domain(d)
+	return forall k int :: {k in domain(d)} k in domain(d)
 }
 
 // True iff a dictionary is monotonic.
