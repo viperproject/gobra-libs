@@ -1,0 +1,97 @@
+// This package contains the minimal proof for InsertCorrect from
+// https://github.com/viperproject/program-proofs-gobra/blob/main/chapter10/examples_10.2.gobra
+package minimal
+
+// Note that we only need to instantiate the induction hypothesis.
+ghost
+requires pq.Valid()
+ensures let pqPrime := pq.Insert(y) in
+	pqPrime.Valid() &&
+	pqPrime.Elements() == pq.Elements() union mset[int]{y}
+decreases len(pq)
+pure func (pq PQueue) InsertCorrect(y int) Unit {
+	return match pq {
+		case Leaf{}:
+			Unit{}
+		case Node{?x, ?l, ?r}:
+			let max := y < x ? x : y in
+			r.InsertCorrect(max)
+	}
+}
+
+ghost
+decreases len(pq)
+pure func (pq PQueue) Valid() bool {
+	return pq.IsBinaryHeap() && pq.IsBalanced()
+}
+
+ghost
+decreases len(pq)
+pure func (pq PQueue) Insert(y int) PQueue {
+	return match pq {
+		case Leaf{}:
+			Node{y, Leaf{}, Leaf{}}
+		case Node{?x, ?left, ?right}:
+			y < x ? Node{y, right.Insert(x), left} : Node{x, right.Insert(y), left}
+	}
+}
+
+ghost
+decreases len(pq)
+pure func (pq PQueue) Elements() mset[int] {
+	return match pq {
+		case Leaf{}:
+			mset[int]{}
+		case Node{?x, ?left, ?right}:
+			mset[int]{x} union left.Elements() union right.Elements()
+	}
+}
+
+ghost
+decreases len(pq)
+pure func (pq PQueue) IsBalanced() (res bool) {
+	return match pq {
+		case Leaf{}:
+			true
+		case Node{_, ?left, ?right}:
+			left.IsBalanced() && right.IsBalanced() &&
+			(let L := len(left.Elements()) in
+			let R := len(right.Elements()) in
+			L == R || L == R + 1)
+	}
+}
+
+ghost
+decreases len(pq)
+pure func (pq PQueue) IsBinaryHeap() bool {
+	return match pq {
+		case Leaf{}:
+			true
+		case Node{?x, ?left, ?right}:
+			left.IsBinaryHeap() && right.IsBinaryHeap() &&
+			(left == Leaf{} || x <= left.x) &&
+			(right == Leaf{} || x <= right.x)
+	}
+}
+
+
+type Unit struct{}
+
+ghost
+requires b
+decreases
+pure func asserting(b bool) Unit {
+	return Unit{}
+}
+
+type PQueue = BraunTree
+
+type BraunTree adt {
+	Leaf {}
+
+	Node {
+		x int
+		left BraunTree
+		right BraunTree
+	}
+}
