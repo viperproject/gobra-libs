@@ -11,9 +11,12 @@
 
 ITERATIONS=30
 
-SILICON_PATH=~/practical-work/silicon/silicon.sh
-Z3_PATH=~/practical-work/z3-4.8.7/bin/z3
-GOBRA_PATH=~/practical-work/gobra/target/scala-2.13/gobra.jar
+# Set the path to silicon.sh
+SILICON_PATH=
+# Set the path to the z3 binary
+Z3_PATH=
+# Set the path to the Gobra jar
+GOBRA_PATH=
 
 # profile with disabled set axioms
 python profile.py ../experiments/synthetic_set/fully_assisted/fully_assisted.gobra --disableSetAxiomatization --z3RandomizeSeeds --iterations $ITERATIONS --silicon_path $SILICON_PATH --z3_path $Z3_PATH --gobra $GOBRA_PATH
