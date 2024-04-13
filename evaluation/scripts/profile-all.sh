@@ -17,7 +17,8 @@ ITERATIONS=30
 
 # Set the path to silicon.sh
 SILICON_PATH=
-# Set the path to the z3 binary
+# Set the path to the Z3 binary
+# Tested Versions: 4.8.7 (newer versions may not work; produce errors and different output) 
 Z3_PATH=
 # Set the path to the Gobra jar
 GOBRA_PATH=
