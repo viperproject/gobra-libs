@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# This file is part of gobra-libs which is released under the MIT license.
+# See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+# for full license details.
+
 # In case you are using a laptop, make sure that power settings are set
 # properly:
 # - don't run from battery

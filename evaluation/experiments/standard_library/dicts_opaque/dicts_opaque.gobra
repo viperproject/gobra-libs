@@ -1,3 +1,9 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+*/
+
 // A copy of the dicts package from the standard library.
 // Uses the opaque version of the sets package.
 package dicts_opaque

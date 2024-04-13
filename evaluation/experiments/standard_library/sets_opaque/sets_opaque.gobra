@@ -1,3 +1,9 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+*/
+
 // Copy of the sets package from the standard library where all lemmas are
 // turned opaque.
 package sets_opaque

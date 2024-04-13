@@ -1,3 +1,9 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+*/
+
 // Contains a function to synthetically push the quantifier instantiations
 // to the hundreds. We prove the assertions "manually" using the standard
 // library. Additionally, we weaken DifferenceLenEq to only include
