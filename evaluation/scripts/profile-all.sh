@@ -4,6 +4,18 @@
 # See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
 # for full license details.
 
+# DEPENDENCIES (plot.py):
+# - pandas
+# - numpy
+# - seaborn
+# - matplotlib
+# In case you forgot to install the dependencies before running the script, you
+# do not need to rerun this script (and in particular profiling); instead, simply use
+# the command for plotting found below.
+
+# USAGE:
+# Switch into the same directory as profile-all.sh, and run the script.
+#
 # In case you are using a laptop, make sure that power settings are set
 # properly:
 # - don't run from battery
