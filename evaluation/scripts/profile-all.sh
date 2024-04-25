@@ -14,7 +14,14 @@
 # the command for plotting found below.
 
 # USAGE:
-# Switch into the same directory as profile-all.sh, and run the script.
+# First, make sure the following variables are set:
+# - SILICON_PATH (should contain path to silicon.sh)
+# - Z3_PATH (should contain path to the Z3 binary)
+# - GOBRA_PATH (should contain path to Gobra jar)
+# Note that we only tested Z3 4.8.7; newer versions may not work as
+# they produce errors and different output.
+#
+# Finally, switch into the same directory as profile-all.sh, and run the script.
 #
 # In case you are using a laptop, make sure that power settings are set
 # properly:
@@ -27,13 +34,19 @@
 
 ITERATIONS=30
 
-# Set the path to silicon.sh
-SILICON_PATH=
-# Set the path to the Z3 binary
-# Tested Versions: 4.8.7 (newer versions may not work; produce errors and different output) 
-Z3_PATH=
-# Set the path to the Gobra jar
-GOBRA_PATH=
+# Check if the environment variables are unset or empty
+if [ -z "$SILICON_PATH" ]; then
+    echo "Please set the environment variable SILICON_PATH to the path to silicon.sh."
+    exit 1
+fi
+if [ -z "$Z3_PATH" ]; then
+    echo "Please set the environment variable Z3_PATH to the path to the Z3 binary."
+    exit 1
+fi
+if [ -z "$GOBRA_PATH" ]; then
+    echo "Please set the environment variable GOBRA_PATH to the path to the Gobra jar."
+    exit 1
+fi
 
 # profile with disabled set axioms
 python profile.py ../experiments/synthetic_set/fully_assisted/fully_assisted.gobra --disableSetAxiomatization --z3RandomizeSeeds --iterations $ITERATIONS --silicon_path $SILICON_PATH --z3_path $Z3_PATH --gobra $GOBRA_PATH
