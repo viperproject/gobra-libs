@@ -16,7 +16,7 @@ Contains plots comparing the results from different experiments.
 
 ## `experiments/`
 ### `program_proofs_example_10_2/`
-We use the proof for `InsertCorrect` from [chapter 10.2 of Program Proofs encoded in Gobra] (https://github.com/viperproject/program-proofs-gobra/blob/main/chapter10/examples_10.2.gobra)
+We use the proof for `InsertCorrect` from [chapter 10.2 of Program Proofs encoded in Gobra](https://github.com/viperproject/program-proofs-gobra/blob/main/chapter10/examples_10.2.gobra)
 to investigate the effect of "assisting" the verifier on execution time
 and quantifier instantiations by means of intermediate assertions.
 
