@@ -49,10 +49,10 @@ if [ -z "$GOBRA_PATH" ]; then
 fi
 
 # profile with disabled set axioms
-python profile.py ../experiments/synthetic_set/fully_assisted/fully_assisted.gobra --disableSetAxiomatization --z3RandomizeSeeds --iterations $ITERATIONS --silicon_path $SILICON_PATH --z3_path $Z3_PATH --gobra $GOBRA_PATH
+python3 profile.py ../experiments/synthetic_set/fully_assisted/fully_assisted.gobra --disableSetAxiomatization --z3RandomizeSeeds --iterations $ITERATIONS --silicon_path $SILICON_PATH --z3_path $Z3_PATH --gobra $GOBRA_PATH
 
 # profile all files "normally"
-find ../experiments -type f -name "*.gobra" -exec python profile.py {} --z3RandomizeSeeds --iterations $ITERATIONS --silicon_path $SILICON_PATH --z3_path $Z3_PATH --gobra $GOBRA_PATH \;
+find ../experiments -type f -name "*.gobra" -exec python3 profile.py {} --z3RandomizeSeeds --iterations $ITERATIONS --silicon_path $SILICON_PATH --z3_path $Z3_PATH --gobra $GOBRA_PATH \;
 
 # generate plots for every csv
-find ../experiments -type f -name "*.csv" -exec python plot.py --qi_size 9 9 {} \;
+find ../experiments -type f -name "*.csv" -exec python3 plot.py --qi_size 9 9 {} \;

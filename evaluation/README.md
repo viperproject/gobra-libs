@@ -11,6 +11,35 @@ and store the results in a csv file (`profile.py`)
 - plot the data from one or more csv files (`plot.py`)
 - profile and plot every file in `experiments/` (`profile-all.sh`)
 
+### Dependencies and Usage
+plot.py has the following dependencies:
+- pandas
+- numpy
+- seaborn
+- matplotlib
+Install these packages using your favorite package manager
+for Python packages (e.g., apt, pacman, nix, pip, conda, etc.).
+
+profile.py requires the path to the following files:
+- silicon.sh
+- Z3 (version 4.8.7)
+- Gobra jar
+We have only tested Z3 4.8.7; newer versions may not work as they produce
+errors and different output. Additionally, in case you get errors of
+the form
+```
+    metadata["silicon_version"] = command_stdout.splitlines()[0].split()[-1][1:-2]
+                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^
+IndexError: list index out of range
+```
+there may be an issue with Silicon. In this case, consider pulling Silicon's
+source again, followed by building its jar.
+
+Examples for the usage of plot.py can be found in
+selected_plots/used_commands.md and profile-all.sh.
+For the usage of profile.py, please take a look at its usage in
+profile-all.sh. Finally, profile-all.sh contains comments describing its usage.
+
 ## `selected_plots/`
 Contains plots comparing the results from different experiments.
 
