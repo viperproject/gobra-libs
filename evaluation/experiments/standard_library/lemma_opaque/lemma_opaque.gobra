@@ -1,0 +1,90 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+*/
+
+// A copy of a non-trivial lemma from the standard library.
+// Lemmas are turned opaque.
+package lemma_opaque
+
+// ##(-I ./..)
+
+import "util"
+
+// A set is empty if it has cardinality 0.
+ghost
+decreases
+pure func IsEmpty(xs set[int]) bool {
+	return len(xs) == 0
+}
+
+// A set is a singleton if it has cardinality 1.
+ghost
+decreases
+pure func IsSingleton(xs set[int]) bool {
+	return len(xs) == 1
+}
+
+// Returns a singleton containing x.
+ghost
+ensures IsSingleton(result)
+ensures e in result
+decreases
+pure func SingletonSet(e int) (result set[int]) {
+	return set[int]{e}
+}
+
+// Returns whether xs is a proper subset of ys.
+ghost
+decreases
+pure func IsProperSubset(xs, ys set[int]) bool {
+	return xs subset ys && xs != ys
+}
+
+// Returns an element from a non-empty set.
+ghost
+requires !IsEmpty(xs)
+ensures e in xs
+ensures IsSingleton(xs) ==> xs == SingletonSet(e)
+decreases
+pure func choose(xs set[int]) (e int)
+
+// Remove e from xs. Does not require e to be in xs.
+ghost
+ensures !(e in xs) ==> result == xs
+ensures (e in xs) ==> (len(result) == len(xs) - 1)
+ensures !(e in xs) ==> (len(result) == len(xs))
+decreases
+pure func Remove(xs set[int], e int) (result set[int]) {
+	return xs setminus SingletonSet(e)
+}
+
+// If xs is a subset of ys and both have the same cardinality, they are equal.
+ghost
+opaque
+requires xs subset ys
+requires len(xs) == len(ys)
+ensures xs == ys
+decreases
+pure func SubsetEquality(xs, ys set[int]) util.Unit {
+	return util.Asserting(len(ys setminus xs) == len(ys) - len(xs))
+}
+
+// If xs is a subset of ys, then the cardinality of xs is less than or equal to the cardinality of ys.
+// If xs is a strict subset of ys, then the cardinality of xs is less than the cardinality of ys.
+ghost
+opaque
+decreases xs, ys
+ensures xs subset ys ==> len(xs) <= len(ys)
+ensures IsProperSubset(xs, ys) ==> len(xs) < len(ys)
+pure func SubsetLen(xs, ys set[int]) util.Unit {
+	return (!(xs subset ys) || len(xs) == 0) ? util.Unit{} :
+		len(xs) == len(ys) ?
+			let _ := SubsetEquality(xs, ys) in
+			(let e := choose(xs) in
+			(SubsetLen(Remove(xs, e), Remove(ys, e)))) :
+
+			let e:= choose(xs) in
+			(SubsetLen(Remove(xs, e), Remove(ys, e)))			
+}

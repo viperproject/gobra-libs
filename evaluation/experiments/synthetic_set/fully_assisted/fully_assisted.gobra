@@ -1,0 +1,90 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+*/
+
+// Contains a function to synthetically push the quantifier instantiations
+// to the hundreds. We prove the assertions "manually" using the standard
+// library.
+package fully_assisted
+
+// We copy an abstract version of the required lemmas in the standard library
+// to here. Otherwise, Gobra would try to verify these lemmas again, which
+// would not work whenever we disable set axiomatization.
+
+type Unit struct{}
+
+ghost
+ensures len(xs setminus ys) == len(xs) - len(xs intersection ys)
+ensures len(xs setminus ys) + len(ys setminus xs) + len(xs intersection ys) == len(xs union ys)
+decreases
+pure func DifferenceLenEq(xs, ys set[int]) Unit
+
+ghost
+ensures len(xs union ys) == len(xs) + len(ys) - len(xs intersection ys)
+decreases
+pure func UnionLenEq(xs, ys set[int]) Unit
+
+ghost
+ensures len(xs union ys) <= len(xs) + len(ys)
+decreases
+pure func UnionLenUpper(xs, ys set[int]) Unit
+
+ghost
+decreases
+func synthetic(a, b, c, d, e, f set[int]) {
+	// Sprinkle in unions and intersections; maybe will lead to more
+	// instantiations of quantifiers like in_intersection_in_both or
+	// in_left_in_union
+	u0 := a union b
+	i0 := a intersection b
+	u1 := c union d
+	i1 := c intersection d
+	u2 := e union f
+	i2 := e intersection f
+
+	// Assert what we would learn from DifferenceLenEq, UnionLenUpper
+	// and UnionLenEq.
+	// It appears that both of the following sections are needed to generate
+	// a lot of quantifier instantiations with some variance.
+
+	// DifferenceLenEq
+	i3 := u0 intersection i0
+	m0 := u0 setminus i0
+
+	i4 := m0 intersection i1
+	m1 := m0 setminus i1
+	DifferenceLenEq(m0, i1)
+	assert len(m1) == len(m0) - len(i4)
+
+	i5 := m1 intersection u2
+	m2 := m1 setminus u2
+	DifferenceLenEq(m1, u2)
+	assert len(m2) == len(m1) - len(i5)
+
+	// UnionLenEq, UnionLenUpper
+	UnionLenEq(a, b)
+	UnionLenUpper(a, b)
+	if len(i0) == 0 {
+		assert len(u0) == len(a) + len(b)
+	} else {
+		assert len(u0) < len(a) + len(b)
+	}
+
+	UnionLenEq(c, d)
+	UnionLenUpper(c, d)
+	if len(i1) == 0 {
+		assert len(u1) == len(c) + len(d)
+	} else {
+		assert len(u1) < len(c) + len(d)
+	}
+
+	UnionLenEq(e, f)
+	UnionLenUpper(e, f)
+	if len(i2) == 0 {
+		assert len(u2) == len(e) + len(f)
+	} else {
+		assert len(u2) < len(e) + len(f)
+	}
+}

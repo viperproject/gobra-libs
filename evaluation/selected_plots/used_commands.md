@@ -1,0 +1,23 @@
+# Description
+This file lists the commands used to generate the combined plots used
+in the report. Note that single plots are stored in the same directory
+as the csv by default. Combined plots, or plots where `--name` was passed
+are stored in the current working directory.
+
+# Commands
+The following commands were executed from the `combined_plots` directory.
+
+## Using opaque
+- standard_library_lemma_opaque: `python ../scripts/plot.py ../experiments/standard_library/lemma_not_opaque/lemma_not_opaque-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/standard_library/lemma_opaque/lemma_opaque-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --top 2 --name standard_library_lemma_opaque --qi_size 8 4 --variants "Default" "opaque"`
+- standard_library_sets_opaque: `python ../scripts/plot.py ../experiments/standard_library/sets_not_opaque/sets_not_opaque-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/standard_library/sets_opaque/sets_opaque-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --top 3 --qi_size 8 4 --name standard_library_sets_opaque --start_at_zero_qi --variants "Default" "opaque"`
+- standard_library_dicts_opaque: `python ../scripts/plot.py ../experiments/standard_library/dicts_not_opaque/dicts_not_opaque-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/standard_library/dicts_opaque/dicts_opaque-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --name standard_library_dicts_opaque --top 3 --qi_size 8 4 --variants "Default" opaque`
+
+## Manual Proofs
+- synthetic_not_assisted_single: `python ../scripts/plot.py ../experiments/synthetic_set/not_assisted/not_assisted-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --name synthetic_not_assisted_single --top 6`
+- synthetic_compare_noaxioms: `python ../scripts/plot.py ../experiments/synthetic_set/not_assisted/not_assisted-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/synthetic_set/fully_assisted/fully_assisted-rand-no_set_axiom-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --name synthetic_compare_noaxioms --variants Automatic Manual`
+  
+## Assisting the Verifier
+- synthetic_assisted_compare: `python ../scripts/plot.py  --name synthetic_assisted_compare ../experiments/synthetic_set/fully_assisted/fully_assisted-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/synthetic_set/weak_diffleneq/weak_diffleneq-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/synthetic_set/no_diffleneq/no_diffleneq-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/synthetic_set/no_diffleneq_unionlenupper/no_diffleneq_unionlenupper-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/synthetic_set/not_assisted/not_assisted-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --qi_size 8 4 --execution_time_size 7 4 --top 3 --variants "Fully Assisted" "Weak Eq" "No Eq" "No Eq/Upper" "Unassisted"`
+- programproofs_first_half: `python ../scripts/plot.py ../experiments/program_proofs_example_10_2/first_half/first_half-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --name programproofs_first_half --top 5 --qi_size 8 4`
+- programproofs_assisted_compare_all: `python ../scripts/plot.py ../experiments/program_proofs_example_10_2/full/full-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/program_proofs_example_10_2/first_half/first_half-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/program_proofs_example_10_2/last_half/last_half-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/program_proofs_example_10_2/minimal/minimal-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --name programproofs_assisted_compare_all --variants "Full" "First Half" "Last Half" "Minimal" --qi_size 12 20`
+- programproofs_assisted_compare_no_first_half: `python ../scripts/plot.py ../experiments/program_proofs_example_10_2/full/full-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/program_proofs_example_10_2/last_half/last_half-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv ../experiments/program_proofs_example_10_2/minimal/minimal-rand-iter_30-gran_1-sil_ver_0608ac9-z3_ver_4_8_7-gobra_ver_0608ac92.csv --name programproofs_assisted_compare_no_first_half --variants "Full" "Last Half" "Minimal" --top 3 --filter --qi_size 8 4`
