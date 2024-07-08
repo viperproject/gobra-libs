@@ -16,20 +16,12 @@ package util
 
 type Unit struct{}
 
-// Useful for marking functions as never called, by putting it in the precondition
-const Uncallable bool = false
-
 ghost
 requires false
 decreases
 pure func Unreachable() Unit {
 	return Unit{}
 }
-
-ghost
-ensures false
-decreases
-func IgnoreBranch()
 
 ghost
 ensures false
