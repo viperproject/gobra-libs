@@ -16,6 +16,21 @@ package util
 
 type Unit struct{}
 
+type Lemma struct{}
+
+ghost
+decreases
+pure func Trivial() Lemma {
+	return Lemma{}
+}
+
+ghost
+requires b
+decreases
+pure func Assert(ghost b bool) Lemma {
+	return Lemma{}
+}
+
 ghost
 requires false
 decreases
@@ -28,6 +43,8 @@ ensures false
 decreases
 func TODO()
 
+// Deprecated! `Assert` and the type `Lemma` should be used for the purposes
+// for which we previously used `Asserting` and `Unit`.
 ghost
 requires b
 decreases

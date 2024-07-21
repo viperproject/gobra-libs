@@ -1,0 +1,210 @@
+// Copyright 2024 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// This file contains the typical definition of natural numbers and includes
+// a few basic operations and lemmas on them. At the moment, we provide very
+// little functionality, but we will add to it as we see fit.
+
+package math
+
+// ##(-I ..)
+import . "util"
+
+type Nat adt {
+	Zero{}
+	Succ {
+		pre Nat
+	}
+}
+
+// PairNat is a pair of Nats. This is a useful structure
+// for doing simultaneous pattern match on two Nats.
+type PairNat adt {
+	PairNatC {
+		Fst Nat
+		Snd Nat
+	}
+}
+
+ghost
+requires 0 <= n
+decreases n
+// TODO: replace input type with `integer` when this type is available in Gobra.
+pure func FromInteger(n int) Nat {
+	return n == 0 ?
+		Zero{} :
+		Succ{FromInteger(n-1)}
+}
+
+ghost
+ensures 0 <= r
+decreases len(n)
+// TODO: replace output type with `integer` when this type is available in Gobra.
+pure func (n Nat) ToInteger() (r int) {
+	return match n {
+		case Zero{}:
+			0
+		case Succ{?nn}:
+			1 + nn.ToInteger()
+	}
+}
+
+// This function is marked private: its specification reveals implementation
+// details (e.g., the termination measure indicates the proof is done by induction).
+// We export this lemma through `FromIntegerToInteger`, which has a minimal
+// termination measure. We use this idiom only for lemmas and closed functions, as their
+// bodies are not relevant to clients.
+ghost
+requires 0 <= n
+ensures  FromInteger(n).ToInteger() == n
+decreases n
+// TODO: replace output type with `integer` when this type is available in Gobra.
+pure func fromIntegerToInteger(n int) Lemma {
+	return n == 0 ?
+		Trivial() :
+		fromIntegerToInteger(n-1)
+}
+
+ghost
+opaque // TODO: guarantee that this closed when we support this feature
+requires 0 <= n
+ensures  FromInteger(n).ToInteger() == n
+decreases
+// TODO: replace output type with `integer` when this type is available in Gobra.
+pure func FromIntegerToInteger(n int) Lemma {
+	return fromIntegerToInteger(n)
+}
+
+ghost
+ensures FromInteger(n.ToInteger()) == n
+decreases len(n)
+// TODO: replace output type with `integer` when this type is available in Gobra.
+pure func toIntegerFromInteger(n Nat) Lemma {
+	return match n {
+		case Zero{}:
+			Trivial()
+		case Succ{?pre}:
+			toIntegerFromInteger(pre)
+	}
+}
+
+ghost
+opaque // TODO: guarantee that this closed when we support this feature
+ensures FromInteger(n.ToInteger()) == n
+decreases
+// TODO: replace output type with `integer` when this type is available in Gobra.
+pure func ToIntegerFromInteger(n Nat) Lemma {
+	return toIntegerFromInteger(n)
+}
+
+ghost
+ensures m.isSucc ==> len(r) < len(m)
+ensures m.isZero ==> r == m
+decreases
+pure func (m Nat) Pred() (r Nat) {
+	return match m {
+		case Zero{}:
+			Zero{}
+		case Succ{?pre}:
+			pre
+	}
+}
+
+ghost
+decreases
+pure func One() Nat {
+	return Succ{Zero{}}
+}
+
+ghost
+decreases len(n)
+pure func (m Nat) Add(n Nat) Nat {
+	return match n {
+		case Zero{}:
+			m
+		case Succ{?nn}:
+			Succ{m.Add(nn)}
+	}
+}
+
+ghost
+ensures One().Add(n) == Succ{n}
+decreases len(n)
+pure func onePlusNIsSuccN(n Nat) Lemma {
+	return match n {
+		case Zero{}:
+			Trivial()
+		case Succ{?pre}:
+			onePlusNIsSuccN(pre) 
+	}
+}
+
+ghost
+ensures Zero{}.Add(n) == n
+decreases len(n)
+pure func zeroPlusNIsN(n Nat) Lemma {
+	return match n {
+		case Zero{}:
+			Trivial()
+		case Succ{?pre}:
+			zeroPlusNIsN(pre)
+	}
+}
+
+ghost
+ensures Zero{}.Add(n) == n
+decreases
+pure func ZeroPlusNIsN(n Nat) Lemma {
+	return zeroPlusNIsN(n)
+}
+
+ghost
+ensures m.Add(n).ToInteger() == m.ToInteger() + n.ToInteger()
+decreases len(m), len(n)
+pure func addIsCorrect(m Nat, n Nat) Lemma {
+	return match PairNatC{m, n} {
+		case PairNatC{Zero{}, _}:
+			let _ := ZeroPlusNIsN(n) in
+			Assert(m.Add(n).ToInteger() == m.ToInteger() + n.ToInteger())
+		case PairNatC{_, Zero{}}:
+			Assert(m.Add(n).ToInteger() == m.ToInteger() + n.ToInteger())
+		case _:
+			let _ := Assert(m.Add(n).ToInteger() == 1 + m.Add(n.Pred()).ToInteger()) in
+			let _ := addIsCorrect(m, n.Pred()) in
+			Assert(m.Add(n).ToInteger() == m.ToInteger() + n.ToInteger())
+	}
+}
+
+ghost
+opaque // TODO: guarantee that this closed when we support this feature
+ensures m.Add(n).ToInteger() == m.ToInteger() + n.ToInteger()
+decreases
+pure func AddIsCorrect(m Nat, n Nat) Lemma {
+	return addIsCorrect(m, n)
+}
+
+ghost
+decreases len(n)
+pure func (m Nat) Mult(n Nat) Nat {
+	return match n {
+		case Zero{}:
+			Zero{}
+		case Succ{Zero{}}:
+			m
+		case Succ{?nn}:
+			m.Add(m.Mult(nn))
+	}
+}
