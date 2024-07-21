@@ -32,6 +32,7 @@ type Nat adt {
 
 // PairNat is a pair of Nats. This is a useful structure
 // for doing simultaneous pattern match on two Nats.
+// TODO: use generic pairs when gobra supports generics.
 type PairNat adt {
 	PairNatC {
 		Fst Nat
