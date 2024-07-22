@@ -19,6 +19,7 @@ env:
   imageVersion: 'latest'
   mceMode: 'off'
   requireTriggers: '1'
+  viperBackend: SILICON
 
 jobs:
   verify-pkgs:
@@ -39,3 +40,4 @@ jobs:
           imageVersion: ${{ env.imageVersion }}
           mceMode: ${{ env.mceMode }}
           requireTriggers: ${{ env.requireTriggers }}
+          viperBackend: ${{ env.viperBackend }}
