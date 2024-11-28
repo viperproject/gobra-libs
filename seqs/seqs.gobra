@@ -6,6 +6,7 @@
   This file is inspired by the standard libraries and axiomatisations of the following verifiers:
   - dafny-lang/libraries: https://github.com/dafny-lang/libraries/blob/master/src/Collections/Sequences/Seq.dfy
 */
+//+gobra
 
 // This package defines lemmas for sequences commonly used in specifications.
 package seqs

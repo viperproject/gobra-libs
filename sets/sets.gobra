@@ -10,6 +10,7 @@
   - viperproject/silicon: https://github.com/viperproject/silicon/blob/master/src/main/resources/dafny_axioms/sets.vpr
 
 */
+//+gobra
 
 // This package defines lemmas for sets commonly used in specifications.
 package sets

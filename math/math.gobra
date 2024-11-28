@@ -1,3 +1,4 @@
+//+gobra
 // This package defines mathematical operations commonly used in specifications.
 package math
 
