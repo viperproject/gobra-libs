@@ -34,6 +34,15 @@ func Byte(s []byte, start int, end int, i int) byte {
 }
 
 ghost
+requires acc(Bytes(ub, 0, len(ub)), _)
+ensures len(res) == len(ub)
+ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
+    res[i] == Byte(ub, 0, len(ub), i)
+decreases len(ub)
+opaque
+pure func View(ub []byte) (res seq[byte])
+
+ghost
 requires 0 < p
 requires acc(Bytes(s, start, end), p)
 requires start <= idx && idx <= end
