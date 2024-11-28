@@ -1,0 +1,19 @@
+package bytes
+
+ghost
+decreases
+func testSplit() {
+	abcd := seq[byte]{'a','b','c','d'}
+
+	assert SplitInner(seq[byte]{}, seq[byte]{'a'}, seq[byte]{'b', 'c', 'd'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
+	assert seq[byte]{'d'}[1:] == seq[byte]{}
+	assert SplitInner(seq[byte]{'d'}, seq[byte]{'a'}, seq[byte]{'b', 'c'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
+	assert seq[byte]{'c', 'd'}[1:] == seq[byte]{'d'}
+	assert SplitInner(seq[byte]{'c', 'd'}, seq[byte]{'a'}, seq[byte]{'b'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
+	assert seq[byte]{'b', 'c', 'd'}[1:] == seq[byte]{'c', 'd'}
+	assert SplitInner(seq[byte]{'b', 'c', 'd'}, seq[byte]{'a'}, seq[byte]{}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
+	assert seq[byte]{'a', 'b', 'c', 'd'}[1:] == seq[byte]{'b', 'c', 'd'}
+	assert SplitInner(seq[byte]{'a', 'b', 'c', 'd'}, seq[byte]{'a'}, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}, seq[byte]{'b', 'c', 'd'}}
+
+	assert Split(abcd, seq[byte]{'a'}) == seq[seq[byte]]{ seq[byte]{}, seq[byte]{'b','c','d'} }
+}
