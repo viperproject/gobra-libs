@@ -3,6 +3,7 @@
   See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
   for full license details.
 */
+//+gobra
 
 // This package defines Go maps and their associated operations in terms of
 // mathematical maps (dictionaries).
