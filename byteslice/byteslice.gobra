@@ -45,7 +45,7 @@ pure func View(ub []byte) (res seq[byte]) {
 }
 
 ghost
-requires forall i int :: {&ub[i]} 0 <= i && i < len(ub) ==> acc(&ub[i], _)
+requires forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], _)
 ensures  len(res) == len(ub)
 ensures  forall i int :: { res[i] } 0 <= i && i < len(ub) ==> res[i] == ub[i]
 decreases len(ub)
