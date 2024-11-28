@@ -19,7 +19,7 @@ decreases
 func testSplit() {
 	abcd := seq[byte]{'a','b','c','d'}
 
-	// this block of assertions is simply to teach gobra how to unfold the definition of `SplitInner`
+	// these assertions force Gobra to expand the definition of `SplitInner`
 	assert SplitInner(seq[byte]{}, seq[byte]{'a'}, seq[byte]{'b', 'c', 'd'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
 	assert seq[byte]{'d'}[1:] == seq[byte]{}
 	assert SplitInner(seq[byte]{'d'}, seq[byte]{'a'}, seq[byte]{'b', 'c'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
