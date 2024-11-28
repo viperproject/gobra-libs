@@ -5,6 +5,7 @@ decreases
 func testSplit() {
 	abcd := seq[byte]{'a','b','c','d'}
 
+	// this block of assertions is simply to teach gobra how to unfold the definition of `SplitInner`
 	assert SplitInner(seq[byte]{}, seq[byte]{'a'}, seq[byte]{'b', 'c', 'd'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
 	assert seq[byte]{'d'}[1:] == seq[byte]{}
 	assert SplitInner(seq[byte]{'d'}, seq[byte]{'a'}, seq[byte]{'b', 'c'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
@@ -16,4 +17,13 @@ func testSplit() {
 	assert SplitInner(seq[byte]{'a', 'b', 'c', 'd'}, seq[byte]{'a'}, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}, seq[byte]{'b', 'c', 'd'}}
 
 	assert Split(abcd, seq[byte]{'a'}) == seq[seq[byte]]{ seq[byte]{}, seq[byte]{'b','c','d'} }
+}
+
+ghost
+decreases
+func testRepeat() {
+	assert Repeat(seq[byte]{'a', 'b'}, 0) == seq[byte]{}
+	assert Repeat(seq[byte]{'a', 'b'}, 1) == seq[byte]{'a', 'b'}
+
+	assert Repeat(seq[byte]{'a', 'b'}, 2) == seq[byte]{'a', 'b', 'a', 'b'}
 }

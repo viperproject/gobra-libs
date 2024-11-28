@@ -2,6 +2,14 @@
 
 package bytes
 
+	
+ghost
+requires count >= 0
+decreases count
+pure func Repeat(b seq[byte], count int) (res seq[byte]) {
+	return count == 0 ? seq[byte]{} : ( b ++ Repeat(b, count - 1) )
+}
+
 ghost
 requires 0 < len(sep)
 decreases
