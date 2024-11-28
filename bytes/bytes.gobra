@@ -12,6 +12,7 @@ pure func Repeat(b seq[byte], count int) (res seq[byte]) {
 
 ghost
 requires 0 < len(sep)
+ensures 0 < len(res)
 decreases
 pure func Split(b, sep seq[byte]) (res seq[seq[byte]]) {
 	return SplitInner(b, sep, seq[byte]{})
@@ -19,6 +20,7 @@ pure func Split(b, sep seq[byte]) (res seq[seq[byte]]) {
 
 ghost
 requires 0 < len(sep)
+ensures 0 < len(res)
 decreases len(s)
 pure func SplitInner(s, sep, ac seq[byte]) (res seq[seq[byte]]) {
 	return len(s) == 0 ?
