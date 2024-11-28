@@ -41,7 +41,7 @@ ensures  forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
 decreases
 opaque
 pure func View(ub []byte) (res seq[byte]) {
-	return unfolding acc(Bytes(ub, 0, len(ub)), _) in viewInner(ub)
+	return unfolding acc(Bytes(ub, 0, len(ub)), _) in ViewInner(ub)
 }
 
 ghost
@@ -49,8 +49,8 @@ requires forall i int :: {&ub[i]} 0 <= i && i < len(ub) ==> acc(&ub[i], _)
 ensures  len(res) == len(ub)
 ensures  forall i int :: { res[i] } 0 <= i && i < len(ub) ==> res[i] == ub[i]
 decreases len(ub)
-pure func viewInner(ub []byte) (res seq[byte]) {
-	return len(ub) == 0 ? seq[byte]{} :  viewInner(ub[:len(ub)-1]) ++ seq[byte]{ub[len(ub)-1]}
+pure func ViewInner(ub []byte) (res seq[byte]) {
+	return len(ub) == 0 ? seq[byte]{} :  ViewInner(ub[:len(ub)-1]) ++ seq[byte]{ub[len(ub)-1]}
 }
 
 ghost
