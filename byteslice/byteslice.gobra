@@ -35,12 +35,23 @@ func Byte(s []byte, start int, end int, i int) byte {
 
 ghost
 requires acc(Bytes(ub, 0, len(ub)), _)
-ensures len(res) == len(ub)
-ensures forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
+ensures  len(res) == len(ub)
+ensures  forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
     res[i] == Byte(ub, 0, len(ub), i)
-decreases len(ub)
+decreases
 opaque
-pure func View(ub []byte) (res seq[byte])
+pure func View(ub []byte) (res seq[byte]) {
+	return unfolding acc(Bytes(ub, 0, len(ub)), _) in viewInner(ub)
+}
+
+ghost
+requires forall i int :: {&ub[i]} 0 <= i && i < len(ub) ==> acc(&ub[i], _)
+ensures  len(res) == len(ub)
+ensures  forall i int :: { res[i] } 0 <= i && i < len(ub) ==> res[i] == ub[i]
+decreases len(ub)
+pure func viewInner(ub []byte) (res seq[byte]) {
+	return len(ub) == 0 ? seq[byte]{} :  viewInner(ub[:len(ub)-1]) ++ seq[byte]{ub[len(ub)-1]}
+}
 
 ghost
 requires 0 < p
