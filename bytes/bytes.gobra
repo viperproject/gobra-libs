@@ -22,12 +22,8 @@ requires 0 < len(sep)
 decreases len(s)
 pure func SplitInner(s, sep, ac seq[byte]) (res seq[seq[byte]]) {
 	return len(s) == 0 ?
-		( len(ac) == 0 ?
-			seq[seq[byte]]{} :
-			seq[seq[byte]]{ac}) :
-		( sep == s ?
-			seq[seq[byte]]{ ac, seq[byte]{} } :
-			s[:len(sep)] == sep ?
-				seq[seq[byte]]{ac} ++ SplitInner(s[len(sep):], sep, seq[byte]{}) :
-				SplitInner(s[1:], sep, ac ++ seq[byte]{s[0]}))
+		seq[seq[byte]]{ac} :
+		s[:len(sep)] == sep ?
+			seq[seq[byte]]{ac} ++ SplitInner(s[len(sep):], sep, seq[byte]{}) :
+			SplitInner(s[1:], sep, ac ++ seq[byte]{s[0]})
 }
