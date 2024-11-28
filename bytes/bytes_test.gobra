@@ -1,0 +1,73 @@
+// Copyright 2024 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package bytes
+
+ghost
+decreases
+func testSplit() {
+	abcd := seq[byte]{'a','b','c','d'}
+
+	// these assertions force Gobra to expand the definition of `SplitInner`
+	assert SplitInner(seq[byte]{}, seq[byte]{'a'}, seq[byte]{'b', 'c', 'd'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
+	assert seq[byte]{'d'}[1:] == seq[byte]{}
+	assert SplitInner(seq[byte]{'d'}, seq[byte]{'a'}, seq[byte]{'b', 'c'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
+	assert seq[byte]{'c', 'd'}[1:] == seq[byte]{'d'}
+	assert SplitInner(seq[byte]{'c', 'd'}, seq[byte]{'a'}, seq[byte]{'b'}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
+	assert seq[byte]{'b', 'c', 'd'}[1:] == seq[byte]{'c', 'd'}
+	assert SplitInner(seq[byte]{'b', 'c', 'd'}, seq[byte]{'a'}, seq[byte]{}) == seq[seq[byte]]{seq[byte]{'b', 'c', 'd'}}
+	assert seq[byte]{'a', 'b', 'c', 'd'}[1:] == seq[byte]{'b', 'c', 'd'}
+	assert SplitInner(seq[byte]{'a', 'b', 'c', 'd'}, seq[byte]{'a'}, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}, seq[byte]{'b', 'c', 'd'}}
+
+	assert Split(abcd, seq[byte]{'a'}) == seq[seq[byte]]{ seq[byte]{}, seq[byte]{'b','c','d'} }
+}
+
+ghost
+decreases
+func testSplitEnd() {
+	abcd := seq[byte]{'a','b','c','d'}
+	abc := seq[byte]{'a','b','c'}
+	sep := seq[byte]{'d'}
+
+	assert SplitInner(seq[byte]{}, sep, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}}
+	assert sep[1:] == seq[byte]{}
+	assert SplitInner(sep, sep, abc) == seq[seq[byte]]{abc, seq[byte]{}}
+	assert seq[byte]{'c', 'd'}[1:] == sep
+	assert SplitInner(seq[byte]{'c', 'd'}, sep, seq[byte]{'a', 'b'}) == seq[seq[byte]]{abc, seq[byte]{}}
+	assert seq[byte]{'b', 'c', 'd'}[1:] == seq[byte]{'c', 'd'}
+	assert SplitInner(seq[byte]{'b', 'c', 'd'}, sep, seq[byte]{'a'}) == seq[seq[byte]]{abc, seq[byte]{}}
+	assert abcd[1:] == seq[byte]{'b', 'c', 'd'}
+	assert SplitInner(abcd, sep, seq[byte]{}) == seq[seq[byte]]{abc, seq[byte]{}}
+	assert Split(abcd, sep) == seq[seq[byte]]{abc, seq[byte]{}}
+
+	assert Split(abcd, seq[byte]{'d'}) == seq[seq[byte]]{ seq[byte]{'a','b','c'}, seq[byte]{} }
+}
+
+ghost
+decreases
+func testSplitEmpty() {
+	sep := seq[byte]{'/'}
+	
+	assert SplitInner(seq[byte]{}, sep, seq[byte]{}) == seq[seq[byte]]{seq[byte]{}}
+	assert Split(seq[byte]{}, sep) == seq[seq[byte]]{seq[byte]{}}
+}
+
+ghost
+decreases
+func testRepeat() {
+	assert Repeat(seq[byte]{'a', 'b'}, 0) == seq[byte]{}
+	assert Repeat(seq[byte]{'a', 'b'}, 1) == seq[byte]{'a', 'b'}
+
+	assert Repeat(seq[byte]{'a', 'b'}, 2) == seq[byte]{'a', 'b', 'a', 'b'}
+}
