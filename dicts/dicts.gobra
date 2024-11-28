@@ -13,6 +13,7 @@
     - https://www.why3.org/stdlib/fmap.html
     - https://www.why3.org/stdlib/map.html
 */
+//+gobra
 
 // This package defines lemmas for mathematical maps (aka dictionaries) commonly used
 // in specifications.
