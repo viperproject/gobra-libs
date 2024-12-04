@@ -1,0 +1,71 @@
+package bytes
+
+//+gobra
+
+ghost
+ensures Repeat(b, 1) == b
+decreases
+func LemmaRepeatOnce(b seq[byte]) {
+	assert Repeat(b, 1) == b ++ Repeat(b, 0)
+}
+
+ghost
+requires n > 0
+ensures Repeat(b, n) == Repeat(b, n-1) ++ b
+decreases n
+func lemmaRepeatFlip(b seq[byte], n int) {
+	if n == 1 {
+		assert Repeat(b, n-1) == seq[byte]{}
+	} else {
+		assert Repeat(b, n) == b ++ Repeat(b, n-1)
+		lemmaRepeatFlip(b, n-1)
+		assert Repeat(b, n-1) == Repeat(b, n-2) ++ b
+	}
+}
+
+ghost
+requires n >= 0
+ensures  b ++ Repeat(b, n) == Repeat(b, n) ++ b
+decreases
+func LemmaRepeatCommutative(b seq[byte], n int) {
+	assert b ++ Repeat(b, n) == Repeat(b, n+1)
+	lemmaRepeatFlip(b, n+1)
+}
+
+ghost
+requires n >= 0
+ensures  Repeat(b, 2 * n) == Repeat(b, n) ++ Repeat(b, n)
+decreases n
+func LemmaRepeatDoubled(b seq[byte], n int) {
+	if n != 0 {
+		assert Repeat(b, n) == b ++ Repeat(b, n - 1)
+		assert Repeat(b, n) ++ Repeat(b, n) == b ++ Repeat(b, n - 1) ++ b ++ Repeat(b, n - 1)
+		// order of repeating doesn't matter because it's always the same element that is repeated
+		assert b ++ Repeat(b, n - 1) ++ b ++ Repeat(b, n - 1) == b ++ (Repeat(b, n - 1) ++ b) ++ Repeat(b, n - 1)
+		LemmaRepeatCommutative(b, n - 1)
+		assert b ++ (Repeat(b, n - 1) ++ b) ++ Repeat(b, n - 1) == b ++ (b ++ Repeat(b, n - 1)) ++ Repeat(b, n - 1)
+		assert b ++ Repeat(b, n - 1) ++ b ++ Repeat(b, n - 1) == b ++ b ++ Repeat(b, n - 1) ++ Repeat(b, n - 1)
+		LemmaRepeatDoubled(b, n - 1)
+		assert Repeat(b, n - 1) ++ Repeat(b, n - 1) == Repeat(b, 2 * (n - 1))
+		assert Repeat(b, 2 * n - 1) == b ++ Repeat(b, n - 1) ++ Repeat(b, n - 1)
+		assert Repeat(b, 2 * n) == b ++ b ++ Repeat(b, n - 1) ++ Repeat(b, n - 1)
+	} else {
+		assert Repeat(b, 2 * 0) == Repeat(b, 0) ++ Repeat(b, 0)
+	}
+}
+
+
+ghost
+requires n >= 0
+ensures  len(Repeat(s, n)) == len(s) * n
+decreases n
+func LemmaRepeatLength(s seq[byte], n int) {
+	switch {
+	case n == 0:
+		assert len(Repeat(s, n)) == 0
+	default:
+		assert Repeat(s, n) == s ++ Repeat(s, n-1)
+		LemmaRepeatLength(s, n-1)
+	}
+}
+
