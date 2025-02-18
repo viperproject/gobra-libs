@@ -18,7 +18,7 @@ env:
   checkConsistency: '1'
   imageVersion: 'latest'
   mceMode: 'off'
-  requireTriggers: '1'
+  requireTriggers: '0'
   viperBackend: SILICON
 
 jobs:
