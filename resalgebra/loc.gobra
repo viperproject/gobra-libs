@@ -22,6 +22,32 @@ package resalgebra
 
 type LocName gpointer[int]
 
+/*
+// todo: make struct ghost
+type globalMap struct {
+	ghost m dict[LocName]locMetadata
+}
+
+// todo: make struct ghost
+type locMetadata struct {
+	ghost ra RA
+	ghost elems set[Elem]
+}
+
+pred invGmap(g globalMap) {
+	forall k LocName :: { k in domain(g.m) } k in domain(g.m) ==>
+		validLocMetadata(g.m[k])
+}
+
+ghost
+decreases
+pure func validLocMetadata(md locMetadata) bool {
+	return md.ra != nil &&
+		forall e Elem :: { e in md.elems } e in md.elems ==>
+			md.ra.IsElem(e) && md.ra.IsValid(e)
+}
+*/
+
 pred GhostLocation(l LocName, ra RA, e Elem)
 
 ghost
@@ -64,7 +90,7 @@ requires ra.IsElem(e1)
 requires ra.IsElem(e2)
 decreases
 pure func IsFramePreservingUpdate(ra RA, e1 Elem, e2 Elem) bool {
-	return forall c option[Elem] :: (c != none[Elem] ==> ra.IsElem(get(c))) ==>
+	return forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c != none[Elem] ==> ra.IsElem(get(c))) ==>
 		(LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) ==> LiftedIsValid(ra, LiftedCompose(ra, some(e2), c)))
 }
 

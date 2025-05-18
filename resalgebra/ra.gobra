@@ -81,6 +81,7 @@ type RA interface {
 	ghost
 	requires IsElem(e1) && IsElem(e2)
 	requires Core(e1) != none[Elem]
+	// fully expanded version of <= due to Gobra's lack of `Self` in interface specs
 	requires exists e3 Elem :: { IsElem(e3) } IsElem(e3) && e2 == Compose(e1, e3)
 	ensures  Core(e2) != none[Elem]
 	ensures  exists e4 Elem :: { IsElem(e4) } IsElem(e4) && get(Core(e2)) == Compose(get(Core(e1)), e4)
