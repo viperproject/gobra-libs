@@ -31,16 +31,15 @@ TypeOneShotRA implements RA
 var OneShotRA TypeOneShotRA = TypeOneShotRA{}
 
 ghost
-ensures res ==> isComparable(e)
 decreases
 pure
 func (ra TypeOneShotRA) IsElem(e Elem) (res bool) {
 	return e != nil &&
 		// using typeOf here leads to unexpected incompletnesses
-		(e == Elem(Pending{})) ||
+		(e === Elem(Pending{})) ||
 		typeOf(e) == type[Shot] ||
 		// using typeOf here leads to unexpected incompletnesses
-		(e == Fail{})
+		(e === Fail{})
 }
 
 
@@ -55,7 +54,7 @@ func (ra TypeOneShotRA) IsValid(e Elem) bool {
 
 ghost
 requires ra.IsElem(e)
-ensures  res != none[Elem] ==> ra.IsElem(get(res))
+ensures  res !== none[Elem] ==> ra.IsElem(get(res))
 decreases
 pure
 func (ra TypeOneShotRA) Core(e Elem) (ghost res option[Elem]) {
@@ -71,47 +70,47 @@ ensures  ra.IsElem(res)
 decreases
 pure
 func (ra TypeOneShotRA) Compose(e1 Elem, e2 Elem) (res Elem) {
-	return typeOf(e1) == type[Shot] && typeOf(e2) == type[Shot] && e1 == e2 ?
+	return typeOf(e1) == type[Shot] && typeOf(e2) == type[Shot] && e1 === e2 ?
 		e1 :
 		Elem(Fail{})
 }
 
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2) && ra.IsElem(e3)
-ensures  ra.Compose(ra.Compose(e1, e2), e3) == ra.Compose(e1, ra.Compose(e2, e3))
+ensures  ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3))
 decreases
 func (ra TypeOneShotRA) ComposeAssoc(e1 Elem, e2 Elem, e3 Elem) {}
 
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2)
-ensures  ra.Compose(e1, e2) == ra.Compose(e2, e1)
+ensures  ra.Compose(e1, e2) === ra.Compose(e2, e1)
 decreases
 func (ra TypeOneShotRA) ComposeComm(e1 Elem, e2 Elem) {}
 
 ghost
 requires ra.IsElem(e)
 ensures  let c := ra.Core(e) in
-	c != none[Elem] ==> ra.Compose(get(c), e) == e
+	c !== none[Elem] ==> ra.Compose(get(c), e) === e
 decreases
 func (ra TypeOneShotRA) CoreId(e Elem) {}
 
 ghost
 requires ra.IsElem(e)
-requires ra.Core(e) != none[Elem]
+requires ra.Core(e) !== none[Elem]
 ensures  let c := ra.Core(e) in
-	c != none[Elem] &&
+	c !== none[Elem] &&
 	let cc := ra.Core(get(c)) in
-	cc != none[Elem] &&
-	get(cc) == get(c)
+	cc !== none[Elem] &&
+	get(cc) === get(c)
 decreases
 func (ra TypeOneShotRA) CoreIdem(e Elem) {}
 
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2)
-requires ra.Core(e1) != none[Elem]
-requires exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 == ra.Compose(e1, e3)
-ensures  ra.Core(e2) != none[Elem]
-ensures  exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) == ra.Compose(get(ra.Core(e1)), e4)
+requires ra.Core(e1) !== none[Elem]
+requires exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 === ra.Compose(e1, e3)
+ensures  ra.Core(e2) !== none[Elem]
+ensures  exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4)
 decreases
 func (ra TypeOneShotRA) CoreMono(e1 Elem, e2 Elem) {}
 

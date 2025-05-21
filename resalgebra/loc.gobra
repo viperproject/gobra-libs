@@ -20,33 +20,7 @@ package resalgebra
 // prone to mistakes. If possible, we should find a model for the
 // predicate GhostLocation and for all lemmas.
 
-type LocName gpointer[int]
-
-/*
-// todo: make struct ghost
-type globalMap struct {
-	ghost m dict[LocName]locMetadata
-}
-
-// todo: make struct ghost
-type locMetadata struct {
-	ghost ra RA
-	ghost elems set[Elem]
-}
-
-pred invGmap(g globalMap) {
-	forall k LocName :: { k in domain(g.m) } k in domain(g.m) ==>
-		validLocMetadata(g.m[k])
-}
-
-ghost
-decreases
-pure func validLocMetadata(md locMetadata) bool {
-	return md.ra != nil &&
-		forall e Elem :: { e in md.elems } e in md.elems ==>
-			md.ra.IsElem(e) && md.ra.IsValid(e)
-}
-*/
+ghost type LocName gpointer[int]
 
 pred GhostLocation(l LocName, ra RA, e Elem)
 
@@ -90,29 +64,29 @@ requires ra.IsElem(e1)
 requires ra.IsElem(e2)
 decreases
 pure func IsFramePreservingUpdate(ra RA, e1 Elem, e2 Elem) bool {
-	return forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c != none[Elem] ==> ra.IsElem(get(c))) ==>
+	return forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] ==> ra.IsElem(get(c))) ==>
 		(LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) ==> LiftedIsValid(ra, LiftedCompose(ra, some(e2), c)))
 }
 
 ghost
 requires ra != nil
-requires e1 != none[Elem] ==> ra.IsElem(get(e1))
-requires e2 != none[Elem] ==> ra.IsElem(get(e2))
+requires e1 !== none[Elem] ==> ra.IsElem(get(e1))
+requires e2 !== none[Elem] ==> ra.IsElem(get(e2))
 decreases
 pure func LiftedCompose(ra RA, e1 option[Elem], e2 option[Elem]) option[Elem] {
-	return e1 == none[Elem] ?
+	return e1 === none[Elem] ?
 		e2 :
-		(e2 == none[Elem] ?
+		(e2 === none[Elem] ?
 			e1 :
 			some(ra.Compose(get(e1), get(e2))))
 }
 
 ghost
 requires ra != nil
-requires e != none[Elem] ==> ra.IsElem(get(e))
+requires e !== none[Elem] ==> ra.IsElem(get(e))
 decreases
 pure func LiftedIsValid(ra RA, e option[Elem]) bool {
-	return e != none[Elem] ?
+	return e !== none[Elem] ?
 		ra.IsValid(get(e)) :
 		true
 }
