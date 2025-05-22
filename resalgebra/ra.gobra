@@ -22,28 +22,24 @@ type RA interface {
 	// defines the set of elements of the RA
 	ghost
 	decreases
-	pure
-	IsElem(e Elem) (res bool)
+	pure IsElem(e Elem) (res bool)
 
 	ghost
 	requires IsElem(e)
 	decreases
-	pure
-	IsValid(e Elem) bool
+	pure IsValid(e Elem) bool
 
 	ghost
 	requires IsElem(e)
 	ensures  res !== none[Elem] ==> IsElem(get(res))
 	decreases
-	pure
-	Core(e Elem) (ghost res option[Elem])
+	pure Core(e Elem) (ghost res option[Elem])
 
 	ghost
 	requires IsElem(e1) && IsElem(e2)
 	ensures  IsElem(res)
 	decreases
-	pure
-	Compose(e1 Elem, e2 Elem) (res Elem)
+	pure Compose(e1 Elem, e2 Elem) (res Elem)
 
 	// Lemmas
 

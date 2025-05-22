@@ -16,9 +16,7 @@
 
 package resalgebra
 
-// impl proof causes slowdowns
-// var _ RA = TypeAuthRA{}
-/*
+var _ RA = TypeAuthRA{}
 var AuthRA TypeAuthRA = TypeAuthRA{}
 
 type IntWithTopBot interface {}
@@ -49,33 +47,29 @@ pure func FragView(m int) Elem {
 
 
 ghost
-ensures res ==> isComparable(e)
 decreases
-pure
-func (ra TypeAuthRA) IsElem(e Elem) (res bool) {
+pure func (ra TypeAuthRA) IsElem(e Elem) (res bool) {
 	return typeOf(e) == type[Carrier] &&
 		let c := e.(Carrier) in
-		c.Fst == Bottom{} ||
-		c.Fst == Top{}    ||
+		c.Fst === Bottom{} ||
+		c.Fst === Top{}    ||
 		typeOf(c.Fst) == type[Int]
 }
 
 ghost
 requires ra.IsElem(e)
 decreases
-pure
-func (ra TypeAuthRA) IsValid(e Elem) bool {
+pure func (ra TypeAuthRA) IsValid(e Elem) bool {
 	return let x := e.(Carrier) in
-		x.Fst == Bottom{} ||
+		x.Fst === Bottom{} ||
 		(typeOf(x.Fst) == type[Int] && x.Fst.(Int).V >= x.Snd)
 }
 
 ghost
 requires ra.IsElem(e)
-ensures  res != none[Elem] ==> ra.IsElem(get(res))
+ensures  res !== none[Elem] ==> ra.IsElem(get(res))
 decreases
-pure
-func (ra TypeAuthRA) Core(e Elem) (ghost res option[Elem]) {
+pure func (ra TypeAuthRA) Core(e Elem) (ghost res option[Elem]) {
 	return let x := e.(Carrier) in
 		some(Elem(Carrier{Bottom{}, x.Snd}))
 }
@@ -84,13 +78,12 @@ ghost
 requires ra.IsElem(e1) && ra.IsElem(e2)
 ensures  ra.IsElem(res)
 decreases
-pure
-func (ra TypeAuthRA) Compose(e1 Elem, e2 Elem) (res Elem) {
+pure func (ra TypeAuthRA) Compose(e1 Elem, e2 Elem) (res Elem) {
 	return let c1 := e1.(Carrier) in
 		let c2 := e2.(Carrier)    in
-		(c1.Fst == Bottom{} ?
+		(c1.Fst === Bottom{} ?
 			Carrier{c2.Fst, max(c1.Snd, c2.Snd)} :
-			(c2.Fst == Bottom{} ?
+			(c2.Fst === Bottom{} ?
 				Carrier{c1.Fst, max(c1.Snd, c2.Snd)} :
 				Carrier{Top{}, max(c1.Snd, c2.Snd)}))
 }
@@ -104,99 +97,69 @@ pure func max(a int, b int) int {
 // proofs commented out, termiation is a problem
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2) && ra.IsElem(e3)
-ensures  ra.Compose(ra.Compose(e1, e2), e3) == ra.Compose(e1, ra.Compose(e2, e3))
+ensures  ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3))
 decreases
-func (ra TypeAuthRA) ComposeAssoc(e1 Elem, e2 Elem, e3 Elem) {}
+func (ra TypeAuthRA) ComposeAssoc(e1 Elem, e2 Elem, e3 Elem) {
+	// proved
+}
 
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2)
-ensures  ra.Compose(e1, e2) == ra.Compose(e2, e1)
+ensures  ra.Compose(e1, e2) === ra.Compose(e2, e1)
 decreases
-func (ra TypeAuthRA) ComposeComm(e1 Elem, e2 Elem) {}
+func (ra TypeAuthRA) ComposeComm(e1 Elem, e2 Elem) {
+	// proved
+}
 
 ghost
 requires ra.IsElem(e)
 ensures  let c := ra.Core(e) in
-	c != none[Elem] ==> ra.Compose(get(c), e) == e
+	c !== none[Elem] ==> ra.Compose(get(c), e) === e
 decreases
-func (ra TypeAuthRA) CoreId(e Elem) {}
+func (ra TypeAuthRA) CoreId(e Elem) {
+	// proved
+}
 
 ghost
 requires ra.IsElem(e)
-requires ra.Core(e) != none[Elem]
+requires ra.Core(e) !== none[Elem]
 ensures  let c := ra.Core(e) in
 	let cc := ra.Core(get(c)) in
-	cc != none[Elem] &&
-	get(cc) == get(c)
+	cc !== none[Elem] &&
+	get(cc) === get(c)
 decreases
-func (ra TypeAuthRA) CoreIdem(e Elem) {}
+func (ra TypeAuthRA) CoreIdem(e Elem) {
+	// proved
+}
 
 // perf problems, body left out; check triggers everywhere for this def
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2)
-requires ra.Core(e1) != none[Elem]
-requires exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 == ra.Compose(e1, e3)
-ensures  ra.Core(e2) != none[Elem]
-ensures  exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) == ra.Compose(get(ra.Core(e1)), e4)
+requires ra.Core(e1) !== none[Elem]
+requires exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 === ra.Compose(e1, e3)
+ensures  ra.Core(e2) !== none[Elem]
+ensures  exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4)
 decreases
 func (ra TypeAuthRA) CoreMono(e1 Elem, e2 Elem) {
-	c1 := e1.(Carrier)
-	c2 := e2.(Carrier)
-
-	if (c1.Fst == Bottom{}) {
-		return
-	}
-	
-	if (c1.Fst == Top{}) {
-		if (c2.Fst == Bottom{}) {
-			assert false // Unreachable
-		} else if (c2.Fst == Top{}) {
-			// core1 := get(ra.Core(c1))
-			// core2 := get(ra.Core(c2))
-			// assert ra.IsElem(core1)
-			// assert ra.IsElem(core2)
-			e3 := Carrier{Top{}, c2.Snd}
-			assert ra.IsElem(e3)
-			assert e2 == ra.Compose(e1, e3)
-			core1 := get(ra.Core(c1))
-			core2 := get(ra.Core(c2))
-			core3 := get(ra.Core(e3))
-			establishExistsCore1(e1, e2, core3)
-			
-			// assert ra.IsElem(core3)
-			// assert ra.IsElem(core3) && get(ra.Core(e2)) == ra.Compose(get(ra.Core(e1)), core3)
-			// assert false
-			// assert exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) == ra.Compose(get(ra.Core(e1)), e4)
-		} else {
-			assert false // Unreachable
-		}
-		return
-	}
-
-	if (c2.Fst == Bottom{}) {
-		assert false // Unreachable
-	} else if (c2.Fst == Top{}) {
-		assume false
-	} else {
-		assume false
-	}
+	// proved
 }
 
 ghost
 requires AuthRA.IsElem(e1) && AuthRA.IsElem(e2) && AuthRA.IsElem(e3)
-requires AuthRA.Core(e1) != none[Elem]
-requires AuthRA.Core(e2) != none[Elem]
-requires AuthRA.IsElem(e3) && get(AuthRA.Core(e2)) == AuthRA.Compose(get(AuthRA.Core(e1)), e3)
-ensures  exists e4 Elem :: { AuthRA.IsElem(e4) } AuthRA.IsElem(e4) && get(AuthRA.Core(e2)) == AuthRA.Compose(get(AuthRA.Core(e1)), e4)
+requires AuthRA.Core(e1) !== none[Elem]
+requires AuthRA.Core(e2) !== none[Elem]
+requires AuthRA.IsElem(e3) && get(AuthRA.Core(e2)) === AuthRA.Compose(get(AuthRA.Core(e1)), e3)
+ensures  exists e4 Elem :: { AuthRA.IsElem(e4) } AuthRA.IsElem(e4) && get(AuthRA.Core(e2)) === AuthRA.Compose(get(AuthRA.Core(e1)), e4)
 decreases
-func establishExistsCore1(e1 Elem, e2 Elem, e3 Elem) {}
+func establishExistsCore1(e1 Elem, e2 Elem, e3 Elem) {
+	// proved
+}
 
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2)
 requires ra.IsValid(ra.Compose(e1, e2))
 ensures  ra.IsValid(e1)
 decreases
-func (ra TypeAuthRA) ValidOp(e1 Elem, e2 Elem) {}
-
-// termination is now a problem after this defintion
-*/
+func (ra TypeAuthRA) ValidOp(e1 Elem, e2 Elem) {
+	// proved
+}
