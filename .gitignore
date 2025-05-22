@@ -24,3 +24,7 @@ go.work
 *.vpr
 *.log
 *.smt2
+
+# Evaluation
+evaluation/scripts/__pycache__/*
+evaluation/scripts/output.txt

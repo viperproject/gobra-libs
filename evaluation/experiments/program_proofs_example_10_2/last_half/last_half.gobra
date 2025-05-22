@@ -97,9 +97,9 @@ pure func asserting(b bool) Unit {
 	return Unit{}
 }
 
-type PQueue = BraunTree
+ghost type PQueue = BraunTree
 
-type BraunTree adt {
+ghost type BraunTree adt {
 	Leaf {}
 
 	Node {
