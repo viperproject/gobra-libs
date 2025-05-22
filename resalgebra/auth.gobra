@@ -26,7 +26,7 @@ type Int struct {
 	V int
 }
 
-type Carrier struct {
+type AuthCarrier struct {
 	Fst IntWithTopBot
 	Snd int
 }
@@ -36,21 +36,21 @@ type TypeAuthRA struct{}
 ghost
 decreases
 pure func AuthView(m int) Elem {
-	return Carrier{Int{m}, 0}
+	return AuthCarrier{Int{m}, 0}
 }
 
 ghost
 decreases
 pure func FragView(m int) Elem {
-	return Carrier{Bottom{}, m}
+	return AuthCarrier{Bottom{}, m}
 }
 
 
 ghost
 decreases
 pure func (ra TypeAuthRA) IsElem(e Elem) (res bool) {
-	return typeOf(e) == type[Carrier] &&
-		let c := e.(Carrier) in
+	return typeOf(e) == type[AuthCarrier] &&
+		let c := e.(AuthCarrier) in
 		c.Fst === Bottom{} ||
 		c.Fst === Top{}    ||
 		typeOf(c.Fst) == type[Int]
@@ -60,7 +60,7 @@ ghost
 requires ra.IsElem(e)
 decreases
 pure func (ra TypeAuthRA) IsValid(e Elem) bool {
-	return let x := e.(Carrier) in
+	return let x := e.(AuthCarrier) in
 		x.Fst === Bottom{} ||
 		(typeOf(x.Fst) == type[Int] && x.Fst.(Int).V >= x.Snd)
 }
@@ -70,8 +70,8 @@ requires ra.IsElem(e)
 ensures  res !== none[Elem] ==> ra.IsElem(get(res))
 decreases
 pure func (ra TypeAuthRA) Core(e Elem) (ghost res option[Elem]) {
-	return let x := e.(Carrier) in
-		some(Elem(Carrier{Bottom{}, x.Snd}))
+	return let x := e.(AuthCarrier) in
+		some(Elem(AuthCarrier{Bottom{}, x.Snd}))
 }
 
 ghost
@@ -79,13 +79,13 @@ requires ra.IsElem(e1) && ra.IsElem(e2)
 ensures  ra.IsElem(res)
 decreases
 pure func (ra TypeAuthRA) Compose(e1 Elem, e2 Elem) (res Elem) {
-	return let c1 := e1.(Carrier) in
-		let c2 := e2.(Carrier)    in
+	return let c1 := e1.(AuthCarrier) in
+		let c2 := e2.(AuthCarrier)    in
 		(c1.Fst === Bottom{} ?
-			Carrier{c2.Fst, max(c1.Snd, c2.Snd)} :
+			AuthCarrier{c2.Fst, max(c1.Snd, c2.Snd)} :
 			(c2.Fst === Bottom{} ?
-				Carrier{c1.Fst, max(c1.Snd, c2.Snd)} :
-				Carrier{Top{}, max(c1.Snd, c2.Snd)}))
+				AuthCarrier{c1.Fst, max(c1.Snd, c2.Snd)} :
+				AuthCarrier{Top{}, max(c1.Snd, c2.Snd)}))
 }
 
 ghost
@@ -141,17 +141,6 @@ ensures  ra.Core(e2) !== none[Elem]
 ensures  exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4)
 decreases
 func (ra TypeAuthRA) CoreMono(e1 Elem, e2 Elem) {
-	// proved
-}
-
-ghost
-requires AuthRA.IsElem(e1) && AuthRA.IsElem(e2) && AuthRA.IsElem(e3)
-requires AuthRA.Core(e1) !== none[Elem]
-requires AuthRA.Core(e2) !== none[Elem]
-requires AuthRA.IsElem(e3) && get(AuthRA.Core(e2)) === AuthRA.Compose(get(AuthRA.Core(e1)), e3)
-ensures  exists e4 Elem :: { AuthRA.IsElem(e4) } AuthRA.IsElem(e4) && get(AuthRA.Core(e2)) === AuthRA.Compose(get(AuthRA.Core(e1)), e4)
-decreases
-func establishExistsCore1(e1 Elem, e2 Elem, e3 Elem) {
 	// proved
 }
 
