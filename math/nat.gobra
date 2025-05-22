@@ -23,7 +23,7 @@ package math
 // ##(-I ..)
 import . "util"
 
-type Nat adt {
+ghost type Nat adt {
 	Zero{}
 	Succ {
 		pre Nat
@@ -33,7 +33,7 @@ type Nat adt {
 // PairNat is a pair of Nats. This is a useful structure
 // for doing simultaneous pattern match on two Nats.
 // TODO: use generic pairs when gobra supports generics.
-type PairNat adt {
+ghost type PairNat adt {
 	PairNatC {
 		Fst Nat
 		Snd Nat
