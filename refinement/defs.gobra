@@ -1,0 +1,156 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// Lib for proving refinement of implementations against a transition system.
+// It allows selecting any transition system (defined below) as the specification
+// for the current program. The main function may obtain a resource `ReadyToInit()`
+// that can be used to pick a transition system that the current program must refine.
+//
+// PS: the soundness of this approach depends on Go's visibility rules (in particular,
+// no package can access this package's private global variables).
+
+pkgInvariant ReadyToInit()
+package refinement
+
+type State interface{}
+type Event interface{}
+
+// private state, must not be accessed outside this packet!
+// this might be possible in Gobra atm, but this should be fixed soon
+ghost var l@ TransitionSystem
+ghost var s@ State
+
+func init() {
+	fold ReadyToInit()
+}
+
+pred ReadyToInit() {
+	acc(&l)  &&
+	l == nil &&
+	acc(&s)  &&
+	s == nil
+}
+
+pred Initialized() {
+	acc(&l, 1/2) && acc(&s)  &&
+	l != nil     && s != nil &&
+	l.Valid(s)
+}
+
+pred SelectedTS(t TransitionSystem) {
+	acc(&l, 1/2) && l === t
+}
+
+type Unit struct{}
+
+// May be useful for framing info about the current TS.
+// Most programs will likely ignore this.
+ghost
+requires Initialized() && SelectedTS(t)
+ensures  TS() === t
+decreases
+pure func SelectedTSIsTS(t TransitionSystem) Unit {
+	return unfolding Initialized() in
+		unfolding SelectedTS(t) in Unit{}
+}
+
+ghost
+requires Initialized()
+ensures  ts != nil
+decreases
+pure func TS() (ts TransitionSystem) {
+	return unfolding Initialized() in l
+}
+
+ghost
+requires Initialized()
+ensures  st != nil && TS().Valid(st)
+decreases
+pure func CurrState() (st State) {
+	return unfolding Initialized() in s
+}
+
+ghost
+requires Initialized()
+decreases
+pure func GuardTS(e Event) bool {
+	return TS().Guard(CurrState(), e)
+}
+
+ghost
+requires ReadyToInit()
+requires t != nil && i != nil
+requires t.Valid(i)
+ensures  Initialized() && SelectedTS(t)
+// the following is logically redundant (due to lemma `SelectedTSIsTS`),
+// but in some cases it is useful to establish this postcondition
+// automatically.
+ensures  TS() === t
+ensures  CurrState() === i
+decreases
+func InitTS(t TransitionSystem, i State) {
+	unfold ReadyToInit()
+	l = t
+	s = i
+	fold Initialized()
+	fold SelectedTS(t)
+}
+
+ghost
+requires Initialized()
+requires GuardTS(e)
+ensures  Initialized()
+ensures  CurrState() === old(TS().Update(CurrState(), e))
+ensures  TS() === old(TS())
+decreases
+func UpdateTS(e Event) {
+	unfold Initialized()
+	l.UpdateValidIsValid(s, e)
+	s = l.Update(s, e)
+	fold Initialized()
+}
+
+// Labeled Transition Systems
+type TransitionSystem interface {
+	// returns true iff s is a valid initial
+	// state of the system
+	ghost
+	decreases
+	pure Init(s State) bool
+
+	ghost
+	decreases
+	pure Valid(s State) bool
+
+	// returns whether event e may be performed
+	// in the current state of the system
+	ghost
+	decreases
+	pure Guard(s State, e Event) bool
+
+	ghost
+	requires Guard(s, e)
+	decreases
+	pure Update(s State, e Event) State
+
+	ghost
+	requires Valid(s)
+	requires Guard(s, e)
+	ensures  let ns := Update(s, e) in
+		ns != nil && Valid(ns)
+	decreases
+	UpdateValidIsValid(s State, e Event)
+}
