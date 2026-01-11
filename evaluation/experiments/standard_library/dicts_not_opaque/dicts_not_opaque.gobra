@@ -1,0 +1,457 @@
+/*
+  This file is part of gobra-libs which is released under the MIT license.
+  See LICENSE or go to https://github.com/viperproject/gobra-libs/blob/main/LICENSE
+  for full license details.
+*/
+
+// A copy of the dicts package from the standard library.
+// Lemmas are turned non-opaque. Uses the non-opaque version of the sets
+// package.
+package dicts_not_opaque
+
+// ##(-I ./..)
+
+import "util"
+import "sets_not_opaque"
+
+// A dictionary is empty if its domain is empty.
+ghost
+decreases
+pure func IsEmpty(d dict[int]int) bool {
+	return sets_not_opaque.IsEmpty(domain(d))
+}
+
+// Returns the empty dictionary.
+ghost
+ensures IsEmpty(result)
+decreases
+pure func Empty() (result dict[int]int) {
+	return dict[int]int{}
+}
+
+// Retrieves the value associated with the key, if present, as an option.
+ghost
+decreases
+pure func Get(d dict[int]int, k int) option[int] {
+	return k in domain(d) ? some(d[k]) : none[int]
+}
+
+// Keep all key-value pairs corresponding to the set of keys provided.
+ghost
+opaque
+ensures forall x int :: {result[x]} (x in domain(d) && x in xs) ==>
+	(x in domain(result) && result[x] == d[x])
+ensures forall x int :: {x in domain(result)} x in domain(result) ==>
+	(x in domain(d) && x in xs)
+ensures domain(result) == xs intersection domain(d)
+decreases xs
+pure func Restrict(d dict[int]int, xs set[int]) (result dict[int]int) {
+	return let ys := (xs intersection domain(d)) in
+		(sets_not_opaque.IsEmpty(ys) ? Empty() :
+			(let y := sets_not_opaque.Choose(ys) in
+			(let yr := sets_not_opaque.Remove(ys, y) in
+			(let _ := sets_not_opaque.IntersectLenUpper(xs, domain(d)) in
+			 Restrict(d, yr)[y = d[y]]))))
+}
+
+// Remove all key-value pairs corresponding to the set of keys provided.
+ghost
+decreases
+pure func RemoveKeys(d dict[int]int, xs set[int]) (result dict[int]int) {
+	return Restrict(d, domain(d) setminus xs)
+}
+
+// Remove a key-value pair. Returns d if k is not in the domain of d.
+ghost
+ensures len(result) <= len(d)
+ensures k in domain(d) ==> len(result) == len(d) - 1
+ensures !(k in domain(d)) ==> len(result) == len(d)
+decreases
+pure func Remove(d dict[int]int, k int) (result dict[int]int) {
+	return let ys := (sets_not_opaque.Remove(domain(d), k)) in
+		let _ := util.Asserting(ys intersection domain(d) == ys) in
+		RemoveKeys(d, sets_not_opaque.SingletonSet(k))
+}
+
+// True iff k maps to the same value or is not in the domains of d1 and d2.
+ghost
+decreases
+pure func IsEqualOnKey(d1, d2 dict[int]int, k int) bool {
+	return !(k in domain(d1) || k in domain(d2)) ||
+		(k in domain(d1) && k in domain(d2) && d1[k] == d2[k])
+}
+
+// True iff if d1 is a subset of d2.
+ghost
+decreases
+pure func IsSubset(d1, d2 dict[int]int) bool {
+	return domain(d1) subset domain(d2) &&
+		forall k int :: {IsEqualOnKey(d1, d2, k)} {k in domain(d1)} (k in domain(d1)) ==>
+		IsEqualOnKey(d1, d2, k)
+}
+
+// Union of two dictionaries. Does not require disjoint domains: on the intersection,
+// values from the second dictionary are chosen.
+ghost
+opaque
+ensures domain(result) == domain(d1) union domain(d2)
+ensures forall k int :: {result[k]} (k in domain(d2)) ==> result[k] == d2[k]
+ensures forall k int :: {result[k]}  (!(k in domain(d2)) && k in domain(d1)) ==>
+	result[k] == d1[k]
+decreases domain(d1) union domain(d2)
+pure func Union(d1, d2 dict[int]int) (result dict[int]int) {
+	return let ks := domain(d1) union domain(d2) in
+		(sets_not_opaque.IsEmpty(ks) ? Empty() :
+			let k := sets_not_opaque.Choose(ks) in
+			let c1 := Remove(d1, k) in
+			let c2 := Remove(d2, k) in
+			let _ := sets_not_opaque.RemoveUnionLen(domain(d1), domain(d2), k) in
+			(k in domain(d2) ? Union(c1, c2)[k = d2[k]] : Union(c1, c2)[k = d1[k]]))
+}
+
+// Dictionaries are disjoint iff their domains are disjoint.
+ghost
+decreases
+pure func AreDisjoint(d1, d2 dict[int]int) bool {
+	return sets_not_opaque.AreDisjoint(domain(d1), domain(d2))
+}
+
+// The length of the union of two disjoint dictionaries is the sum of each of their lengths.
+ghost
+requires AreDisjoint(d1, d2)
+ensures len(Union(d1, d2)) == len(d1) + len(d2)
+decreases
+pure func DisjointUnionLen(d1, d2 dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// True iff a dictionary is injective.
+ghost
+opaque
+decreases
+pure func IsInjective(d dict[int]int) bool {
+	return forall k1, k2 int :: {d[k1], d[k2]} (k1 != k2 && k1 in domain(d) && k2 in domain(d)) ==>
+		d[k1] != d[k2]
+}
+
+// True iff a dictionary contains all valid keys.
+ghost
+opaque
+decreases
+pure func IsTotal(d dict[int]int) bool {
+	return forall k int :: {k in domain(d)} k in domain(d)
+}
+
+// True iff a dictionary is monotonic.
+ghost
+opaque
+decreases
+pure func IsMonotonic(d dict[int]int) bool {
+	return forall k1, k2 int :: {d[k1], d[k2]} (k1 in domain(d) && k2 in domain(d) && k1 <= k2) ==>
+		d[k1] <= d[k2]
+}
+
+// True iff a dictionary is monotonic. Only considers keys greater than or equal to start.
+ghost
+opaque
+decreases
+pure func IsMonotonicFrom(d dict[int]int, start int) bool {
+	return forall k1, k2 int :: {d[k1], d[k2]} (k1 in domain(d) && k2 in domain(d) && start <= k1 && k1 <= k2) ==>
+		d[k1] <= d[k2]
+}
+
+// True iff a dictionary is monotonic. Only considers keys in the interval [start, end).
+ghost
+opaque
+decreases
+pure func IsMonotonicFromTo(d dict[int]int, start, end int) bool {
+	return forall k1, k2 int :: {d[k1], d[k2]} (k1 in domain(d) &&
+						    k2 in domain(d) &&
+		 				    start <= k1 && k1 <= k2 && k2 < end) ==> d[k1] <= d[k2]
+}
+
+// True iff two dictionaries are equal in the interval [start, end).
+ghost
+opaque
+decreases
+pure func IsEqualInRange(d1, d2 dict[int]int, start, end int) bool {
+	return forall k int :: {d1[k], d2[k]} {k in domain(d1)} {k in domain(d2)}(start <= k && k < end) ==>
+		k in domain(d1) && k in domain(d2) && d1[k] == d2[k]
+}
+
+// True iff d1 and d2 agree on all keys that their domains share.
+ghost
+decreases
+pure func Agree(d1, d2 dict[int]int) bool {
+	return forall k int :: {d1[k], d2[k]} k in (domain(d1) intersection domain(d2)) ==>
+		d1[k] == d2[k]
+}
+
+// The domain of a map after removing a key is equivalent to removing
+// the key from the domain of the original map.
+ghost
+ensures domain(Remove(d, k)) == sets_not_opaque.Remove(domain(d), k)
+decreases
+pure func RemoveDomain(d dict[int]int, k int) util.Unit {
+	return util.Unit{}
+}
+
+// The domain of the empty dictionary is the empty set.
+ghost
+requires IsEmpty(d)
+ensures domain(d) == sets_not_opaque.Empty()
+decreases
+pure func EmptyDictEmptyDomain(d dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// The domain of a dictionary after inserting a key-value pair is equivalent to
+// inserting the key into the original map's domain set.
+ghost
+ensures domain(d[k = v]) == sets_not_opaque.Add(domain(d), k)
+decreases
+pure func InsertDomain(d dict[int]int, k, v int) util.Unit {
+	return util.Unit{}
+}
+
+// Inserting value at k in d results in a dictionary that maps k to v.
+ghost
+ensures d[k = v][k] == v
+decreases
+pure func UpdateSame(d dict[int]int, k, v int) util.Unit {
+	return util.Unit{}
+}
+
+// Reassigning the corresponding value to a key does not change the dictionary.
+ghost
+requires k in domain(d)
+requires v == d[k]
+ensures d[k = v] == d
+decreases
+pure func UpdateEqual(d dict[int]int, k, v int) util.Unit {
+	return util.Unit{}
+}
+
+// Inserting v at k2 does not change the value mapped to by any other keys in d.
+ghost
+requires k1 != k2
+ensures k2 in domain(d[k1 = v]) == k2 in domain(d)
+ensures k2 in domain(d) ==> d[k1 = v][k2] == d[k2]
+decreases
+pure func UpdateDifferent(d dict[int]int, k1, k2, v int) util.Unit {
+	return util.Unit{}
+}
+
+// Removing a key-value pair from a dictionary does not change the value mapped to
+// by any other keys in the map.
+ghost
+requires k1 in domain(d)
+requires k1 != k2
+ensures Remove(d, k2)[k1] == d[k1]
+decreases
+pure func RemoveDifferent(d dict[int]int, k1, k2 int) util.Unit {
+	return util.Unit{}
+}
+
+// Two maps are equivalent if their domains are equivalent and every key in their
+// domains map to the same value.
+ghost
+ensures (d1 == d2) ==
+	(domain(d1) == domain(d2) && forall k int :: {d1[k], d2[k]} k in domain(d1) ==>	d1[k] == d2[k])
+decreases
+pure func ExtEqual(d1, d2 dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// The cardinality of a dictionary is non-negative.
+ghost
+ensures len(d) >= 0
+decreases
+pure func NonNegativeLen(d dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// The cardinality of a dictionary is equal to the cardinality of its domain.
+ghost
+ensures len(d) == len(domain(d))
+decreases
+pure func DomainLenEq(d dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// If two dictionaries are disjoint there is no key that is in both of their domains.
+ghost
+requires AreDisjoint(d1, d2)
+ensures !(k in domain(d1) && k in domain(d2))
+decreases
+pure func DisjointNoSharedKey(d1, d2 dict[int]int, k int) util.Unit {
+	return util.Unit{}
+}
+
+// If two dictionaries are not disjoint, there exists a key that is in both of their domains.
+ghost
+requires !AreDisjoint(d1, d2)
+ensures exists k int :: {k in domain(d1), k in domain(d2)} k in domain(d1) && k in domain(d2)
+decreases
+pure func NotDisjointSharedKey(d1, d2 dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// There is only one empty map.
+ghost
+requires IsEmpty(d)
+ensures d == Empty()
+decreases
+pure func EmptyIsUnique(d dict[int]int) util.Unit {
+	return util.Unit{}
+}
+
+// An empty dictionary contains no keys.
+ghost
+requires IsEmpty(d)
+ensures !(k in domain(d))
+decreases
+pure func NotInEmpty(d dict[int]int, k int) util.Unit {
+	return util.Unit{}
+}
+
+// There exists a key in a non-empty dictionary.
+ghost
+requires !IsEmpty(d)
+ensures exists k int :: {k in domain(d)} k in domain(d)
+decreases
+pure func NotEmptyKeyExists(d dict[int]int, k int) util.Unit {
+	return util.Unit{}
+}
+
+// If a key is in d, d is not empty.
+ghost
+requires k in domain(d)
+ensures !IsEmpty(d)
+decreases
+pure func KeyInDomainDictNotEmpty(d dict[int]int, k int) util.Unit {
+	return util.Unit{}
+}
+
+// Inserting a new key increases the cardinality of the dictionary by 1.
+// Updating the value of a key does not change the cardinality.
+ghost
+ensures k in domain(d) ==> len(d[k = v]) == len(d)
+ensures !(k in domain(d)) ==> len(d[k = v]) == len(d) + 1
+decreases
+pure func InsertUpdateLen(d dict[int]int, k, v int) util.Unit {
+	return util.Unit{}
+}
+
+// If a value is in the range of a dictionary, there exists a corresponding key.
+ghost
+requires v in range(d)
+ensures exists k int :: {k in domain(d)} k in domain(d) && d[k] == v
+decreases
+pure func ValueHasKey(d dict[int]int, v int) util.Unit {
+	return util.Unit{}
+}
+
+// If a value is in the domain of a dictionary, the corresponding value is in its range.
+ghost
+requires k in domain(d)
+ensures d[k] in range(d)
+decreases
+pure func KeyMapsToRange(d dict[int]int, k int) util.Unit {
+	return util.Unit{}
+}
+
+// Returns a dictionary with the values at k1 and k2 swapped.
+ghost
+requires k1 in domain(d) && k2 in domain(d)
+ensures domain(result) == domain(d)
+ensures result[k1] == d[k2] && result[k2] == d[k1]
+ensures forall k int :: {result[k]} (k in domain(d) && k != k1 && k != k2) ==>
+	result[k] == d[k]
+decreases
+pure func Swap(d dict[int]int, k1, k2 int) (result dict[int]int) {
+	return d[k1 = d[k2]][k2 = d[k1]]
+}
+
+// Returns the set of keys from the given dictionary that map to the specified value.
+ghost
+opaque
+ensures forall k int :: {k in result} (k in domain(d) && d[k] == v) == (k in result)
+decreases len(d)
+pure func Keys(d dict[int]int, v int) (result set[int]) {
+	return IsEmpty(d) ? sets_not_opaque.Empty() :
+		(let x := sets_not_opaque.Choose(domain(d)) in
+		(let subKeys := Keys(Remove(d, x), v) in
+		(d[x] == v ? sets_not_opaque.Add(subKeys, x) : subKeys)))
+	
+}
+
+// Returns the number of occurences of the value in the dictionary.
+ghost
+decreases
+pure func Occurrences(d dict[int]int, v int) int {
+	return len(Keys(d, v))
+}
+
+// Remove preserves the injectivity of a dictionary.
+ghost
+requires IsInjective(d)
+ensures IsInjective(Remove(d, k))
+decreases
+pure func RemovePreservesInjectivity(d dict[int]int, k int) util.Unit {
+	return let _ := reveal IsInjective(d) in
+		let _ := reveal IsInjective(Remove(d, k)) in
+		util.Unit{}
+}
+
+// After removing a key, the corresponding value occurs one less time.
+ghost
+requires k in domain(d)
+ensures Occurrences(Remove(d, k), d[k]) == Occurrences(d, d[k]) - 1
+decreases
+pure func RemoveOccurrences(d dict[int]int, k int) util.Unit {
+	return let ks1 := reveal Keys(d, d[k]) in
+	let ks2 := reveal Keys(Remove(d, k), d[k]) in
+	util.Asserting(ks2 == sets_not_opaque.Remove(ks1, k))
+}
+
+// Adding a new key-value pair increases the occurrence of the value by one.
+ghost
+requires !(k in domain(d))
+ensures Occurrences(d[k = v], v) == Occurrences(d, v) + 1
+decreases
+pure func AddOccurrences(d dict[int]int, k, v int) util.Unit {
+	return let ks1 := reveal Keys(d, v) in
+		let ks2 := reveal Keys(d[k = v], v) in
+		util.Asserting(ks2 == sets_not_opaque.Add(ks1, k))
+}
+
+// Updating a key to a new value results in an additional occurrences for the
+// new value, and one less occurrence for the old value.
+ghost
+requires k in domain(d)
+requires v != d[k]
+ensures Occurrences(d[k = v], v) == Occurrences(d, v) + 1
+ensures Occurrences(d[k = v], d[k]) == Occurrences(d, d[k]) - 1
+decreases
+pure func UpdateOccurrences(d dict[int]int, k, v int) util.Unit {
+	return let ks1v := reveal Keys(d, v) in
+		let ks2v := reveal Keys(d[k = v], v) in
+		let _ := util.Asserting(ks2v == sets_not_opaque.Add(ks1v, k)) in
+		let ks1dk := reveal Keys(d, d[k]) in
+		let ks2dk := reveal Keys(d[k = v], d[k]) in
+		util.Asserting(ks2dk == sets_not_opaque.Remove(ks1dk, k))
+}
+
+// v can occur at most once as a value in injective dictionaries.
+ghost
+requires IsInjective(d)
+ensures Occurrences(d, v) <= 1
+decreases len(d)
+pure func InjectiveOccurrences(d dict[int]int, v int) util.Unit {
+	return Occurrences(d, v) <= 1 ? util.Unit{} :
+		let x1 := sets_not_opaque.Choose(Keys(d, v)) in
+		let x2 := sets_not_opaque.Choose(sets_not_opaque.Remove(Keys(d, v), x1)) in
+		let _ := reveal IsInjective(d) in
+		util.Unit{}
+}
