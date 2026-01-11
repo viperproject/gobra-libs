@@ -23,7 +23,7 @@ import "util"
 ghost
 requires acc(m, _)
 ensures domain(result) == domain(m)
-ensures forall k int :: {result[k]} {k in domain(m)} k in domain(m) ==> result[k] == m[k]
+ensures forall k int :: {result[k]} {k elem domain(m)} k elem domain(m) ==> result[k] == m[k]
 decreases
 pure func ToDict(m map[int]int) (result dict[int]int)
 
@@ -51,8 +51,8 @@ requires acc(m2, _)
 ensures result == dicts.IsEqualOnKey(ToDict(m1), ToDict(m2), k)
 decreases
 pure func IsEqualOnKey(m1, m2 map[int]int, k int) (result bool) {
-	return !(k in domain(m1) || k in domain(m2)) ||
-		(k in domain(m1) && k in domain(m2) && m1[k] == m2[k])
+	return !(k elem domain(m1) || k elem domain(m2)) ||
+		(k elem domain(m1) && k elem domain(m2) && m1[k] == m2[k])
 }
 
 // True iff m1 is a subset of m2.
@@ -63,7 +63,7 @@ ensures result == dicts.IsSubset(ToDict(m1), ToDict(m2))
 decreases
 pure func IsSubset(m1, m2 map[int]int) (result bool) {
 	return domain(m1) subset domain(m2) &&
-			forall k int :: {IsEqualOnKey(m1, m2, k)} {k in domain(m1)} (k in domain(m1)) ==>
+			forall k int :: {IsEqualOnKey(m1, m2, k)} {k elem domain(m1)} (k elem domain(m1)) ==>
 				IsEqualOnKey(m1, m2, k)
 }
 
@@ -84,7 +84,7 @@ ensures result == dicts.IsInjective(ToDict(m))
 decreases
 pure func IsInjective(m map[int]int) (result bool) {
 	return let _ := reveal dicts.IsInjective(ToDict(m)) in
-		forall k1, k2 int :: {m[k1], m[k2]} (k1 != k2 && k1 in domain(m) && k2 in domain(m)) ==>
+		forall k1, k2 int :: {m[k1], m[k2]} (k1 != k2 && k1 elem domain(m) && k2 elem domain(m)) ==>
 			m[k1] != m[k2]
 }
 
@@ -95,7 +95,7 @@ ensures result == dicts.IsMonotonic(ToDict(m))
 decreases
 pure func IsMonotonic(m map[int]int) (result bool) {
 	return let _ := reveal dicts.IsMonotonic(ToDict(m)) in
-		forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && k1 <= k2) ==>
+		forall k1, k2 int :: {m[k1], m[k2]} (k1 elem domain(m) && k2 elem domain(m) && k1 <= k2) ==>
 			m[k1] <= m[k2]
 }
 
@@ -107,7 +107,7 @@ ensures result == dicts.IsMonotonicFrom(ToDict(m), start)
 decreases
 pure func IsMonotonicFrom(m map[int]int, start int) (result bool) {
 	return let _ := reveal dicts.IsMonotonicFrom(ToDict(m), start) in
-		forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) && k2 in domain(m) && start <= k1 && k1 <= k2) ==>
+		forall k1, k2 int :: {m[k1], m[k2]} (k1 elem domain(m) && k2 elem domain(m) && start <= k1 && k1 <= k2) ==>
 			m[k1] <= m[k2]
 }
 
@@ -119,8 +119,8 @@ ensures result == dicts.IsMonotonicFromTo(ToDict(m), start, end)
 decreases
 pure func IsMonotonicFromTo(m map[int]int, start, end int) (result bool) {
 	return let _ := reveal dicts.IsMonotonicFromTo(ToDict(m), start, end) in
-		forall k1, k2 int :: {m[k1], m[k2]} (k1 in domain(m) &&
-						     k2 in domain(m) &&
+		forall k1, k2 int :: {m[k1], m[k2]} (k1 elem domain(m) &&
+						     k2 elem domain(m) &&
 		 				     start <= k1 && k1 <= k2 && k2 < end) ==>
 							m[k1] <= m[k2]
 }
@@ -134,8 +134,8 @@ ensures result == dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end)
 decreases
 pure func IsEqualInRange(m1, m2 map[int]int, start, end int) (result bool) {
 	return let _ := reveal dicts.IsEqualInRange(ToDict(m1), ToDict(m2), start, end) in
-		(forall k int :: {m1[k], m2[k]} {k in domain(m1)} {k in domain(m2)} (start <= k && k < end) ==>
-			k in domain(m1) && k in domain(m2) && m1[k] == m2[k])
+		(forall k int :: {m1[k], m2[k]} {k elem domain(m1)} {k elem domain(m2)} (start <= k && k < end) ==>
+			k elem domain(m1) && k elem domain(m2) && m1[k] == m2[k])
 }
 
 // True iff m1 and m2 agree on all keys that their domains share.
@@ -145,14 +145,14 @@ requires acc(m2, _)
 ensures result == dicts.Agree(ToDict(m1), ToDict(m2))
 decreases
 pure func Agree(m1, m2 map[int]int) (result bool) {
-	return forall k int :: {m1[k], m2[k]} k in (domain(m1) intersection domain(m2)) ==>
+	return forall k int :: {m1[k], m2[k]} k elem (domain(m1) intersection domain(m2)) ==>
 			m1[k] == m2[k]
 }
 
 // Returns the set of keys from m that map to the specified value.
 ghost
 requires acc(m, _)
-ensures forall k int :: {k in result} (k in domain(m) && m[k] == v) == (k in result)
+ensures forall k int :: {k elem result} (k elem domain(m) && m[k] == v) == (k elem result)
 decreases len(m)
 pure func Keys(m map[int]int, v int) (result set[int]) {
 	// Since we don't have access to Remove for gomaps, we define this
