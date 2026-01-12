@@ -1,0 +1,109 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package refinement
+
+type ts struct{}
+
+type state struct {
+	count int
+}
+
+type inc struct {
+	delta int
+}
+
+ts implements TransitionSystem
+
+const MAX = 3
+
+// Definition of LTS: we may update the value of the counter,
+// as long as it is always within bounds ([0..3])
+ghost
+decreases
+pure func (t ts) Init(s State) bool {
+	return s != nil              &&
+		typeOf(s) == type[state] &&
+		let st := s.(state)      in
+		st.count == 0
+}
+
+ghost
+decreases
+pure func (t ts) Valid(s State) bool {
+	return s != nil              &&
+		typeOf(s) == type[state] &&
+		let st := s.(state)      in
+		0 <= st.count && st.count <= MAX
+}
+
+ghost
+decreases
+pure func (t ts) Guard(s State, e Event) bool {
+	return t.Valid(s) && typeOf(e) == type[inc] ?
+			(let ee := e.(inc)            in
+			let st := s.(state)           in
+			let nv := st.count + ee.delta in
+			0 <= nv && nv <= MAX) :
+		false
+}
+
+ghost
+requires t.Guard(s, e)
+decreases
+pure func (t ts) Update(s State, e Event) State {
+	return let ee := e.(inc) in
+		let st := s.(state)  in
+		state{ st.count + ee.delta }
+}
+
+ghost
+requires t.Valid(s)
+requires t.Guard(s, e)
+ensures  let ns := t.Update(s, e) in
+	ns != nil && t.Valid(ns)
+decreases
+func (t ts) UpdateValidIsValid(s State, e Event) {
+	// proven
+}
+
+// end of definition of LTS
+
+requires ReadyToInit()
+func test() {
+	InitTS(ts{}, state{0}) // declare our model
+	assert TS() === ts{}
+	c@ := 0
+	increment(&c)
+	increment(&c)
+	increment(&c)
+	// increment(&c) // rejected, violates the protocol
+}
+
+requires acc(x) && *x < MAX
+requires Initialized()
+requires TS() === ts{}
+// binding model and concrete state
+requires CurrState() === state{*x}
+ensures  acc(x) && *x == old(*x) + 1
+ensures  Initialized()
+ensures  TS() === old(TS())
+// binding model and concrete state
+ensures  CurrState() === state{*x}
+func increment(x *int) {
+	*x = *x + 1
+	UpdateTS(inc{1})
+}
