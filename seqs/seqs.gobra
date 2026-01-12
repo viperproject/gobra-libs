@@ -196,8 +196,8 @@ pure func HasNoDuplicates(xs seq[int]) bool {
 ghost
 requires len(xs) > 0
 requires HasNoDuplicates(xs)
-ensures !(First(xs) in DropFirst(xs))
-ensures !(Last(xs) in DropLast(xs))
+ensures !(First(xs) elem DropFirst(xs))
+ensures !(Last(xs) elem DropLast(xs))
 decreases
 pure func DropExcludesValue(xs seq[int]) util.Unit {
 	return util.Unit{}
@@ -207,7 +207,7 @@ pure func DropExcludesValue(xs seq[int]) util.Unit {
 // Use IndexOfReturnsFirst to instantiate the fact that the resulting index is
 // of the first occurrence.
 ghost
-requires e in xs
+requires e elem xs
 ensures 0 <= result && result < len(xs)
 ensures xs[result] == e
 decreases xs
@@ -217,7 +217,7 @@ pure func IndexOf(xs seq[int], e int) (result int) {
 
 // IndexOf returns the first occurrence of e in xs.
 ghost
-requires e in xs
+requires e elem xs
 requires 0 <= i && i < IndexOf(xs, e)
 ensures xs[i] != e
 decreases
@@ -226,7 +226,7 @@ pure func IndexOfReturnsFirst(xs seq[int], e int, i int) util.Unit {
 }
 
 ghost
-requires e in xs
+requires e elem xs
 ensures forall i int :: { xs[i] } (0 <= i && i < IndexOf(xs, e)) ==> xs[i] != e
 decreases xs
 pure func quantifiedIndexOfReturnsFirst(xs seq[int], e int) util.Unit {
@@ -237,7 +237,7 @@ pure func quantifiedIndexOfReturnsFirst(xs seq[int], e int) util.Unit {
 // Use IndexOfLastReturnsLast to instantiate the fact the the resulting index is
 // of the last occurrence.
 ghost
-requires e in xs
+requires e elem xs
 ensures 0 <= result && result < len(xs)
 ensures xs[result] == e
 decreases xs
@@ -247,7 +247,7 @@ pure func IndexOfLast(xs seq[int], e int) (result int) {
 
 // IndexOfLast returns the last occurrence of e in xs.
 ghost
-requires e in xs
+requires e elem xs
 requires IndexOfLast(xs, e) < i && i < len(xs)
 ensures xs[i] != e
 decreases
@@ -256,7 +256,7 @@ pure func IndexOfLastReturnsLast(xs seq[int], e int, i int) util.Unit {
 }
 
 ghost
-requires e in xs
+requires e elem xs
 ensures forall i int :: { xs[i] } (IndexOfLast(xs, e) < i && i < len(xs)) ==> xs[i] != e
 decreases xs
 pure func quantifiedIndexOfLastReturnsLast(xs seq[int], e int) util.Unit {
@@ -276,7 +276,7 @@ pure func Remove(xs seq[int], pos int) (result seq[int]) {
 
 // Deletes the first occurrence of e in xs.
 ghost
-requires e in xs
+requires e elem xs
 ensures len(result) == len(xs) - 1
 ensures forall i int :: { result[i] } { xs[i] } (0 <= i && i < IndexOf(xs, e)) ==> result[i] == xs[i]
 ensures forall i int :: { result[i] } (IndexOf(xs, e) <= i && i < len(xs) - 1) ==>
@@ -321,8 +321,8 @@ pure func Repeat(e int, length int) (result seq[int]) {
 // Returns the maximum of a non-empty sequence.
 ghost
 requires len(xs) > 0
-ensures forall k int :: { k in xs } (k in xs) ==> result >= k
-ensures result in xs
+ensures forall k int :: { k elem xs } (k elem xs) ==> result >= k
+ensures result elem xs
 decreases xs
 pure func Max(xs seq[int]) (result int) {
 	return let _ := DropFirstPrependFirst(xs) in
@@ -335,7 +335,7 @@ ghost
 requires len(xs) > 0 && len(ys) > 0
 ensures Max(xs ++ ys) >= Max(xs)
 ensures Max(xs ++ ys) >= Max(ys)
-ensures forall k int :: { k in xs ++ ys } (k in (xs ++ ys)) ==> Max(xs ++ ys) >= k
+ensures forall k int :: { k elem xs ++ ys } (k elem (xs ++ ys)) ==> Max(xs ++ ys) >= k
 decreases xs
 pure func MaxOfConcat(xs, ys seq[int]) util.Unit {
 	return let _ := ConcatDropFirst(xs, ys) in
@@ -345,8 +345,8 @@ pure func MaxOfConcat(xs, ys seq[int]) util.Unit {
 // Returns the minimum of a non-empty sequence.
 ghost
 requires len(xs) > 0
-ensures forall k int :: { k in xs } (k in xs) ==> result <= k
-ensures result in xs
+ensures forall k int :: { k elem xs } (k elem xs) ==> result <= k
+ensures result elem xs
 decreases xs
 pure func Min(xs seq[int]) (result int) {
 	return let _ := DropFirstPrependFirst(xs) in
@@ -359,7 +359,7 @@ ghost
 requires len(xs) > 0 && len(ys) > 0
 ensures Min(xs ++ ys) <= Min(xs)
 ensures Min(xs ++ ys) <= Min(ys)
-ensures forall k int :: { k in xs ++ ys } (k in xs ++ ys) ==> Min(xs ++ ys) <= k
+ensures forall k int :: { k elem xs ++ ys } (k elem xs ++ ys) ==> Min(xs ++ ys) <= k
 decreases xs
 pure func MinOfConcat(xs, ys seq[int]) util.Unit {
 	return let _ := ConcatDropFirst(xs, ys) in
@@ -373,7 +373,7 @@ requires 0 <= a && a < b && b <= len(xs)
 ensures Max(xs[a:b]) <= Max(xs)
 decreases
 pure func MaxOfSubseq(xs seq[int], a, b int) util.Unit {
-	return util.Asserting(Max(xs[a:b]) in xs)
+	return util.Asserting(Max(xs[a:b]) elem xs)
 }
 
 // The minimum element in a non-empty sequence is less than or equal to the
@@ -383,7 +383,7 @@ requires 0 <= a && a < b && b <= len(xs)
 ensures Min(xs[a:b]) >= Min(xs)
 decreases
 pure func MinOfSubseq(xs seq[int], a, b int) util.Unit {
-	return util.Asserting(Min(xs[a:b]) in xs)
+	return util.Asserting(Min(xs[a:b]) elem xs)
 }
 
 // Flattens a sequence of sequences into a single sequence.
