@@ -52,8 +52,8 @@ pure func Pow2(e int) int {
 // If x is not in the interval, Clip returns the closest 
 // value in the interval. Otherwise, it returns x.
 ghost
-requires low <= high
+requires l <= h
 decreases
-pure func Clip(x, low, high int) int {
-	return Min(Max(x, low), high)
+pure func Clip(x, l, h int) int {
+	return Min(Max(x, l), h)
 }

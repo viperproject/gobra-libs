@@ -28,7 +28,7 @@ pure func IsSingleton(xs set[int]) bool {
 // Returns a singleton containing x.
 ghost
 ensures IsSingleton(result)
-ensures e in result
+ensures e elem result
 decreases
 pure func SingletonSet(e int) (result set[int]) {
 	return set[int]{e}
@@ -44,16 +44,16 @@ pure func IsProperSubset(xs, ys set[int]) bool {
 // Returns an element from a non-empty set.
 ghost
 requires !IsEmpty(xs)
-ensures e in xs
+ensures e elem xs
 ensures IsSingleton(xs) ==> xs == SingletonSet(e)
 decreases
 pure func choose(xs set[int]) (e int)
 
 // Remove e from xs. Does not require e to be in xs.
 ghost
-ensures !(e in xs) ==> result == xs
-ensures (e in xs) ==> (len(result) == len(xs) - 1)
-ensures !(e in xs) ==> (len(result) == len(xs))
+ensures !(e elem xs) ==> result == xs
+ensures (e elem xs) ==> (len(result) == len(xs) - 1)
+ensures !(e elem xs) ==> (len(result) == len(xs))
 decreases
 pure func Remove(xs set[int], e int) (result set[int]) {
 	return xs setminus SingletonSet(e)
