@@ -38,7 +38,7 @@ pure func EmptyIsUnique(xs set[int]) util.Unit {
 // An empty set doesn't have any elements.
 ghost
 requires IsEmpty(xs)
-ensures !(e in xs)
+ensures !(e elem xs)
 decreases
 pure func NotInEmpty(xs set[int], e int) util.Unit {
 	return util.Unit{}
@@ -54,7 +54,7 @@ pure func IsSingleton(xs set[int]) bool {
 // Returns a singleton containing x.
 ghost
 ensures IsSingleton(result)
-ensures e in result
+ensures e elem result
 decreases
 pure func SingletonSet(e int) (result set[int]) {
 	return set[int]{e}
@@ -63,7 +63,7 @@ pure func SingletonSet(e int) (result set[int]) {
 // If a is in a singleton set x, then x is of the form {a}.
 ghost
 requires IsSingleton(xs)
-requires e in xs
+requires e elem xs
 ensures xs == SingletonSet(e)
 decreases
 pure func SingletonIsSingletonSet(xs set[int], e int) util.Unit {
@@ -73,8 +73,8 @@ pure func SingletonIsSingletonSet(xs set[int], e int) util.Unit {
 // Elements in a singleton set are equal to each other.
 ghost
 requires IsSingleton(xs)
-requires a in xs
-requires b in xs
+requires a elem xs
+requires b elem xs
 ensures a == b
 decreases
 pure func SingletonEquality(xs set[int], a int, b int) util.Unit {
@@ -84,7 +84,7 @@ pure func SingletonEquality(xs set[int], a int, b int) util.Unit {
 // Constructs a set with all integers in the range [a, b).
 ghost
 requires a <= b
-ensures forall i int :: { i in result } (a <= i && i < b) == i in result
+ensures forall i int :: { i elem result } (a <= i && i < b) == i elem result
 ensures len(result) == b - a
 decreases b - a
 pure func Range(a, b int) (result set[int]) {
@@ -94,7 +94,7 @@ pure func Range(a, b int) (result set[int]) {
 // Constructs a set with all integers in the range [0, n).
 ghost
 requires n >= 0
-ensures forall i int :: { i in result } (0 <= i && i < n) == i in result
+ensures forall i int :: { i elem result } (0 <= i && i < n) == i elem result
 ensures len(result) == n
 decreases
 pure func RangeFromZero(n int) (result set[int]) {
@@ -104,8 +104,8 @@ pure func RangeFromZero(n int) (result set[int]) {
 // Converts a set into a multiset where each element from the set has
 // multiplicity 1 and any other element has multiplicity 0.
 ghost
-ensures forall i int :: {i # result} (i in s) ==> ((i # result) == 1)
-ensures forall i int :: {i # result} (!(i in s)) ==> ((i # result) == 0)
+ensures forall i int :: {i # result} (i elem s) ==> ((i # result) == 1)
+ensures forall i int :: {i # result} (!(i elem s)) ==> ((i # result) == 0)
 decreases s
 pure func ToMultiset(s set[int]) (result mset[int]) {
 	return IsEmpty(s) ? mset[int] {} :
@@ -116,7 +116,7 @@ pure func ToMultiset(s set[int]) (result mset[int]) {
 // Returns an element from a non-empty set.
 ghost
 requires !IsEmpty(xs)
-ensures e in xs
+ensures e elem xs
 ensures IsSingleton(xs) ==> xs == SingletonSet(e)
 decreases
 pure func Choose(xs set[int]) (e int)
@@ -130,7 +130,7 @@ pure func AreDisjoint(xs, ys set[int]) bool {
 
 // Definition of set equality.
 ghost
-ensures (xs == ys) == (forall e int :: {e in xs} {e in ys} ((e in xs) == (e in ys)))
+ensures (xs == ys) == (forall e int :: {e elem xs} {e elem ys} ((e elem xs) == (e elem ys)))
 decreases
 pure func SetEquality(xs, ys set[int]) util.Unit {
 	return util.Unit{}
@@ -138,9 +138,9 @@ pure func SetEquality(xs, ys set[int]) util.Unit {
 
 // Definition of subset without quantifiers.
 ghost
-requires e in xs
+requires e elem xs
 requires xs subset ys
-ensures e in ys
+ensures e elem ys
 decreases
 pure func InSubset(xs, ys set[int], e int) util.Unit {
 	return util.Unit{}
@@ -183,7 +183,7 @@ pure func IsProperSubset(xs, ys set[int]) bool {
 
 // If e is in the union of xs and ys, then it must be in xs or ys.
 ghost
-ensures (e in (xs union ys)) == ((e in xs) || (e in ys))
+ensures (e elem (xs union ys)) == ((e elem xs) || (e elem ys))
 decreases
 pure func InUnionInOne(xs, ys set[int], e int) util.Unit {
 	return util.Unit{}
@@ -209,10 +209,10 @@ pure func UnionIsIdempotent(xs, ys set[int]) util.Unit {
 // Add x to xs.
 ghost
 // Need this post-condition first to ensure the properties about the length.
-ensures (e in xs) ==> result == xs
-ensures (e in xs) ==> (len(result) == len(xs))
-ensures !(e in xs) ==> (len(result) == len(xs) + 1)
-ensures e in result
+ensures (e elem xs) ==> result == xs
+ensures (e elem xs) ==> (len(result) == len(xs))
+ensures !(e elem xs) ==> (len(result) == len(xs) + 1)
+ensures e elem result
 decreases
 pure func Add(xs set[int], e int) (result set[int]) {
 	return xs union SingletonSet(e)
@@ -220,7 +220,7 @@ pure func Add(xs set[int], e int) (result set[int]) {
 
 // If a is in xs union {b}, then a is equal to b, or a was already in xs.
 ghost
-ensures (a in Add(xs, b)) == ((a == b) || a in xs)
+ensures (a elem Add(xs, b)) == ((a == b) || a elem xs)
 decreases
 pure func InAdd(xs set[int], a, b int) util.Unit {
 	return util.Unit{}
@@ -228,8 +228,8 @@ pure func InAdd(xs set[int], a, b int) util.Unit {
 
 // If a is in xs, then a will remain in xs no matter what we add to it.
 ghost
-requires a in xs
-ensures a in Add(xs, b)
+requires a elem xs
+ensures a elem Add(xs, b)
 decreases
 pure func InvarianceInAdd(xs set[int], a, b int) util.Unit {
 	return util.Unit{}
@@ -237,9 +237,9 @@ pure func InvarianceInAdd(xs set[int], a, b int) util.Unit {
 
 // Remove e from xs. Does not require e to be in xs.
 ghost
-ensures !(e in xs) ==> result == xs
-ensures (e in xs) ==> (len(result) == len(xs) - 1)
-ensures !(e in xs) ==> (len(result) == len(xs))
+ensures !(e elem xs) ==> result == xs
+ensures (e elem xs) ==> (len(result) == len(xs) - 1)
+ensures !(e elem xs) ==> (len(result) == len(xs))
 decreases
 pure func Remove(xs set[int], e int) (result set[int]) {
 	return xs setminus SingletonSet(e)
@@ -264,7 +264,7 @@ pure func IntersectionIsIdempotent(xs, ys set[int]) util.Unit {
 
 // If e is in the difference xs - ys, then e must be in xs but not in ys.
 ghost
-ensures (e in (xs setminus ys)) == ((e in xs) && !(e in ys))
+ensures (e elem (xs setminus ys)) == ((e elem xs) && !(e elem ys))
 decreases
 pure func InDifference(xs, ys set[int], e int) util.Unit {
 	return util.Unit{}
@@ -272,8 +272,8 @@ pure func InDifference(xs, ys set[int], e int) util.Unit {
 
 // If ys contains e, then the difference xs - ys does not contain e.
 ghost
-requires e in ys
-ensures !(e in (xs setminus ys))
+requires e elem ys
+ensures !(e elem (xs setminus ys))
 decreases
 pure func NotInDifference(xs, ys set[int], e int) util.Unit {
 	return util.Unit{}
@@ -281,7 +281,7 @@ pure func NotInDifference(xs, ys set[int], e int) util.Unit {
 
 // If e is in the intersection of xs and ys, then e must be both in xs and ys.
 ghost
-ensures e in (xs intersection ys) == ((e in xs) && (e in ys))
+ensures e elem (xs intersection ys) == ((e elem xs) && (e elem ys))
 decreases
 pure func InIntersectionInBoth(xs, ys set[int], e int) util.Unit {
 	return util.Unit{}
@@ -300,7 +300,7 @@ pure func DisjointUnionDifference(xs, ys set[int]) util.Unit {
 
 // If e is in xs, removing and adding it back yields the original set.
 ghost
-requires e in xs
+requires e elem xs
 ensures Add(Remove(xs, e), e) == xs
 decreases
 pure func AddRemove(xs set[int], e int) util.Unit {
@@ -385,7 +385,7 @@ pure func UnionLenLower(xs, ys set[int]) util.Unit {
 	return IsEmpty(ys) ? util.Unit{} :
 		let y := Choose(ys) in
 		(let yr := Remove(ys, y) in
-		(y in xs ?
+		(y elem xs ?
 			(let xr := Remove(xs, y) in
 			(let _ := util.Asserting(xr union yr == Remove(xs union ys, y)) in UnionLenLower(xr, yr))) :
 			(let _ := util.Asserting(xs union yr == Remove(xs union ys, y)) in UnionLenLower(xs, yr))))
@@ -438,8 +438,8 @@ pure func DifferenceLenEq(xs, ys set[int]) util.Unit {
 // If e is in xs, adding it to xs doesn't change the cardinality.
 // If e is not in xs, adding it to xs increases the cardinality by 1.
 ghost
-ensures (e in xs) ==> (len(Add(xs, e)) == len(xs))
-ensures !(e in xs) ==> (len(Add(xs, e)) == len(xs) + 1)
+ensures (e elem xs) ==> (len(Add(xs, e)) == len(xs))
+ensures !(e elem xs) ==> (len(Add(xs, e)) == len(xs) + 1)
 decreases
 pure func AddLen(xs set[int], e int) util.Unit {
 	return util.Unit{}
@@ -448,8 +448,8 @@ pure func AddLen(xs set[int], e int) util.Unit {
 // If e is in xs, removing it from xs reduces the cardinality by 1.
 // If e is not in xs, removing it from xs doesn't change the cardinality.
 ghost
-ensures (e in xs) ==> (len(Remove(xs, e)) == len(xs) - 1)
-ensures !(e in xs) ==> (len(Remove(xs, e)) == len(xs))
+ensures (e elem xs) ==> (len(Remove(xs, e)) == len(xs) - 1)
+ensures !(e elem xs) ==> (len(Remove(xs, e)) == len(xs))
 decreases
 pure func RemoveLen(xs set[int], e int) util.Unit {
 	return util.Unit{}
@@ -465,7 +465,7 @@ pure func RemoveUnion(xs, ys set[int], e int) util.Unit {
 
 // If e is in (xs union ys), removing it from both sets reduces the cardinality by 1.
 ghost
-requires e in (xs union ys)
+requires e elem (xs union ys)
 ensures len(Remove(xs, e) union Remove(ys, e)) == len(xs union ys) - 1
 decreases
 pure func RemoveUnionLen(xs, ys set[int], e int) util.Unit {
@@ -485,7 +485,7 @@ pure func DisjointUnionLen(xs, ys set[int]) util.Unit {
 // If xs solely contains integers in the range [a, b), then its size is 
 // bounded by b - a.
 ghost
-requires forall i int :: { i in xs } i in xs ==> (a <= i && i < b)
+requires forall i int :: { i elem xs } i elem xs ==> (a <= i && i < b)
 requires a <= b
 ensures len(xs) <= b - a
 decreases
