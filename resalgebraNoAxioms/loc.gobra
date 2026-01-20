@@ -369,6 +369,7 @@ func GhostUpdateWithIdx(l LocName, ra RA, e1 Elem, e2 Elem, i UserFacingIdx) {
 		//	==> compose(e2, core(e1)) must be valid because compose(e1, core(e1)) is valid and e2 is a frame preserving update
 		//	==> e2 is valid because the compose(e2, core(e1)) is valid.
 		// what about the cases e1 does not have a core?
+		assume ra.IsValid(e2) // TODO
 	}
 
 	// if ra.Core(e1) != none[Elem] {
