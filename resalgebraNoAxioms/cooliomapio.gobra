@@ -48,6 +48,7 @@ pred inv(m cooliomapio) {
 ghost
 mayInit
 ensures inv(m)
+ensures toDict(m) == dict[key]val{}
 decreases
 func allocMap() (m cooliomapio) {
 	var g@ node

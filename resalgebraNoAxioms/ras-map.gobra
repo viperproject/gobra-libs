@@ -46,6 +46,7 @@ pred (m rasMap) Inv() {
 ghost
 mayInit
 ensures m.Inv()
+ensures m.ToDict() == dict[keyRasMap]valRasMap{}
 decreases
 func rasMapAlloc() (m rasMap) {
 	var g@ nodeRasMap
