@@ -14,7 +14,9 @@
 
 // +gobra
 
-// This package is shows that we can provide a model for ghost locations, similar to
+package resalgebraNoAxioms
+
+// This package shows that we can provide a model for ghost locations, similar to
 // those of Iris entirely in Gobra. The public API of this package is very similar to
 //  that of `resalgebra` except that (1) we made some tweaks to the definition of RA that
 // should be logically equivalent to those of the RA defined in `resalgebra`
@@ -23,29 +25,29 @@
 // to provide the instantiations of the quantified variables), (2) all
 // lemmas for ghost locations require a Witness value to be passed.
 // This is due to a technicality in Gobra (we cannot existentially quantify
-// over resources). Nonetheless, one may have the same API as that
-// of `resalgebra/loc.gobra` if one axiomatizes the introduction and elimination
-// rules for existential QPs:
-//
-//     // Same as `exists w s.t. GhostLocationW(l, ra, e, w)`
-//     pred GhostLocation(l LocName, ra RA, e Elem)
-//
-//     // Converting between GhostLocationW and GhostLocation by
-//     // introducing the existential quantifier.
-//     ghost
-//     trusted
-//     requires GhostLocationW(l, ra, e, w)
-//     ensures  GhostLocation(l, ra, e)
-//     decreases
-//     func IntroExists(l LocName, ra RA, e Elem, w Witness)
-//
-//     // Converting between GhostLocation and GhostLocationW by
-//     // eliminating the existential quantifier.
-//     ghost
-//     trusted
-//     requires GhostLocation(l, ra, e)
-//     ensures  GhostLocationW(l, ra, e, w)
-//     decreases
-//     func IntroElim(l LocName, ra RA, e Elem) (w Witness)
+// over resources).
 
-package resalgebraNoAxioms
+// For the time being, to keep the same API for GhostLocations
+// as the one found in `resalgebra/loc.gobra`, we axiomatize
+// the introduction and elimination rules for existential QPs:
+
+// Same as `exists w s.t. GhostLocationW(l, ra, e, w)`
+pred GhostLocation(l LocName, ra RA, e Elem)
+
+// Converting between GhostLocationW and GhostLocation by
+// introducing the existential quantifier.
+ghost
+trusted
+requires GhostLocationW(l, ra, e, w)
+ensures  GhostLocation(l, ra, e)
+decreases
+func IntroExists(l LocName, ra RA, e Elem, w Witness)
+
+// Converting between GhostLocation and GhostLocationW by
+// eliminating the existential quantifier.
+ghost
+trusted
+requires GhostLocation(l, ra, e)
+ensures  GhostLocationW(l, ra, e, w)
+decreases
+func ElimExists(l LocName, ra RA, e Elem) (w Witness)

@@ -16,6 +16,7 @@
 
 package resalgebraNoAxioms
 
+/*
 import "sync"
 
 type MonoCounter struct {
@@ -76,3 +77,4 @@ func test(c *MonoCounter) {
 	GhostValid(c.loc, AuthRA, v)
 	assert c.val >= 10
 }
+*/

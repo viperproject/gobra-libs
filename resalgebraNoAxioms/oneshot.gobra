@@ -42,7 +42,6 @@ func (ra TypeOneShotRA) IsElem(e Elem) (res bool) {
 		(e === Fail{})
 }
 
-
 ghost
 requires ra.IsElem(e)
 decreases
