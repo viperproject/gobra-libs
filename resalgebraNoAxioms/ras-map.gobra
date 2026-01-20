@@ -1,0 +1,150 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// Instantiation of genericmonomap for `ras` (Key is LocName and Val is RA).
+// Copying this is easier than implementing wrappers around MonoMap.
+
+package resalgebraNoAxioms
+
+ghost type keyRasMap = LocName
+type valRasMap = RA
+
+ghost type nodeRasMap ghost struct {
+	inUse bool
+	next gpointer[nodeRasMap]
+	k keyRasMap
+	v valRasMap
+	p perm
+}
+
+ghost type rasMap gpointer[nodeRasMap]
+
+pred (m rasMap) Inv() {
+	acc(m, 1/2) &&
+	(m.next == nil ==> !m.inUse && acc(m, 1/2)) &&
+	(m.next != nil ==> 
+		m.inUse &&
+		acc(&m.p, 1/2)       &&
+		rasMap(m.next).Inv() &&
+		m.p > 0              &&
+		acc(&m.inUse, m.p) && acc(&m.next, m.p) && acc(&m.k, m.p) && acc(&m.v, m.p))
+}
+
+ghost
+mayInit
+ensures m.Inv()
+decreases
+func rasMapAlloc() (m rasMap) {
+	var g@ nodeRasMap
+	fold rasMap(&g).Inv()
+	return &g
+}
+
+ghost
+requires  m.Inv()
+decreases m.Inv()
+pure func (m rasMap) ToDict() dict[keyRasMap]valRasMap {
+	return unfolding m.Inv() in
+		(m.inUse ? (let smallMap := rasMap(m.next).ToDict() in smallMap[m.k = m.v]) : dict[keyRasMap]valRasMap{})
+}
+
+ghost
+requires  m.Inv()
+decreases m.Inv()
+pure func (m rasMap) KeySet() set[keyRasMap] {
+	return domain(m.ToDict())
+}
+
+ghost
+requires  m.Inv()
+requires  k elem domain(m.ToDict())
+decreases m.Inv()
+pure func (m rasMap) Get(k keyRasMap) valRasMap {
+	return let d := m.ToDict() in valRasMap(d[k])
+}
+
+pred (m rasMap) Witness(k keyRasMap, v valRasMap) {
+	acc(&m.inUse, _) && acc(&m.next, _) && acc(&m.k, _) && acc(&m.v, _) &&
+	(!m.inUse ==> false)               &&
+	(m.k === k && m.v !== v ==> false) &&
+	(m.k != k ==> rasMap(m.next).Witness(k, v))
+}
+
+ghost
+requires m.Inv()
+requires !(k elem domain(m.ToDict()))
+ensures  m.Inv()
+ensures  m.Witness(k, v)
+ensures  m.ToDict() === old(m.ToDict())[k = v]
+decreases m.Inv()
+func (m rasMap) Insert(k keyRasMap, v valRasMap) {
+	unfold m.Inv()
+	if !m.inUse {
+		next@ := nodeRasMap{}
+		assert acc(m)
+		m.inUse = true
+		m.p = 1/4
+		m.next = &next
+		m.k = k
+		m.v = v
+		fold rasMap(m.next).Inv()
+		fold m.Inv()
+		assert m.ToDict() === unfolding m.Inv() in rasMap(m.next).ToDict()[m.k = m.v]
+		assert m.ToDict() === dict[keyRasMap]valRasMap{k : v}
+		fold m.Witness(k, v)
+	} else {
+		rasMap(m.next).Insert(k, v)
+		assert rasMap(m.next).Witness(k, v)
+		m.p = m.p/2
+		fold m.Inv()
+		fold m.Witness(k, v)
+	}
+}
+
+ghost
+requires 0 < p
+requires acc(m.Inv(), p)
+requires m.Witness(k, v)
+ensures  acc(m.Inv(), p)
+ensures  m.Witness(k, v)
+ensures  k elem domain(m.ToDict())
+ensures  m.ToDict()[k] === v
+decreases acc(m.Inv(), p)
+func (m rasMap) WitnessInMap(k keyRasMap, v valRasMap, p perm) {
+	d := m.ToDict()
+	unfold acc(m.Inv(), p)
+	unfold m.Witness(k, v)
+	if m.k == k {
+		assert k elem domain(d)
+	} else {
+		rasMap(m.next).WitnessInMap(k, v, p)
+	}
+	fold acc(m.Inv(), p)
+	fold m.Witness(k, v)
+}
+
+ghost
+requires m.Witness(k, v)
+ensures  m.Witness(k, v) && m.Witness(k, v)
+decreases m.Witness(k, v)
+func (m rasMap) DupWitness(k keyRasMap, v valRasMap) {
+	unfold m.Witness(k, v)
+	if m.k != k {
+		rasMap(m.next).DupWitness(k, v)
+	}
+	fold m.Witness(k, v)
+	fold m.Witness(k, v)
+}

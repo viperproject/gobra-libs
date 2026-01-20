@@ -140,11 +140,11 @@ pure func LiftedIsValid(ra RA, e option[Elem]) bool {
 // TODO: IsInv(GlobalMem()) should be established by init
 pred GlobalMem() {
 	inv(model) &&
-	acc(ras)   &&
+	ras.Inv()  &&
 	// necessary for proving key freshness
 	(forall k LocName :: k elem domain(toDict(model)) ==> acc(k, 1/2)) &&
-	(forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras)) &&
-	(forall k LocName :: k elem domain(ras) ==> ras[k] != RA(nil)) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras.ToDict())) &&
+	(forall k LocName :: k elem domain(ras.ToDict()) ==> ras.ToDict()[k] != RA(nil)) &&
 	// injectivity
 	(forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
 		toDict(model)[k1] != toDict(model)[k2]) &&
@@ -156,26 +156,17 @@ pred GlobalMem() {
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==> acc(i, 1/2))) &&
 	(forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
-			i.inUse ==> (ras[k].IsElem(i.val) && ras[k].IsValid(i.val)))) &&
+			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))) &&
 	(forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (
 				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-					ras[k].IsElem(ras[k].Compose(i.val, i2.val)) &&
-					ras[k].IsValid(ras[k].Compose(i.val, i2.val)))))
+					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
+					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val)))))
 }
 
-// ghost
-// requires ras.Inv()
-// requires l elem domain(ras.ToDict())
-// requires forall k LocName :: { k elem domain(ras.ToDict()) }{ k.ToDict()[k] } k elem domain(ras.ToDict()) ==>
-// 	typeOf(k.ToDict()[k]) == type[RA]
-// decreases
-// pure func getRA(l LocName) RA
-
 ghost var model cooliomapio = allocMap()
-ghost var ras map[LocName]RA = map[LocName]RA{} // TODO: make monotonic
-// ghost var ras genericmonomap.MonoMap
+ghost var ras rasMap = rasMapAlloc()
 
 func init() {
 	assume false // todo
@@ -197,14 +188,14 @@ ghost type meta ghost struct {
 }
 
 pred GhostLocationW(l LocName, ra RA, e Elem, w Witness) {
-	acc(w.i, 1/2) &&
+	acc(w.i, 1/2)          &&
 	witness(model, l, w.c) &&
-	w.c.witness(w.i) &&
-	ra != nil &&
-	w.i.val === e &&
-	ra.IsElem(w.i.val) &&
-	ra.IsValid(w.i.val)
-	// and ra is in ras (we have a witness)
+	w.c.witness(w.i)       &&
+	ra != nil              &&
+	w.i.val === e          &&
+	ra.IsElem(w.i.val)     &&
+	ra.IsValid(w.i.val)    &&
+	ras.Witness(l, ra)
 }
 
 /***** Model: functions that do not acquire global invariant; these functions may be called from critical regions *****/
@@ -226,10 +217,13 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	cs.add(iii)
 	add(model, newl, cs)
 	assert witness(model, newl, cs)
-	newi := Witness {iii, cs}
-	exhale acc(ras)
-	inhale acc(ras)
-	assume ras[newl] === ra
+	newi := Witness{iii, cs}
+	rasDict := ras.ToDict()
+	assume !(newl elem domain(rasDict))
+	ras.Insert(newl, ra)
+	// exhale acc(ras)
+	// inhale acc(ras)
+	// assume ras.ToDict()[newl] === ra
 	// ras[newl] = ra // type system limitation, solved when swapping ras to a monotonic set
 	fold GhostLocationW(newl, ra, e, newi)
 
@@ -237,8 +231,8 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	// TODO: prolly missing triggers
 	assume forall k LocName :: k elem domain(toDict(model)) ==> acc(k, 1/2)
 	// TODO: fixed when we have a monotonic set and with permissions for showing injectivity
-	assume forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras)
-	assume forall k LocName :: k elem domain(ras) ==> ras[k] != RA(nil) 
+	assume forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras.ToDict())
+	assume forall k LocName :: k elem domain(ras.ToDict()) ==> ras.ToDict()[k] != RA(nil) 
 	assume forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
 	// problem with triggers?
@@ -246,7 +240,7 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==> acc(i, 1/2))
 	assume forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
-			i.inUse ==> (ras[k].IsElem(i.val) && ras[k].IsValid(i.val)))
+			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))
 	assume false
 	fold GlobalMem()
 
@@ -269,7 +263,7 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	unfold GhostLocationW(l, ra, ra.Compose(e1, e2), i)
 
 	// todo: when we use monotonic maps
-	assume l elem ras && ras[l] === ra
+	assume l elem domain(ras.ToDict()) && ras.ToDict()[l] === ra
 	assert witness(model, l, i.c)
 	lemmaWitness(model, l, i.c, 1/3)
 	assert toDict(model)[l] === i.c
@@ -287,13 +281,14 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	iii1 := &meta{true, e1}
 	dupWitness(model, l, i.c)
 	i.c.add(iii1)
-	i1 := Witness {iii1, i.c}
+	i1 := Witness{iii1, i.c}
+	ras.DupWitness(l, ra)
 	fold GhostLocationW(l, ra, e1, i1) 
 
 	iii2 := &meta{true, e2}
 	i.c.add(iii2)
 	assert witness(model, l, i.c)
-	i2 := Witness {iii2, i.c}
+	i2 := Witness{iii2, i.c}
 	fold GhostLocationW(l, ra, e2, i2) 
 
 	assume forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
@@ -305,8 +300,8 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 				  i.inUse ==> (
 						  forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-								  ras[k].IsElem(ras[k].Compose(i.val, i2.val)) &&
-								  ras[k].IsValid(ras[k].Compose(i.val, i2.val)))) 
+								  ras.ToDict()[k].IsElem( ras.ToDict()[k].Compose(i.val, i2.val)) &&
+								  ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val)))) 
 
 	fold GlobalMem()
 	return i1, i2
@@ -345,7 +340,7 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 	// triggering issue
 	assume forall k LocName :: k elem domain(toDict(model)) ==>
 		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
-				  i.inUse ==> (ras[k].IsElem(i.val) && ras[k].IsValid(i.val)))
+				  i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))
 
 	// proof requires that all previous elems can be added to this one and become valid.
 	// actually, the proof should be very similar to that of GhostOp1W
@@ -353,8 +348,8 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 				i.inUse ==> (
 						forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-								ras[k].IsElem(ras[k].Compose(i.val, i2.val)) &&
-								ras[k].IsValid(ras[k].Compose(i.val, i2.val))))
+								ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
+								ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
 
 
 	fold GlobalMem()
@@ -405,14 +400,14 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 	// }
 
 	// TODO: drop when ras is a monotonic set
-	assume ras[l] === ra
+	assume ras.ToDict()[l] === ra
 	// TODO: should be provable from the def of IsFramePreservingUpdate
 	assume forall k LocName :: k elem domain(toDict(model)) ==>
 		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 				  i.inUse ==> (
 						  forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-								  ras[k].IsElem(ras[k].Compose(i.val, i2.val)) &&
-								  ras[k].IsValid(ras[k].Compose(i.val, i2.val))))
+								  ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
+								  ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
 
 	fold GhostLocationW(l, ra, e2, i)
 
