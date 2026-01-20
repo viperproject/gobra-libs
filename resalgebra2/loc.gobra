@@ -1,0 +1,385 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package resalgebra2
+
+// TODO:
+// - move cooliosetio and coliomapio to another package, make them generic
+// - use a cooliomapio for ras
+// - adapt all documentation
+// - provide a body for all operations without ghost idx
+// - add triggers to invariants
+// - drop all assumptions
+// - come up with better names for everything
+
+// At the moment, all of these definitions are trusted, and this,
+// prone to mistakes. If possible, we should find a model for the
+// predicate GhostLocation and for all lemmas.
+
+ghost type LocName gpointer[int]
+
+// should be a coolio mappio from locname to (RA, set[idx])
+ghost var model cooliomapio
+ghost var ras map[LocName]RA // probably needs to be monotonic as well
+
+ghost type idx gpointer[meta]
+
+ghost type UserFacingIdx ghost struct {
+	i idx
+	c cooliosetio
+}
+
+// replace by infinite type for idx
+ghost type meta ghost struct {
+	inUse bool
+	val Elem
+}
+
+// TODO IsInv(ghostMem()) should be established by init
+pred ghostMem() {
+	inv(model) &&
+	acc(ras)   &&
+	// necessary for proving key freshness
+	(forall k LocName :: k elem domain(toDict(model)) ==> acc(k, 1/2)) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras)) &&
+	(forall k LocName :: k elem domain(ras) ==> ras[k] != RA(nil)) &&
+	// injectivity
+	(forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
+		toDict(model)[k1] != toDict(model)[k2]) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==> toDict(model)[k].Inv()) &&
+	// injectivity
+	(forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==> acc(i, 1/2))) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+			i.inUse ==> (ras[k].IsElem(i.val) && ras[k].IsValid(i.val)))) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+			i.inUse ==> (
+				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+					ras[k].IsElem(ras[k].Compose(i.val, i2.val)) &&
+					ras[k].IsValid(ras[k].Compose(i.val, i2.val)))))
+}
+	// acc model
+	// for every member in model, we have half perm to In Use
+
+pred ghostLocationIdx(l LocName, ra RA, e Elem, i UserFacingIdx) {
+	acc(i.i, 1/2) &&
+	witness(model, l, i.c) &&
+	i.c.witness(i.i) &&
+	ra != nil &&
+	i.i.val === e &&
+	ra.IsElem(i.i.val) &&
+	ra.IsValid(i.i.val)
+	// and ra is in ras (we have a witness)
+}
+// IsInv(ghostMem()) && ra elem model.witness()
+
+
+
+ghost
+requires ra != nil
+requires ra.IsElem(e) && ra.IsValid(e)
+ensures  l != nil
+ensures  GhostLocation(l, ra, e)
+decreases
+func Alloc(ra RA, e Elem) (l LocName)
+// adds a new key to the set, and a set to the model
+
+ghost
+requires ra != nil
+requires ra.IsElem(e) && ra.IsValid(e)
+ensures  l != nil
+ensures  ghostLocationIdx(l, ra, e, i)
+decreases
+func AllocWithIdx(ra RA, e Elem) (l LocName, i UserFacingIdx) {
+	// obtain pkg inv
+	inhale ghostMem()
+	unfold ghostMem()
+
+	newl := new(int)
+	var cs cooliosetio = allocSet()
+	iii := &meta{true, e}
+	cs.add(iii)
+	add(model, newl, cs)
+	assert witness(model, newl, cs)
+	newi := UserFacingIdx {iii, cs}
+	exhale acc(ras)
+	inhale acc(ras)
+	assume ras[newl] === ra
+	// ras[newl] = ra // type system limitation, solved when swapping ras to a monotonic set
+	fold ghostLocationIdx(newl, ra, e, newi)
+
+	assert acc(newl, 1/2)
+	// TODO: prolly missing triggers
+	assume forall k LocName :: k elem domain(toDict(model)) ==> acc(k, 1/2)
+	// TODO: fixed when we have a monotonic set and with permissions for showing injectivity
+	assume forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras)
+	assume forall k LocName :: k elem domain(ras) ==> ras[k] != RA(nil) 
+	assume forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
+	// problem with triggers?
+	assume forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==> acc(i, 1/2))
+	assume forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+			i.inUse ==> (ras[k].IsElem(i.val) && ras[k].IsValid(i.val)))
+	assume false
+	fold ghostMem()
+	// close pkg inv
+	exhale ghostMem()
+
+	return newl, newi
+}
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires ghostLocationIdx(l, ra, ra.Compose(e1, e2), i)
+ensures  ghostLocationIdx(l, ra, e1, i1) && ghostLocationIdx(l, ra, e2, i2)
+decreases
+func GhostOp1WithIdx(l LocName, ra RA, e1 Elem, e2 Elem, i UserFacingIdx) (i1 UserFacingIdx, i2 UserFacingIdx) {
+	// obtain pkg inv
+	inhale ghostMem()
+	unfold ghostMem()
+
+	unfold ghostLocationIdx(l, ra, ra.Compose(e1, e2), i)
+
+	// todo: when we use monotonic maps
+	assume l elem ras && ras[l] === ra
+	assert witness(model, l, i.c)
+	lemmaWitness(model, l, i.c, 1/3)
+	assert toDict(model)[l] === i.c
+	assert i.c.witness(i.i)
+	i.c.lemmaWitness(i.i, 1/3)
+	assert i.i elem toCoolSet(i.c)
+	//assert i.i.inUse && i.i.val === a.Compose(e1, e2)
+	ra.ValidOp(e1, e2)
+	assert ra.IsValid(e1)
+	ra.ComposeComm(e1, e2)
+	ra.ValidOp(e2, e1)
+	assert ra.IsValid(e2)
+
+	i.i.inUse = false
+	iii1 := &meta{true, e1}
+	dupWitness(model, l, i.c)
+	i.c.add(iii1)
+	i1 = UserFacingIdx {iii1, i.c}
+	fold ghostLocationIdx(l, ra, e1, i1) 
+
+	iii2 := &meta{true, e2}
+	i.c.add(iii2)
+	assert witness(model, l, i.c)
+	i2 = UserFacingIdx {iii2, i.c}
+	fold ghostLocationIdx(l, ra, e2, i2) 
+
+	assume forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
+
+	// not hard to prove, requires applying commutativity and associativity to get (i1 x i2) x k == (i1 x k) x i2. Because the lhs is valid, the rhs is also valid, and by ValidOp, i1 x k is also valid
+	// TODO: requires changing the API of RAs so that all lemmas are universally quantified
+	assume forall k LocName :: k elem domain(toDict(model)) ==>
+		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+				  i.inUse ==> (
+						  forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+								  ras[k].IsElem(ras[k].Compose(i.val, i2.val)) &&
+								  ras[k].IsValid(ras[k].Compose(i.val, i2.val)))) 
+
+	fold ghostMem()
+	// close pkg inv
+	exhale ghostMem()
+}
+// modifies the set, removes one elem, adds two. should follow from axioms of RAs
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires GhostLocation(l, ra, ra.Compose(e1, e2))
+ensures  GhostLocation(l, ra, e1) && GhostLocation(l, ra, e2)
+decreases
+func GhostOp1(l LocName, ra RA, e1 Elem, e2 Elem)
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires ghostLocationIdx(l, ra, e1, i1) && ghostLocationIdx(l, ra, e2, i2)
+ensures  ghostLocationIdx(l, ra, ra.Compose(e1, e2), i1)
+decreases
+func GhostOp2WithIdx(l LocName, ra RA, e1 Elem, e2 Elem, i1 UserFacingIdx, i2 UserFacingIdx) {
+	// obtain pkg inv
+	inhale ghostMem()
+	unfold ghostMem()
+
+	unfold ghostLocationIdx(l, ra, e1, i1)
+	unfold ghostLocationIdx(l, ra, e2, i2)
+	lemmaWitness(model, l, i2.c, 1/3)
+	assert i2.c === toDict(model)[l]
+	i2.c.lemmaWitness(i2.i, 1/3)
+	assert i2.i elem toCoolSet(i2.c)
+	i2.i.inUse = false
+
+	lemmaWitness(model, l, i1.c, 1/3)
+	i1.c.lemmaWitness(i1.i, 1/3)
+	i1.i.val = ra.Compose(e1, e2)
+	// triggering issue ?
+	assume ra.IsElem(ra.Compose(e1, e2)) && ra.IsValid(ra.Compose(e1, e2))
+	fold ghostLocationIdx(l, ra, ra.Compose(e1, e2), i1)
+
+	// triggering issue
+	assume forall k LocName :: k elem domain(toDict(model)) ==>
+		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+				  i.inUse ==> (ras[k].IsElem(i.val) && ras[k].IsValid(i.val)))
+
+	// proof requires that all previous elems can be added to this one and become valid.
+	// actually, the proof should be very similar to that of GhostOp1WithIdx
+	assume forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+				i.inUse ==> (
+						forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+								ras[k].IsElem(ras[k].Compose(i.val, i2.val)) &&
+								ras[k].IsValid(ras[k].Compose(i.val, i2.val))))
+
+
+	fold ghostMem()
+	// close pkg inv
+	exhale ghostMem()
+}
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires GhostLocation(l, ra, e1) && GhostLocation(l, ra, e2)
+ensures  GhostLocation(l, ra, ra.Compose(e1, e2))
+decreases
+func GhostOp2(l LocName, ra RA, e1 Elem, e2 Elem)
+// should follow from the invariant of the set
+
+ghost
+requires ra != nil
+requires ghostLocationIdx(l, ra, e, i)
+ensures  ghostLocationIdx(l, ra, e, i)
+ensures  ra.IsElem(e) && ra.IsValid(e)
+decreases
+func GhostValidWithIdx(l LocName, ra RA, e Elem, i UserFacingIdx) {
+	unfold ghostLocationIdx(l, ra, e, i)
+	fold ghostLocationIdx(l, ra, e, i)
+}
+
+ghost
+requires ra != nil
+requires GhostLocation(l, ra, e)
+ensures  GhostLocation(l, ra, e)
+ensures  ra.IsElem(e) && ra.IsValid(e)
+decreases
+func GhostValid(l LocName, ra RA, e Elem)
+// trivial from the inv
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+decreases
+pure func IsFramePreservingUpdate(ra RA, e1 Elem, e2 Elem) bool {
+	return forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] ==> ra.IsElem(get(c))) ==>
+		(LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) ==> LiftedIsValid(ra, LiftedCompose(ra, some(e2), c)))
+}
+
+ghost
+requires ra != nil
+requires e1 !== none[Elem] ==> ra.IsElem(get(e1))
+requires e2 !== none[Elem] ==> ra.IsElem(get(e2))
+decreases
+pure func LiftedCompose(ra RA, e1 option[Elem], e2 option[Elem]) option[Elem] {
+	return e1 === none[Elem] ?
+		e2 :
+		(e2 === none[Elem] ?
+			e1 :
+			some(ra.Compose(get(e1), get(e2))))
+}
+
+ghost
+requires ra != nil
+requires e !== none[Elem] ==> ra.IsElem(get(e))
+decreases
+pure func LiftedIsValid(ra RA, e option[Elem]) bool {
+	return e !== none[Elem] ?
+		ra.IsValid(get(e)) :
+		false // is this correct?
+}
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires GhostLocation(l, ra, e1)
+requires IsFramePreservingUpdate(ra, e1, e2)
+ensures  GhostLocation(l, ra, e2)
+decreases
+// slightly different from paper, improve
+func GhostUpdate(l LocName, ra RA, e1 Elem, e2 Elem)
+// should be trivial to prove too
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires ghostLocationIdx(l, ra, e1, i)
+requires IsFramePreservingUpdate(ra, e1, e2)
+ensures  ghostLocationIdx(l, ra, e2, i)
+decreases
+// slightly different from paper, improve
+func GhostUpdateWithIdx(l LocName, ra RA, e1 Elem, e2 Elem, i UserFacingIdx) {
+	// obtain pkg inv
+	inhale ghostMem()
+	unfold ghostMem()
+
+	unfold ghostLocationIdx(l, ra, e1, i)
+	lemmaWitness(model, l, i.c, 1/3)
+	i.c.lemmaWitness(i.i, 1/3)
+	i.i.val = e2
+
+	// TODO: can be proven easily once we require all RAs to be unital
+	// seems to require that ra is unital.
+	// idea: if e1 has a core, than e2 must be valid: e1 has core ==>
+	//	==> compose(e2, core(e1)) must be valid because compose(e1, core(e1)) is valid and e2 is a frame preserving update
+	//	==> e2 is valid because the compose(e2, core(e1)) is valid.
+	// what about the cases e1 does not have a core?
+	assume ra.IsValid(e2)
+	// TODO: drop when ras is a monotonic set
+	assume ras[l] === ra
+	// TODO: should be provable from the def of IsFramePreservingUpdate
+	assume forall k LocName :: k elem domain(toDict(model)) ==>
+		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+				  i.inUse ==> (
+						  forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+								  ras[k].IsElem(ras[k].Compose(i.val, i2.val)) &&
+								  ras[k].IsValid(ras[k].Compose(i.val, i2.val))))
+
+	fold ghostLocationIdx(l, ra, e2, i)
+
+	fold ghostMem()
+	// close pkg inv
+	exhale ghostMem()
+}
+
+
+
