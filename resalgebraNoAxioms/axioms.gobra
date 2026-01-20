@@ -25,6 +25,7 @@
 
 package resalgebraNoAxioms
 
+// TODO: move these axioms to package resalgebra, define that library on top of this one
 // Same as `exists witness s.t. ghostLocationIdx(l, ra, e, witness)`
 pred GhostLocation(l LocName, ra RA, e Elem)
 
