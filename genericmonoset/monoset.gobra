@@ -1,0 +1,136 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// Implementation of monotonic sets, i.e., sets where we may always add
+// new elements, but never previously inserted elements. Once established
+// that one element e is in the set s (by owning s.Witness(e)), we know
+// that e will always be in s, even when the ownership to the invariant
+// of s is lost.
+// This package differs from a previous implementation 
+// (https://github.com/viperproject/VerifiedSCION/tree/master/verification/utils/monoset)
+// in that (1) it does not presupose a pre-defined capacity for the set,
+// and (2) it may hold elements of any type, as long as they are comparable.
+
+package genericmonoset
+
+type Elem = any
+
+ghost type nodeSet ghost struct {
+	inUse bool
+	next gpointer[nodeSet]
+	v Elem
+	p perm
+}
+
+ghost type MonoSet gpointer[nodeSet]
+
+pred (m MonoSet) Inv() {
+	acc(m, 1/2) &&
+	(m.next == nil ==> !m.inUse && acc(m, 1/2)) &&
+	(m.next != nil ==> 
+		m.inUse &&
+		acc(&m.p, 1/2) &&
+		MonoSet(m.next).Inv() &&
+		m.p > 0               &&
+		acc(&m.inUse, m.p) && acc(&m.next, m.p) && acc(&m.v, m.p))
+}
+
+ghost
+ensures m.Inv()
+decreases
+func Alloc() (m MonoSet) {
+	var g@ nodeSet
+	var c MonoSet = &g
+	fold c.Inv()
+	return c
+}
+
+ghost
+requires  m.Inv()
+decreases m.Inv()
+pure func (m MonoSet) ToSet() set[Elem] {
+	return unfolding m.Inv() in
+		(m.inUse ? (MonoSet(m.next).ToSet() union set[Elem]{m.v}) : set[Elem]{})
+}
+
+pred (m MonoSet) Witness(v Elem) {
+	acc(&m.inUse, _) && acc(&m.next, _) && acc(&m.v, _) &&
+	isComparable(v)      &&
+	(!m.inUse ==> false) &&
+	(m.v != v ==> MonoSet(m.next).Witness(v))
+}
+
+ghost
+requires m.Inv()
+requires isComparable(v)
+ensures  m.Inv()
+ensures  m.Witness(v)
+ensures  m.ToSet() === old(m.ToSet()) union set[Elem]{v}
+decreases m.Inv()
+func (m MonoSet) Insert(v Elem) {
+	unfold m.Inv()
+	if !m.inUse {
+		next@ := nodeSet{}
+		assert acc(m)
+		m.inUse = true
+		m.p = 1/4
+		m.next = &next
+		m.v = v
+		fold MonoSet(m.next).Inv()
+		fold m.Inv()
+		fold m.Witness(v)
+	} else {
+		MonoSet(m.next).Insert(v)
+		assert MonoSet(m.next).Witness(v)
+		m.p = m.p/2
+		fold m.Inv()
+		fold m.Witness(v)
+	}
+}
+
+ghost
+requires 0 < p
+requires acc(m.Inv(), p)
+requires m.Witness(v)
+ensures  acc(m.Inv(), p)
+ensures  m.Witness(v)
+ensures  v elem m.ToSet()
+decreases acc(m.Inv(), p)
+func (m MonoSet) WitnessInSet(v Elem, p perm) {
+	d := m.ToSet()
+	unfold acc(m.Inv(), p)
+	unfold m.Witness(v)
+	if m.v == v {
+		assert v elem d
+	} else {
+		MonoSet(m.next).WitnessInSet(v, p)
+	}
+	fold acc(m.Inv(), p)
+	fold m.Witness(v)
+}
+
+ghost
+requires m.Witness(v)
+ensures  m.Witness(v) && m.Witness(v)
+decreases m.Witness(v)
+func (m MonoSet) DupWitness(v Elem) {
+	unfold m.Witness(v)
+	if m.v != v {
+		MonoSet(m.next).DupWitness(v)
+	}
+	fold m.Witness(v)
+	fold m.Witness(v)
+}
