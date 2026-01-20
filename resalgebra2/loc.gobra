@@ -17,11 +17,14 @@
 package resalgebra2
 
 // TODO:
-// - TODO: rename this package back to resalgebra, replace the old package
+// - rename this package to resalgebraNoAxioms
+// - change to quantified lemmas, make the old lemmas available as a function defined outside the RA
+// - rename "Idx" to "Witness", drop all lemmas without the witness and rename functions "WithIdx" to drop the suffix
+// - drop axioms.gobra
 // - move cooliosetio and coliomapio to another package, make them generic
 // - use a cooliomapio for ras
 // - adapt all documentation
-// - provide a body for all operations without ghost idx
+// - change all functions to pass around the witnesses
 // - add triggers to invariants
 // - drop all assumptions
 // - come up with better names for everything

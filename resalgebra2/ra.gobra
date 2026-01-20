@@ -16,9 +16,6 @@
 
 package resalgebra2
 
-// TODO: change to quantified lemmas, make the old lemmas available as a function
-// defined outside the RA
-
 type Elem interface{}
 
 type RA interface {
