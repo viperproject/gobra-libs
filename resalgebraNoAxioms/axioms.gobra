@@ -34,11 +34,11 @@ trusted
 requires ghostLocationIdx(l, ra, e, witness)
 ensures  GhostLocation(l, ra, e)
 decreases
-func IntroExists(l LocName, ra RA, e Elem, witness UserFacingIdx)
+func IntroExists(l LocName, ra RA, e Elem, witness Witness)
 
 ghost
 trusted
 requires GhostLocation(l, ra, e)
 ensures  ghostLocationIdx(l, ra, e, witness)
 decreases
-func IntroElim(l LocName, ra RA, e Elem) (witness UserFacingIdx)
+func IntroElim(l LocName, ra RA, e Elem) (witness Witness)
