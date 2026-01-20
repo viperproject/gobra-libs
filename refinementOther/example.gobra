@@ -1,0 +1,74 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package refinement
+
+// valid states are instances of States and one of these two values
+type appendExample int
+const (
+    waiting appendExample = iota
+    replying
+)
+
+// ghost
+type printEvent struct {
+	val string
+}
+
+requires l != nil
+requires ProgramTrace(t)
+requires l.Guard(PrintEvent(s))
+// State returns the current state. Update is a wrapper around t.update
+ensures  ProgramTrace(t)
+ensures  t.State() == t.Update(old(t.State()), PrintEvent(s))
+// t.Events() returns the event trace
+ensures  t.Events() == Append(old(t.Events()), PrintEvent(s))
+decreases
+func Print(s string, ghost t Trace, ghost l LTS)
+
+requires t.Mem()
+// Guard would be a wrapper around t.guard that considers the current state
+requires forall s string :: t.Guard(ReadStrEvent(s))
+ensures  t.Mem()
+// State returns the current state. Update is a wrapper around t.update
+ensures  t.State() == t.Update(old(t.State()), ReadStrEvent(res))
+// t.Events() returns the event trace
+ensures  t.Events() == Append(old(t.Events()), ReadStrEvent(res))
+decreases
+func ReadStr(ghost t *Trace) (res string)
+
+
+///// example: func that reads a str and appends sth to it
+type AppendStrTrace struct {}
+
+
+
+// Guard(Waiting, ReadStrEvent(s)) == true
+// Guard(Replying, PrintEvent(s)) == true
+// otherwise, false
+
+// Update(Waiting, ReadStrEvent(s)) == Replying
+// Update(Replying, ...) == Waiting
+// otherwise, no need to consider. == FailEvent
+
+requires t != nil && t.Mem()
+requires t.State() == Waiting
+ensures  t != nil && t.Mem()
+// this part is technically redundant, as we can recompute the state from the events, but
+// allows us to have simpler clients
+ensures  t.State() == t.Update(t.Update(old(t.State()), ...), ...)
+ensures  t.Event() == old(t.Events) ++ seq[Event]{ReadStrEvent(added), PrintEvent(added + "hello")}
+func RecvAndReply(ghost t *Trace) (ghost added string)

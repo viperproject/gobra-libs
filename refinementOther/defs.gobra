@@ -1,0 +1,177 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package refinement
+
+type State interface{}
+type Event interface{}
+
+// Labeled Transition Systems
+type LTS interface {
+	// returns true iff s is a valid initial
+	// state of the system
+	ghost
+	decreases
+	pure InitialState(s State) bool
+
+	// returns whether this labeled transition
+	// system understands error 'e'. This allows
+	// us to overcome a limitation of the Go's type
+	// system, where we cannot specify the type of
+	// events that we accept.
+	ghost
+	decreases
+	pure AcceptsEvent(e Event) bool
+
+	// returns whether event e may be performed
+	// in the current state of the system
+	ghost
+	requires AcceptsEvent(e)
+	decreases
+	pure Guard(s State, e Event) bool
+
+	ghost
+	requires AcceptsEvent(e)
+	requires Guard(s, e)
+	decreases
+	pure Update(s State, e Event) State
+	
+}
+
+type ResourceAwareLTS interface {
+	// returns true iff s is a valid initial
+	// state of the system
+	ghost
+	decreases
+	pure InitialState(s State) bool
+
+	// returns whether this labeled transition
+	// system understands error 'e'. This allows
+	// us to overcome a limitation of the Go's type
+	// system, where we cannot specify the type of
+	// events that we accept.
+	ghost
+	decreases
+	pure AcceptsEvent(e Event) bool
+
+	pred CanPerform(e Event)
+
+	// returns whether event e may be performed
+	// in the current state of the system
+	ghost
+	requires AcceptsEvent(e)
+	decreases
+	pure Guard(s State, e Event) bool
+
+	ghost
+	requires AcceptsEvent(e)
+	requires Guard(s, e)
+	requires CanPerform(e)
+	decreases
+	pure Update(s State, e Event) State
+	
+}
+
+// Traces
+// todo: make this a ghost struct
+type Trace struct {
+	ghost InitialState State
+	ghost Tr seq[EventStatePair]
+}
+
+ghost
+decreases
+pure func (t Trace) IsEmpty() bool {
+	return 0 == len(t.Tr)
+}
+
+/*
+ghost
+decreases
+pure func (t Trace) CurrState() State {
+	return t.IsEmpty() ?
+		t.InitialState :
+		???
+}
+*/
+
+// todo: make this a ghost struct
+type EventStatePair adt {
+	EventStatePair_ {
+		Ev Event
+		St State
+	}
+}
+
+// This resource can be used to establish the program trace. The program
+// trace corresponds to the trace where all events performed by the program
+// are registered. For an entire program, we must guarantee that there is a
+// single program trace, and to accomplish that, we must guarantee that, at
+// most, one single copy of ProgramTraceToken is instantiated. We could do this
+// safely by adding an instance of this predicate as a free precondition of the
+// main function (and disallowing calling main from anywhere in the module).
+pred ProgramTraceToken()
+
+pred ProgramTrace(t Trace)
+
+ghost
+requires ProgramTraceToken()
+ensures  ProgramTrace(t)
+decreases
+func SetProgramTrace(t Trace)
+
+// TODO: 'Refines' relation between two LTS
+
+ghost
+requires l != nil
+decreases
+pure func (t Trace) IsTraceOf(l LTS) bool {
+	return l.InitialState(t.InitialState) &&
+		(!t.IsEmpty() ==> t.ValidTransitions(l))
+}
+
+ghost
+requires l != nil
+requires !t.IsEmpty()
+decreases
+pure func (t Trace) ValidTransitions(l LTS) bool {
+	return t.FirstStepIsValid(l) &&
+		// the following trigger contains a matching loop, maybe
+		// there is a better one to be chosen here
+		forall i int :: { t.Tr[i] } 0 <= i && i < len(t.Tr) - 1 ==>
+			l.StepIsValid(t.Tr[i].St, t.Tr[i+1])
+}
+
+ghost
+requires l != nil
+requires !t.IsEmpty()
+decreases
+pure func (t Trace) FirstStepIsValid(l LTS) bool {
+	return let firstStep := t.Tr[0] in
+		l.StepIsValid(t.InitialState, firstStep)
+}
+
+ghost
+requires l != nil
+decreases
+pure func (l LTS) StepIsValid(s State, step EventStatePair) bool {
+	return l.AcceptsEvent(step.Ev) &&
+		l.Guard(s, step.Ev)        &&
+		isComparable(step.St)      &&
+		l.Update(s, step.Ev) == step.St
+}
+
+// TODO: Resource Aware traces
