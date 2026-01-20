@@ -14,7 +14,7 @@
 
 // +gobra
 
-package resalgebra2
+package resalgebraNoAxioms
 
 // TODO:
 // - rename this package to resalgebraNoAxioms

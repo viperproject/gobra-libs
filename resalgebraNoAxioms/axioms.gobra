@@ -23,7 +23,7 @@
 // of existential quantifiers, and they are used to deal with Gobra's
 // lack of support for existentially quantified permissions.
 
-package resalgebra2
+package resalgebraNoAxioms
 
 // Same as `exists witness s.t. ghostLocationIdx(l, ra, e, witness)`
 pred GhostLocation(l LocName, ra RA, e Elem)

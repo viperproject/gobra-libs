@@ -14,7 +14,7 @@
 
 // +gobra
 
-package resalgebra2
+package resalgebraNoAxioms
 
 // sets that can only grow monotically. adding a new element to the set
 // requires and ensures the set invariant, but checking that a value is in the set

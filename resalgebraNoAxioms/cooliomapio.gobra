@@ -14,7 +14,7 @@
 
 // +gobra
 
-package resalgebra2
+package resalgebraNoAxioms
 
 // map that can only grow monotically. adding a new element to the map
 // requires and ensures the map invariant, but checking that a key-pair value (or a key is in the map) is in the map
