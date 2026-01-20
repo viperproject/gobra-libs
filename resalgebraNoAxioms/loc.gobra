@@ -14,6 +14,7 @@
 
 // +gobra
 
+pkgInvariant GlobalMem() // todo: replace this by a dup invariant that GlobalMem() is an invariant
 package resalgebraNoAxioms
 
 // TODO:
@@ -164,10 +165,22 @@ pred GlobalMem() {
 					ras[k].IsValid(ras[k].Compose(i.val, i2.val)))))
 }
 
-ghost var model cooliomapio
+// ghost
+// requires ras.Inv()
+// requires l elem domain(ras.ToDict())
+// requires forall k LocName :: { k elem domain(ras.ToDict()) }{ k.ToDict()[k] } k elem domain(ras.ToDict()) ==>
+// 	typeOf(k.ToDict()[k]) == type[RA]
+// decreases
+// pure func getRA(l LocName) RA
 
-ghost var ras map[LocName]RA // TODO: make monotonic
+ghost var model cooliomapio = allocMap()
+ghost var ras map[LocName]RA = map[LocName]RA{} // TODO: make monotonic
 // ghost var ras genericmonomap.MonoMap
+
+func init() {
+	assume false // todo
+	fold GlobalMem()
+}
 
 /***** Model *****/
 

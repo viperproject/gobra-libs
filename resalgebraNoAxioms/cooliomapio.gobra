@@ -46,6 +46,7 @@ pred inv(m cooliomapio) {
 }
 
 ghost
+mayInit
 ensures inv(m)
 decreases
 func allocMap() (m cooliomapio) {
