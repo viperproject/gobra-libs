@@ -15,7 +15,7 @@
 // +gobra
 
 // Implementation of monotonic sets, i.e., sets where we may always add
-// new elements, but never previously inserted elements. Once established
+// new elements, but never remove previously inserted elements. Once established
 // that one element e is in the set s (by owning s.Witness(e)), we know
 // that e will always be in s, even when the ownership to the invariant
 // of s is lost.

@@ -1,0 +1,145 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// Implementation of monotonic maps, i.e., maps where we may always add
+// new key-value pairs, but never remove or update previously inserted pairs. 
+// Once established that a pair (k, v) is in the set s (by owning s.Witness(k, v)), we know
+// that (k,v) will always be in s, even when the ownership to the invariant of s is lost.
+//
+// This could be easily implemented on top of genericmonoset.
+
+package genericmonomap
+
+type Key = any
+type Val = any
+
+ghost type node ghost struct {
+	inUse bool
+	next gpointer[node]
+	k Key
+	v Val
+	p perm
+}
+
+ghost type MonoMap gpointer[node]
+
+pred (m MonoMap) Inv() {
+	acc(m, 1/2) &&
+	(m.next == nil ==> !m.inUse && acc(m, 1/2)) &&
+	(m.next != nil ==> 
+		m.inUse &&
+		acc(&m.p, 1/2)        &&
+		isComparable(m.k)     &&
+		isComparable(m.v)     &&
+		MonoMap(m.next).Inv() &&
+		m.p > 0               &&
+		acc(&m.inUse, m.p) && acc(&m.next, m.p) && acc(&m.k, m.p) && acc(&m.v, m.p))
+}
+
+ghost
+ensures m.Inv()
+decreases
+func Alloc() (m MonoMap) {
+	var g@ node
+	fold MonoMap(&g).Inv()
+	return &g
+}
+
+ghost
+requires  m.Inv()
+decreases m.Inv()
+pure func (m MonoMap) ToDict() dict[Key]Val {
+	return unfolding m.Inv() in
+		(m.inUse ? (let smallMap := MonoMap(m.next).ToDict() in smallMap[m.k = m.v]) : dict[Key]Val{})
+}
+
+pred (m MonoMap) Witness(k Key, v Val) {
+	acc(&m.inUse, _) && acc(&m.next, _) && acc(&m.k, _) && acc(&m.v, _) &&
+	isComparable(k)                  &&
+	isComparable(m.k)                &&
+	isComparable(m.v)                &&
+	(!m.inUse ==> false)             &&
+	(m.k == k && m.v != v ==> false) &&
+	(m.k != k ==> MonoMap(m.next).Witness(k, v))
+}
+
+ghost
+requires m.Inv()
+requires isComparable(k) && isComparable(v)
+requires !(k elem domain(m.ToDict()))
+ensures  m.Inv()
+ensures  m.Witness(k, v)
+ensures  m.ToDict() === old(m.ToDict())[k = v]
+decreases m.Inv()
+func (m MonoMap) Insert(k Key, v Val) {
+	unfold m.Inv()
+	if !m.inUse {
+		next@ := node{}
+		assert acc(m)
+		m.inUse = true
+		m.p = 1/4
+		m.next = &next
+		m.k = k
+		m.v = v
+		fold MonoMap(m.next).Inv()
+		fold m.Inv()
+		assert m.ToDict() === unfolding m.Inv() in MonoMap(m.next).ToDict()[m.k = m.v]
+		assert m.ToDict() === dict[Key]Val{k : v}
+		fold m.Witness(k, v)
+	} else {
+		MonoMap(m.next).Insert(k, v)
+		assert MonoMap(m.next).Witness(k, v)
+		m.p = m.p/2
+		fold m.Inv()
+		fold m.Witness(k, v)
+	}
+}
+
+ghost
+requires 0 < p
+requires acc(m.Inv(), p)
+requires m.Witness(k, v)
+ensures  acc(m.Inv(), p)
+ensures  m.Witness(k, v)
+ensures  k elem domain(m.ToDict())
+ensures  isComparable(v)
+ensures  m.ToDict()[k] == v
+decreases acc(m.Inv(), p)
+func (m MonoMap) WitnessInMap(k Key, v Val, p perm) {
+	d := m.ToDict()
+	unfold acc(m.Inv(), p)
+	unfold m.Witness(k, v)
+	if m.k == k {
+		assert k elem domain(d)
+	} else {
+		MonoMap(m.next).WitnessInMap(k, v, p)
+	}
+	fold acc(m.Inv(), p)
+	fold m.Witness(k, v)
+}
+
+ghost
+requires m.Witness(k, v)
+ensures  m.Witness(k, v) && m.Witness(k, v)
+decreases m.Witness(k, v)
+func (m MonoMap) DupWitness(k Key, v Val) {
+	unfold m.Witness(k, v)
+	if m.k != k {
+		MonoMap(m.next).DupWitness(k, v)
+	}
+	fold m.Witness(k, v)
+	fold m.Witness(k, v)
+}
