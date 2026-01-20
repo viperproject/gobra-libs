@@ -66,6 +66,21 @@ pure func (m MonoMap) ToDict() dict[Key]Val {
 		(m.inUse ? (let smallMap := MonoMap(m.next).ToDict() in smallMap[m.k = m.v]) : dict[Key]Val{})
 }
 
+ghost
+requires  m.Inv()
+decreases m.Inv()
+pure func (m MonoMap) KeySet() set[Key] {
+	return domain(m.ToDict())
+}
+
+ghost
+requires  m.Inv()
+requires  k elem domain(m.ToDict())
+decreases m.Inv()
+pure func (m MonoMap) Get(k Key) Val {
+	return let d := m.ToDict() in Val(d[k])
+}
+
 pred (m MonoMap) Witness(k Key, v Val) {
 	acc(&m.inUse, _) && acc(&m.next, _) && acc(&m.k, _) && acc(&m.v, _) &&
 	isComparable(k)                  &&

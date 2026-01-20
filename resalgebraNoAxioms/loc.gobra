@@ -167,6 +167,7 @@ pred GlobalMem() {
 ghost var model cooliomapio
 
 ghost var ras map[LocName]RA // TODO: make monotonic
+// ghost var ras genericmonomap.MonoMap
 
 /***** Model *****/
 
@@ -347,17 +348,6 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 }
 
 ghost
-requires ra != nil
-requires GhostLocationW(l, ra, e, w)
-ensures  GhostLocationW(l, ra, e, w)
-ensures  ra.IsElem(e) && ra.IsValid(e)
-decreases
-func GhostValidW(l LocName, ra RA, e Elem, w Witness) {
-	unfold GhostLocationW(l, ra, e, w)
-	fold GhostLocationW(l, ra, e, w)
-}
-
-ghost
 requires GlobalMem()
 requires ra != nil
 requires ra.IsElem(e1)
@@ -414,6 +404,19 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 	fold GhostLocationW(l, ra, e2, i)
 
 	fold GlobalMem()
+}
+
+/***** Model: functions that do not depend on the global invariant *****/
+
+ghost
+requires ra != nil
+requires GhostLocationW(l, ra, e, w)
+ensures  GhostLocationW(l, ra, e, w)
+ensures  ra.IsElem(e) && ra.IsValid(e)
+decreases
+func GhostValidW(l LocName, ra RA, e Elem, w Witness) {
+	unfold GhostLocationW(l, ra, e, w)
+	fold GhostLocationW(l, ra, e, w)
 }
 
 /***** Model: wrappers that acquire the global invariant; these functions may not be called from critical regions *****/
