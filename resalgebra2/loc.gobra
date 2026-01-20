@@ -17,6 +17,7 @@
 package resalgebra2
 
 // TODO:
+// - TODO: rename this package back to resalgebra, replace the old package
 // - move cooliosetio and coliomapio to another package, make them generic
 // - use a cooliomapio for ras
 // - adapt all documentation
@@ -323,7 +324,7 @@ decreases
 pure func LiftedIsValid(ra RA, e option[Elem]) bool {
 	return e !== none[Elem] ?
 		ra.IsValid(get(e)) :
-		false // is this correct?
+		true
 }
 
 ghost
@@ -357,13 +358,30 @@ func GhostUpdateWithIdx(l LocName, ra RA, e1 Elem, e2 Elem, i UserFacingIdx) {
 	i.c.lemmaWitness(i.i, 1/3)
 	i.i.val = e2
 
-	// TODO: can be proven easily once we require all RAs to be unital
-	// seems to require that ra is unital.
-	// idea: if e1 has a core, than e2 must be valid: e1 has core ==>
-	//	==> compose(e2, core(e1)) must be valid because compose(e1, core(e1)) is valid and e2 is a frame preserving update
-	//	==> e2 is valid because the compose(e2, core(e1)) is valid.
-	// what about the cases e1 does not have a core?
-	assume ra.IsValid(e2)
+	// TODO: can be proven easily as long as I can introduce an existentially quantified variable
+	if forall e Elem :: ra.IsElem(e) ==> LiftedCompose(ra, some(e1), some(e)) === none[Elem] {
+		assert ra.IsValid(e2)
+	} else {
+		// idea: if e1 has a core, than e2 must be valid: e1 has core ==>
+		//	==> compose(e2, core(e1)) must be valid because compose(e1, core(e1)) is valid and e2 is a frame preserving update
+		//	==> e2 is valid because the compose(e2, core(e1)) is valid.
+		// what about the cases e1 does not have a core?
+	}
+
+	// if ra.Core(e1) != none[Elem] {
+	// 	ra.CoreId(e1)
+	// 	assert ra.Compose(get(ra.Core(e1)), e1) === e1
+	// 	ra.ComposeComm(get(ra.Core(e1)), e1)
+	// 	assert ra.Compose(e1, get(ra.Core(e1))) === e1
+	// 	assert LiftedIsValid(ra, some(e1))
+	// 	assert LiftedIsValid(ra, some(ra.Compose(e1, get(ra.Core(e1)))))
+	// 	IsFramePreservingUpdate(ra, e1, e2)
+	// 	assume false // TODO
+	// 	assert LiftedIsValid(ra, some(ra.Compose(e2, get(ra.Core(e1))))) // from def of frame-preserving update
+	// } else {
+	// 	// assume ra.IsValid(e2)
+	// }
+
 	// TODO: drop when ras is a monotonic set
 	assume ras[l] === ra
 	// TODO: should be provable from the def of IsFramePreservingUpdate
@@ -380,6 +398,3 @@ func GhostUpdateWithIdx(l LocName, ra RA, e1 Elem, e2 Elem, i UserFacingIdx) {
 	// close pkg inv
 	exhale ghostMem()
 }
-
-
-

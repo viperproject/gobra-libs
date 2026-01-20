@@ -18,10 +18,6 @@ package resalgebra2
 
 // TODO: change to quantified lemmas, make the old lemmas available as a function
 // defined outside the RA
-// TODO: change RA to UnitResAlgebra
-// TODO: rename "Compose" to "Op"
-// TODO: make "core" a total func
-// TODO: still include ResAlgebra as a type, but do not use it?
 
 type Elem interface{}
 
@@ -47,6 +43,11 @@ type RA interface {
 	ensures  IsElem(res)
 	decreases
 	pure Compose(e1 Elem, e2 Elem) (res Elem)
+
+	// ghost
+	// ensures  IsElem(res) && IsValid(res)
+	// decreases
+	// pure Unit() (res Elem)
 
 	// Lemmas
 
@@ -95,4 +96,11 @@ type RA interface {
 	ensures  IsValid(e1)
 	decreases
 	ValidOp(e1 Elem, e2 Elem)
+
+	// ghost
+	// requires IsElem(e)
+	// requires Compose(e, Unit()) === e
+	// requires Compose(Unit(), e) === e
+	// decreases
+	// ComposeUnit(e Elem)
 }
