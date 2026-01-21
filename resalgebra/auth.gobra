@@ -45,7 +45,6 @@ pure func FragView(m int) Elem {
 	return AuthCarrier{Bottom{}, m}
 }
 
-
 ghost
 decreases
 pure func (ra TypeAuthRA) IsElem(e Elem) (res bool) {
@@ -94,7 +93,6 @@ pure func max(a int, b int) int {
 	return a > b ? a : b
 }
 
-// proofs commented out, termiation is a problem
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2) && ra.IsElem(e3)
 ensures  ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3))
@@ -132,7 +130,6 @@ func (ra TypeAuthRA) CoreIdem(e Elem) {
 	// proved
 }
 
-// perf problems, body left out; check triggers everywhere for this def
 ghost
 requires ra.IsElem(e1) && ra.IsElem(e2)
 requires ra.Core(e1) !== none[Elem]
