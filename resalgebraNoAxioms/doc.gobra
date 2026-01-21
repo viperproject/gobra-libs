@@ -1,0 +1,53 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package resalgebraNoAxioms
+
+// This package shows that we can provide a model for ghost locations, similar to
+// those of Iris entirely in Gobra. The public API of this package is very similar to
+//  that of `resalgebra` except that (1) we made some tweaks to the definition of RA that
+// should be logically equivalent to those of the RA defined in `resalgebra`
+// but which are easier to work with in Gobra (e.g., all lemmas in the
+// interface RA are universally quantified, rather than requiring the user
+// to provide the instantiations of the quantified variables), (2) all
+// lemmas for ghost locations require a Witness value to be passed.
+// This is due to a technicality in Gobra (we cannot existentially quantify
+// over resources).
+
+// For the time being, to keep the same API for GhostLocations
+// as the one found in `resalgebra/loc.gobra`, we axiomatize
+// the introduction and elimination rules for existential QPs:
+
+// Same as `exists w s.t. GhostLocationW(l, ra, e, w)`
+pred GhostLocation(l LocName, ra RA, e Elem)
+
+// Converting between GhostLocationW and GhostLocation by
+// introducing the existential quantifier.
+ghost
+trusted
+requires GhostLocationW(l, ra, e, w)
+ensures  GhostLocation(l, ra, e)
+decreases
+func IntroExists(l LocName, ra RA, e Elem, w Witness)
+
+// Converting between GhostLocation and GhostLocationW by
+// eliminating the existential quantifier.
+ghost
+trusted
+requires GhostLocation(l, ra, e)
+ensures  GhostLocationW(l, ra, e, w)
+decreases
+func ElimExists(l LocName, ra RA, e Elem) (w Witness)

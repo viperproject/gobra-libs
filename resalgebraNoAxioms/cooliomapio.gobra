@@ -1,0 +1,144 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package resalgebraNoAxioms
+
+// map that can only grow monotically. adding a new element to the map
+// requires and ensures the map invariant, but checking that a key-pair value (or a key is in the map) is in the map
+// should not require the map inv
+
+ghost type key = LocName
+ghost type val = cooliosetio
+
+ghost type node ghost struct {
+	inUse bool
+	next gpointer[node]
+	k key
+	v val
+	p perm
+}
+
+// todo: change
+ghost type cooliomapio gpointer[node]
+
+pred inv(m cooliomapio) {
+	acc(m, 1/2) &&
+	(m.next == nil ==> !m.inUse && acc(m, 1/2)) &&
+	(m.next != nil ==> 
+		m.inUse &&
+		acc(&m.p, 1/2) &&
+		inv(m.next)    &&
+		m.p > 0        &&
+		acc(&m.inUse, m.p) && acc(&m.next, m.p) && acc(&m.k, m.p) && acc(&m.v, m.p))
+}
+
+ghost
+mayInit
+ensures inv(m)
+ensures toDict(m) == dict[key]val{}
+decreases
+func allocMap() (m cooliomapio) {
+	var g@ node
+	fold inv(&g)
+	return &g
+}
+
+ghost
+requires inv(m)
+decreases inv(m)
+pure func toDict(m cooliomapio) dict[key]val {
+	return unfolding inv(m) in (m.inUse ? (let smallMap := toDict(m.next) in smallMap[m.k = m.v]) : dict[key]val{})
+}
+
+// ghost
+// requires witness(m, k)
+// decreases
+// pure func getVal(m cooliomapio, k key) val
+
+pred witness(m cooliomapio, k key, v val) {
+	acc(&m.inUse, _) && acc(&m.next, _) && acc(&m.k, _) && acc(&m.v, _) &&
+	(!m.inUse ==> false) &&
+	(m.k == k && m.v != v ==> false) &&
+	(m.k != k ==> witness(m.next, k, v))
+}
+
+ghost
+requires inv(m)
+requires !(k elem domain(toDict(m)))
+ensures  inv(m)
+ensures  witness(m, k, v)
+// ensures  getVal(m, k) === v
+ensures  toDict(m) === old(toDict(m))[k = v]
+decreases inv(m)
+func add(m cooliomapio, k key, v val) {
+	unfold inv(m)
+	if !m.inUse {
+		next@ := node{}
+		assert acc(m)
+		m.inUse = true
+		m.p = 1/4
+		m.next = &next
+		m.k = k
+		m.v = v
+		fold inv(m.next)
+		fold inv(m)
+		assert toDict(m) === unfolding inv(m) in toDict(m.next)[m.k = m.v]
+		assert toDict(m) === dict[key]val{k : v}
+		fold witness(m, k, v)
+	} else {
+		add(m.next, k, v)
+		assert witness(m.next, k, v)
+		m.p = m.p/2
+		fold inv(m)
+		fold witness(m, k, v)
+	}
+}
+
+ghost
+requires 0 < p
+requires acc(inv(m), p)
+//requires witness(m, k)
+requires witness(m, k, v)
+ensures  acc(inv(m), p)
+ensures  witness(m, k, v)
+ensures  k elem domain(toDict(m))
+ensures  toDict(m)[k] === v // v may not be comparable
+decreases acc(inv(m), p)
+func lemmaWitness(m cooliomapio, k key, v val, p perm) {
+	d := toDict(m)
+	unfold acc(inv(m), p)
+	unfold witness(m, k, v)
+	if m.k == k {
+		assert k elem domain(d)
+	} else {
+		lemmaWitness(m.next, k, v, p)
+	}
+	fold acc(inv(m), p)
+	fold witness(m, k, v)
+}
+
+ghost
+requires witness(m, k, v)
+ensures  witness(m, k, v) && witness(m, k, v)
+decreases witness(m, k, v)
+func dupWitness(m cooliomapio, k key, v val) {
+	unfold witness(m, k, v)
+	if m.k != k {
+		dupWitness(m.next, k, v)
+	}
+	fold witness(m, k, v)
+	fold witness(m, k, v)
+}
