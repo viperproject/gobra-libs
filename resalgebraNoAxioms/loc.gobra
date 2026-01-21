@@ -283,15 +283,23 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	i.c.add(iii1)
 	i1 := Witness{iii1, i.c}
 	ras.DupWitness(l, ra)
+	assert forall k LocName :: k elem domain(toDict(model)) && k != l ==>
+		!(iii1 elem toCoolSet(toDict(model)[k]))
+	assert forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
 	fold GhostLocationW(l, ra, e1, i1)
 
 	iii2 := &meta{true, e2}
 	i.c.add(iii2)
 	assert witness(model, l, i.c)
 	i2 := Witness{iii2, i.c}
+	assert forall k LocName :: k elem domain(toDict(model)) && k != l ==>
+		!(iii2 elem toCoolSet(toDict(model)[k]))
+	assert forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
 	fold GhostLocationW(l, ra, e2, i2)
 
-	assume forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
+	assert forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
 
 	// not hard to prove, requires applying commutativity and associativity to get (i1 x i2) x k == (i1 x k) x i2. Because the lhs is valid, the rhs is also valid, and by ValidOp, i1 x k is also valid
