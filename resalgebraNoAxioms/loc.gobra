@@ -348,10 +348,9 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 	i2.i.inUse = false
 	fold GhostLocationW(l, ra, ra.Compose(e1, e2), i1)
 
-	// triggering issue
-	assume forall k LocName :: k elem domain(toDict(model)) ==>
-		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
-				  i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))
+	assert forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))
 
 	// proof requires that all previous elems can be added to this one and become valid.
 	// actually, the proof should be very similar to that of GhostOp1W
