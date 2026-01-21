@@ -161,6 +161,9 @@ pred GlobalMem() {
 				forall i2 idx :: { ras.ToDict()[k].Compose(i.val, i2.val) } i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
 					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
 					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val)))))
+	// MISSING: the product of all inUse elements is valid. requires proving all kinds of facts
+	//          about the updates to the set of values inUse and the order in which the multiplication is performed.
+	//          this is easy to show ghostOp1 and ghostOp2 and frame-preserving updates
 }
 
 // TODO: use MonoSet and MonoMap for the model; delete cooliosetio and mapio
@@ -412,6 +415,8 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 	assert ra.IsElem(ra.Compose(i1.i.val, i2.i.val))
 	assert ra.IsValid(ra.Compose(i1.i.val, i2.i.val))
 
+	// TODO: this is where the invariant of Validity of the product of all elements comes in handy
+	//       to prove this assumption
 	assume forall ii idx :: ii elem toCoolSet(toDict(model)[l]) && ii.inUse && ii !== i1.i && ii != i2.i ==>
 		// let _ := ghostOp2WIaux(ra, e1, e2, ii.val) in
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(ra.Compose(e1, e2), ii.val)) &&
