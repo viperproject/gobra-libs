@@ -158,10 +158,10 @@ pred GlobalMem() {
 	(forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] } k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))) &&
-	(forall k LocName :: { k elem domain(toDict(model)) } { toDict(model)[k] } k elem domain(toDict(model)) ==>
-		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+	(forall k LocName :: { k elem domain(toDict(model)) } { toDict(model)[k] }{ ras.ToDict()[k] } k elem domain(toDict(model)) ==>
+		(forall i idx :: { i elem toCoolSet(toDict(model)[k]) } { i.inUse } i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (
-				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+				forall i2 idx :: { ras.ToDict()[k].Compose(i.val, i2.val) } i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
 					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
 					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val)))))
 }
@@ -189,6 +189,7 @@ ghost type meta ghost struct {
 
 pred GhostLocationW(l LocName, ra RA, e Elem, w Witness) {
 	acc(w.i, 1/2)          &&
+	w.i.inUse              &&
 	witness(model, l, w.c) &&
 	w.c.witness(w.i)       &&
 	ra != nil              &&
@@ -322,16 +323,29 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 	unfold GhostLocationW(l, ra, e1, i1)
 	unfold GhostLocationW(l, ra, e2, i2)
 	lemmaWitness(model, l, i2.c, 1/3)
+	assert forall i idx :: { i elem toCoolSet(toDict(model)[l]) } { i.inUse } i elem toCoolSet(toDict(model)[l]) ==>
+		i.inUse ==> (
+			forall i2 idx :: { ras.ToDict()[l].Compose(i.val, i2.val) } i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 !== i ==>
+				ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i.val, i2.val)) &&
+				ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i.val, i2.val)))
 	assert i2.c === toDict(model)[l]
 	i2.c.lemmaWitness(i2.i, 1/3)
 	assert i2.i elem toCoolSet(i2.c)
-	i2.i.inUse = false
-
 	lemmaWitness(model, l, i1.c, 1/3)
 	i1.c.lemmaWitness(i1.i, 1/3)
+
+	ras.DupWitness(l, ra)
+	ras.WitnessInMap(l, ra, 1/10)
+	assert ra === ras.ToDict()[l]
+
+	assert i1.i elem toCoolSet(toDict(model)[l]) && i1.i.inUse
+	assert i2.i elem toCoolSet(toDict(model)[l]) && i2.i.inUse
+	assert ra.IsElem(ra.Compose(i1.i.val, i2.i.val))
+	assert ra.IsValid(ra.Compose(i1.i.val, i2.i.val))
+
+	assert ra.IsElem(ra.Compose(e1, e2)) && ra.IsValid(ra.Compose(e1, e2))
 	i1.i.val = ra.Compose(e1, e2)
-	// triggering issue ?
-	assume ra.IsElem(ra.Compose(e1, e2)) && ra.IsValid(ra.Compose(e1, e2))
+	i2.i.inUse = false
 	fold GhostLocationW(l, ra, ra.Compose(e1, e2), i1)
 
 	// triggering issue
