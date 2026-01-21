@@ -45,6 +45,7 @@ pred (m cooliosetio) Inv() {
 
 ghost
 ensures m.Inv()
+ensures toCoolSet(m) == set[valSet]{}
 decreases
 func allocSet() (m cooliosetio) {
 	var g@ nodeSet

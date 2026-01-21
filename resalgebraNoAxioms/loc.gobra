@@ -227,6 +227,11 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	assert witness(model, newl, cs)
 	newi := Witness{iii, cs}
 
+	assert forall k LocName :: k elem domain(toDict(model)) && k != newl ==>
+		!(iii elem toCoolSet(toDict(model)[k]))
+	assert forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
+
 	fold GhostLocationW(newl, ra, e, newi)
 
 	assert acc(newl, 1/2)
@@ -234,10 +239,7 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	assert forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras.ToDict())
 	assert forall k LocName :: k elem domain(ras.ToDict()) ==> ras.ToDict()[k] != RA(nil)
 
-	// problem with triggers?
-	assume forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
-		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
-	assume forall k LocName :: k elem domain(toDict(model)) ==>
+	assert forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==> acc(i, 1/2))
 	assert forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
@@ -410,11 +412,11 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 
 	// TODO: should be provable from the def of IsFramePreservingUpdate
 	assume forall k LocName :: k elem domain(toDict(model)) ==>
-		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
-				  i.inUse ==> (
-						  forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-								  ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
-								  ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+			i.inUse ==> (
+				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
+					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
 
 	fold GhostLocationW(l, ra, e2, i)
 	fold GlobalMem()
@@ -434,8 +436,6 @@ func GhostValidW(l LocName, ra RA, e Elem, w Witness) {
 }
 
 /***** Model: wrappers that acquire the global invariant; these functions may not be called from critical regions *****/
-
-// TODO: IsInv(GlobalMem()) should be a duplicable invariant
 
 ghost
 // opensInvariants
