@@ -371,30 +371,26 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 	i.c.lemmaWitness(i.i, 1/3)
 	i.i.val = e2
 
-	// TODO: can be proven easily as long as I can introduce an existentially quantified variable
 	if forall e Elem :: ra.IsElem(e) ==> LiftedCompose(ra, some(e1), some(e)) === none[Elem] {
 		assert ra.IsValid(e2)
+	} else if forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) ==> !ra.IsValid(ra.Compose(e1, e)) {
+		assert IsFramePreservingUpdate(ra, e1, e2)
+		assert forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] ==> ra.IsElem(get(c))) ==>
+			(LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) ==> LiftedIsValid(ra, LiftedCompose(ra, some(e2), c)))
+		assert forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] ==> ra.IsElem(get(c))) ==>
+			(LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) ==> c === none[Elem])
+		assert LiftedIsValid(ra, LiftedCompose(ra, some(e2), none[Elem]))
+		assert ra.IsValid(e2)
 	} else {
-		// idea: if e1 has a core, than e2 must be valid: e1 has core ==>
-		//	==> compose(e2, core(e1)) must be valid because compose(e1, core(e1)) is valid and e2 is a frame preserving update
-		//	==> e2 is valid because the compose(e2, core(e1)) is valid.
-		// what about the cases e1 does not have a core?
-		assume ra.IsValid(e2) // TODO
+		assert exists e Elem :: { ra.IsElem(e) } { LiftedCompose(ra, some(e1), some(e)) } ra.IsElem(e) &&
+			LiftedCompose(ra, some(e1), some(e)) !== none[Elem]
+		ra.ValidOpQ()
+		assert exists e Elem :: { ra.IsElem(e) } { LiftedCompose(ra, some(e1), some(e)) } ra.IsElem(e) &&
+			LiftedIsValid(ra, LiftedCompose(ra, some(e1), some(e))) &&
+			ra.IsValid(ra.Compose(e1, e)) &&
+			ra.IsValid(ra.Compose(e2, e)) &&
+			ra.IsValid(e2)
 	}
-
-	// if ra.Core(e1) != none[Elem] {
-	// 	ra.CoreId(e1)
-	// 	assert ra.Compose(get(ra.Core(e1)), e1) === e1
-	// 	ra.ComposeComm(get(ra.Core(e1)), e1)
-	// 	assert ra.Compose(e1, get(ra.Core(e1))) === e1
-	// 	assert LiftedIsValid(ra, some(e1))
-	// 	assert LiftedIsValid(ra, some(ra.Compose(e1, get(ra.Core(e1)))))
-	// 	IsFramePreservingUpdate(ra, e1, e2)
-	// 	assume false // TODO
-	// 	assert LiftedIsValid(ra, some(ra.Compose(e2, get(ra.Core(e1))))) // from def of frame-preserving update
-	// } else {
-	// 	// assume ra.IsValid(e2)
-	// }
 
 	ras.DupWitness(l, ra)
 	ras.WitnessInMap(l, ra, 1/10)
@@ -408,7 +404,6 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 								  ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
 
 	fold GhostLocationW(l, ra, e2, i)
-
 	fold GlobalMem()
 }
 
