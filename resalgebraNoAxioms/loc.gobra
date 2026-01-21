@@ -134,14 +134,16 @@ pure func LiftedIsValid(ra RA, e option[Elem]) bool {
 
 /***** Model: Global State *****/
 
-// TODO: IsInv(GlobalMem()) should be established by init
 pred GlobalMem() {
 	inv(model) &&
 	ras.Inv()  &&
 	// necessary for proving key freshness
-	(forall k LocName :: k elem domain(toDict(model)) ==> acc(k, 1/2)) &&
+	(forall k LocName :: { k elem domain(toDict(model)) } k elem domain(toDict(model)) ==> acc(k, 1/2)) &&
+	// complicated way of saying that the domains of model and ras are the same:
 	(forall k LocName :: { k elem domain(toDict(model)) } { ras.ToDict()[k] } k elem domain(toDict(model)) ==>
 		k elem domain(ras.ToDict())) &&
+	(forall k LocName :: { k elem domain(toDict(model)) } k elem domain(ras.ToDict()) ==>
+		k elem domain(toDict(model))) &&
 	(forall k LocName :: { k elem domain(ras.ToDict()) }{ ras.ToDict()[k] } k elem domain(ras.ToDict()) ==>
 		ras.ToDict()[k] != RA(nil)) &&
 	// injectivity
@@ -153,10 +155,10 @@ pred GlobalMem() {
 		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))) &&
 	(forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==> acc(i, 1/2))) &&
-	(forall k LocName :: k elem domain(toDict(model)) ==>
+	(forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] } k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))) &&
-	(forall k LocName :: k elem domain(toDict(model)) ==>
+	(forall k LocName :: { k elem domain(toDict(model)) } { toDict(model)[k] } k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (
 				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
@@ -213,12 +215,17 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	var cs cooliosetio = allocSet()
 	iii := &meta{true, e}
 	cs.add(iii)
+	if (newl elem domain(toDict(model))) {
+		assert acc(newl, 3/2)
+	}
+	assert !(newl elem domain(toDict(model)))
+	rasDict := ras.ToDict()
+	assert !(newl elem domain(rasDict))
+	ras.Insert(newl, ra)
 	add(model, newl, cs)
 	assert witness(model, newl, cs)
 	newi := Witness{iii, cs}
-	rasDict := ras.ToDict()
-	assume !(newl elem domain(rasDict))
-	ras.Insert(newl, ra)
+
 	fold GhostLocationW(newl, ra, e, newi)
 
 	assert acc(newl, 1/2)
