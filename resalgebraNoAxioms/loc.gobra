@@ -14,7 +14,8 @@
 
 // +gobra
 
-pkgInvariant GlobalMem() // todo: replace this by a dup invariant that GlobalMem() is an invariant
+// todo: replace this by a dup invariant that GlobalMem() is an invariant
+pkgInvariant GlobalMem()
 package resalgebraNoAxioms
 
 // TODO:
@@ -302,17 +303,132 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	assert forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
 
-	// not hard to prove, requires applying commutativity and associativity to get (i1 x i2) x k == (i1 x k) x i2. Because the lhs is valid, the rhs is also valid, and by ValidOp, i1 x k is also valid
-	// TODO: requires changing the API of RAs so that all lemmas are universally quantified
-	assume forall k LocName :: k elem domain(toDict(model)) ==>
+	assert ras.ToDict()[l] === ra
+	
+	// assume (forall i idx :: { ra.Compose(iii1.val, i.val) } i elem toCoolSet(toDict(model)[l]) ==>
+	// 	i != iii1 && i.inUse ==> (
+	// 		ra.IsElem(ra.Compose(iii1.val, i.val)) &&
+	// 		ra.IsValid(ra.Compose(iii1.val, i.val))))
+	// assume (forall i idx :: { ra.Compose(iii2.val, i.val) } i elem toCoolSet(toDict(model)[l]) ==>
+	// 	i != iii2 && i.inUse ==> (
+	// 		ra.IsElem(ra.Compose(iii2.val, i.val)) &&
+	// 		ra.IsValid(ra.Compose(iii2.val, i.val))))
+	// assume ra.IsElem(ra.Compose(iii2.val, iii1.val)) &&
+	// 	ra.IsValid(ra.Compose(iii2.val, iii1.val))
+	// assume ra.IsElem(ra.Compose(iii1.val, iii2.val)) &&
+	// 	ra.IsValid(ra.Compose(iii1.val, iii2.val))
+	
+/*
+	assert forall k LocName :: k elem domain(toDict(model)) && k != l ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (
 				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-					ras.ToDict()[k].IsElem( ras.ToDict()[k].Compose(i.val, i2.val)) &&
+					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
+					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
+
+	assert forall i idx :: i elem toCoolSet(toDict(model)[l]) ==>
+		i.inUse && i != iii1 && i != iii2 ==> (
+			forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 !== i && i2 != iii1 && i2 != iii2  ==>
+				ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i.val, i2.val)) &&
+				ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i.val, i2.val)))
+	
+	assert forall i idx :: i elem toCoolSet(toDict(model)[l]) ==>
+		i.inUse && i != iii1 && i != iii2 ==> (
+			forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 !== i && i2 != iii1 && i2 != iii2  ==>
+				ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i.val, i2.val)) &&
+				ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i.val, i2.val)))
+*/
+	/*
+	assert forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 != iii1 && i2 != iii2 ==>
+		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(ras.ToDict()[l].Compose(iii1.val, iii2.val), i2.val)) &&
+		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(ras.ToDict()[l].Compose(iii1.val, iii2.val), i2.val))
+	ra.ValidOpQ()
+	ra.ComposeAssocQ()
+	assert forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 != iii1 && i2 != iii2 ==>
+		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(iii1.val, ras.ToDict()[l].Compose(iii2.val, i2.val))) &&
+		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(iii1.val, ras.ToDict()[l].Compose(iii2.val, i2.val)))
+	ra.ComposeCommQ()
+	assert forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 != iii1 && i2 != iii2 ==>
+		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(iii1.val, ras.ToDict()[l].Compose(i2.val, iii2.val))) &&
+		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(iii1.val, ras.ToDict()[l].Compose(i2.val, iii2.val)))
+	assert forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 != iii1 && i2 != iii2 ==>
+		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(ras.ToDict()[l].Compose(iii1.val, i2.val), iii2.val)) &&
+		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(ras.ToDict()[l].Compose(iii1.val, i2.val), iii2.val))
+	///
+	assert false
+	assert forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 != iii1  ==>
+		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(iii1.val, i2.val)) &&
+		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(iii1.val, i2.val))
+	
+	/////
+
+	assert forall i idx :: i elem toCoolSet(toDict(model)[l]) ==>
+		i.inUse && i != iii1 && i != iii2 ==> (
+			forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 !== i && i2 != iii1 && i2 != iii2  ==>
+				ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i.val, i2.val)) &&
+				ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i.val, i2.val)))
+	
+	assert forall i idx :: i elem toCoolSet(toDict(model)[l]) ==>
+		i.inUse ==> (
+			forall i2 idx :: i2 elem toCoolSet(toDict(model)[l]) && i2.inUse && i2 !== i ==>
+				ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i.val, i2.val)) &&
+				ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i.val, i2.val)))
+	*/
+	// not hard to prove, requires applying commutativity and associativity to get (i1 x i2) x k == (i1 x k) x i2. Because the lhs is valid, the rhs is also valid, and by ValidOp, i1 x k is also valid
+
+	ghostOp1WIAux(ra, iii1.val, iii2.val)
+	
+	assert forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+			i.inUse ==> (
+				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
 					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
 
 	fold GlobalMem()
 	return i1, i2
+}
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1) && ra.IsElem(e2)
+requires ra.IsValid(ra.Compose(e1, e2))
+ensures  forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+	ra.IsValid(ra.Compose(e1, e))
+ensures  forall e Elem :: { ra.Compose(e2, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+	ra.IsValid(ra.Compose(e2, e))
+ensures  forall e Elem :: { ra.Compose(e, e1) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+	ra.IsValid(ra.Compose(e, e1))
+ensures  forall e Elem :: { ra.Compose(e, e2) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+	ra.IsValid(ra.Compose(e, e2))
+decreases
+func ghostOp1WIAux(ra RA, e1 Elem, e2 Elem) {
+	assume false
+	/*
+	requires ra != nil
+	requires ra.IsElem(e1) && ra.IsElem(e2)
+	requires ra.IsValid(ra.Compose(e1, e2))
+	ensures  forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+		ra.IsValid(ra.Compose(e1, e))
+	decreases
+	outline(
+		assume false
+		ra.ComposeAssocQ()
+		assert forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+			ra.IsValid(ra.Compose(e1, ra.Compose(e2, e)))
+		ra.ComposeCommQ()
+		assert forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(e1, ra.Compose(e2, e))) ==>
+			ra.IsValid(ra.Compose(e1, ra.Compose(e, e2)))
+		assert forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(e1, ra.Compose(e, e2))) ==>
+			ra.IsValid(ra.Compose(ra.Compose(e1, e), e2))
+		ra.ValidOpQ()
+		assert forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e), e2)) ==>
+			ra.IsValid(ra.Compose(e1, e))
+	)
+	*/
+	// ra.ValidOpQ()
+	// ra.ComposeAssocQ()
+	// ra.ComposeCommQ()
 }
 
 ghost
@@ -366,12 +482,10 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 	// actually, the proof should be very similar to that of GhostOp1W
 	assume forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
-				i.inUse ==> (
-						forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-								ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
-								ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
-
-
+			i.inUse ==> (
+				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
+					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
 	fold GlobalMem()
 }
 
