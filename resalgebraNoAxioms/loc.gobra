@@ -272,10 +272,10 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	assert i.c.witness(i.i)
 	i.c.lemmaWitness(i.i, 1/3)
 	assert i.i elem toCoolSet(i.c)
-	ValidOp(ra, e1, e2)
+	ra.ValidOp(e1, e2)
 	assert ra.IsValid(e1)
-	ComposeComm(ra, e1, e2)
-	ValidOp(ra, e2, e1)
+	ra.ComposeComm(e1, e2)
+	ra.ValidOp(e2, e1)
 	assert ra.IsValid(e2)
 
 	i.i.inUse = false
@@ -334,32 +334,47 @@ ensures  forall e Elem :: { ra.Compose(e, e2) } ra.IsElem(e) && ra.IsValid(ra.Co
 	ra.IsValid(ra.Compose(e, e2))
 decreases
 func ghostOp1WIAux(ra RA, e1 Elem, e2 Elem) {
-	assume false
-	/*
-	requires ra != nil
-	requires ra.IsElem(e1) && ra.IsElem(e2)
-	requires ra.IsValid(ra.Compose(e1, e2))
-	ensures  forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+	ghostOp1WIAux1(ra, e1, e2)
+	ghostOp1WIAux2(ra, e1, e2)
+	ComposeCommQ(ra)
+}
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1) && ra.IsElem(e2)
+requires ra.IsValid(ra.Compose(e1, e2))
+ensures  forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+	ra.IsValid(ra.Compose(e1, e))
+decreases
+func ghostOp1WIAux1(ra RA, e1 Elem, e2 Elem) {
+	assert forall e Elem :: ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+		let _ := ra.ComposeAssoc(e1, e2, e) in
+		ra.IsValid(ra.Compose(e1, ra.Compose(e2, e))) &&
+		let _ := ra.ComposeComm(e2, e) in
+		ra.Compose(e, e2) === ra.Compose(e2, e) &&
+		ra.IsValid(ra.Compose(e1, ra.Compose(e, e2))) &&
+		let _ := ra.ComposeAssoc(e1, e, e2) in
+		ra.Compose(e1, ra.Compose(e, e2)) === ra.Compose(ra.Compose(e1, e), e2) &&
+		ra.IsValid(ra.Compose(ra.Compose(e1, e), e2)) &&
+		let _ := ra.ValidOp(ra.Compose(e1, e), e2) in
 		ra.IsValid(ra.Compose(e1, e))
-	decreases
-	outline(
-		assume false
-		ra.ComposeAssocQ()
-		assert forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
-			ra.IsValid(ra.Compose(e1, ra.Compose(e2, e)))
-		ra.ComposeCommQ()
-		assert forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(e1, ra.Compose(e2, e))) ==>
-			ra.IsValid(ra.Compose(e1, ra.Compose(e, e2)))
-		assert forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(e1, ra.Compose(e, e2))) ==>
-			ra.IsValid(ra.Compose(ra.Compose(e1, e), e2))
-		ra.ValidOpQ()
-		assert forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e), e2)) ==>
-			ra.IsValid(ra.Compose(e1, e))
-	)
-	*/
-	// ra.ValidOpQ()
-	// ra.ComposeAssocQ()
-	// ra.ComposeCommQ()
+}
+
+ghost
+requires ra != nil
+requires ra.IsElem(e1) && ra.IsElem(e2)
+requires ra.IsValid(ra.Compose(e1, e2))
+ensures  forall e Elem :: { ra.Compose(e1, e) } ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+	ra.IsValid(ra.Compose(e2, e))
+decreases
+func ghostOp1WIAux2(ra RA, e1 Elem, e2 Elem) {
+	assert forall e Elem :: ra.IsElem(e) && ra.IsValid(ra.Compose(ra.Compose(e1, e2), e)) ==>
+		let _ := ra.ComposeAssoc(e1, e2, e) in
+		ra.IsValid(ra.Compose(e1, ra.Compose(e2, e)))  &&
+		let _ := ra.ComposeComm(e1, ra.Compose(e2, e)) in
+		ra.IsValid(ra.Compose(ra.Compose(e2, e), e1))  &&
+		let _ := ra.ValidOp(ra.Compose(e2, e), e1) in
+		ra.IsValid(ra.Compose(e2, e))
 }
 
 ghost
@@ -452,7 +467,7 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 	} else {
 		assert exists e Elem :: { ra.IsElem(e) } { LiftedCompose(ra, some(e1), some(e)) } ra.IsElem(e) &&
 			LiftedCompose(ra, some(e1), some(e)) !== none[Elem]
-		ra.ValidOpQ()
+		ValidOpQ(ra)
 		assert exists e Elem :: { ra.IsElem(e) } { LiftedCompose(ra, some(e1), some(e)) } ra.IsElem(e) &&
 			LiftedIsValid(ra, LiftedCompose(ra, some(e1), some(e))) &&
 			ra.IsValid(ra.Compose(e1, e)) &&

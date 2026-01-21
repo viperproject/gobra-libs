@@ -78,36 +78,42 @@ func (ra TypeOneShotRA) Compose(e1 Elem, e2 Elem) (res Elem) {
 
 ghost
 decreases
-func (ra TypeOneShotRA) ComposeAssocQ() {
+pure func (ra TypeOneShotRA) ComposeAssoc(e1 Elem, e2 Elem, e3 Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeOneShotRA) ComposeCommQ() {
+pure func (ra TypeOneShotRA) ComposeComm(e1 Elem, e2 Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeOneShotRA) CoreIdQ() {
+pure func (ra TypeOneShotRA) CoreId(e Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeOneShotRA) CoreIdemQ() {
+pure func (ra TypeOneShotRA) CoreIdem(e Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeOneShotRA) CoreMonoQ() {
+pure func (ra TypeOneShotRA) CoreMono(e1 Elem, e2 Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeOneShotRA) ValidOpQ() {
+pure func (ra TypeOneShotRA) ValidOp(e1 Elem, e2 Elem) Unit {
 	// proved
+	return Unit{}
 }

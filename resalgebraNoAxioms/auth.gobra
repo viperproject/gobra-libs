@@ -96,38 +96,45 @@ pure func max(a int, b int) int {
 
 // all lemmas proven automatically
 
+
 ghost
 decreases
-func (ra TypeAuthRA) ComposeAssocQ() {
+pure func (ra TypeAuthRA) ComposeAssoc(e1 Elem, e2 Elem, e3 Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeAuthRA) ComposeCommQ() {
+pure func (ra TypeAuthRA) ComposeComm(e1 Elem, e2 Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeAuthRA) CoreIdQ() {
+pure func (ra TypeAuthRA) CoreId(e Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeAuthRA) CoreIdemQ() {
+pure func (ra TypeAuthRA) CoreIdem(e Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeAuthRA) CoreMonoQ() {
+pure func (ra TypeAuthRA) CoreMono(e1 Elem, e2 Elem) Unit {
 	// proved
+	return Unit{}
 }
 
 ghost
 decreases
-func (ra TypeAuthRA) ValidOpQ() {
+pure func (ra TypeAuthRA) ValidOp(e1 Elem, e2 Elem) Unit {
 	// proved
+	return Unit{}
 }

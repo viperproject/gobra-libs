@@ -18,6 +18,8 @@ package resalgebraNoAxioms
 
 type Elem interface{}
 
+type Unit struct{}
+
 type RA interface {
 	// defines the set of elements of the RA
 	ghost
@@ -44,110 +46,127 @@ type RA interface {
 	// Lemmas
 
 	ghost
-	ensures  forall e1, e2, e3 Elem :: { Compose(Compose(e1, e2), e3) } { Compose(e1, Compose(e2, e3)) } IsElem(e1) &&
-		IsElem(e2) && IsElem(e3) ==>
-			Compose(Compose(e1, e2), e3) === Compose(e1, Compose(e2, e3))
+	requires IsElem(e1) && IsElem(e2) && IsElem(e3)
+	ensures  Compose(Compose(e1, e2), e3) === Compose(e1, Compose(e2, e3))
 	decreases
-	ComposeAssocQ()
+	pure ComposeAssoc(e1 Elem, e2 Elem, e3 Elem) Unit
 
 	ghost
-	ensures  forall e1, e2 Elem :: { Compose(e1, e2) } { Compose(e2, e1) } IsElem(e1) && IsElem(e2) ==>
-		Compose(e1, e2) === Compose(e2, e1)
+	requires IsElem(e1) && IsElem(e2)
+	ensures  Compose(e1, e2) === Compose(e2, e1)
 	decreases
-	ComposeCommQ()
+	pure ComposeComm(e1 Elem, e2 Elem) Unit
 
 	ghost
-	ensures  forall e Elem :: { Core(e) } IsElem(e) ==>
-		let c := Core(e) in
-			c !== none[Elem] ==> Compose(get(c), e) === e
+	requires IsElem(e)
+	ensures  let c := Core(e) in
+		c !== none[Elem] ==> Compose(get(c), e) === e
 	decreases
-	CoreIdQ()
+	pure CoreId(e Elem) Unit
 
 	ghost
-	ensures  forall e Elem :: { Core(e) } IsElem(e) && Core(e) !== none[Elem] ==>
-		let c := Core(e) in
+	requires IsElem(e)
+	requires Core(e) !== none[Elem]
+	ensures  let c := Core(e) in
 		let cc := Core(get(c)) in
 		cc !== none[Elem] &&
 		get(cc) === get(c)
 	decreases
-	CoreIdemQ()
+	pure CoreIdem(e Elem) Unit
 
 	ghost
-	ensures  forall e1, e2 Elem ::  { Core(e1), Core(e2) } IsElem(e1) && IsElem(e2) && Core(e1) !== none[Elem] &&
-		// fully expanded version of <= due to Gobra's lack of `Self` in interface specs
-		(exists e3 Elem :: { IsElem(e3) } IsElem(e3) && e2 === Compose(e1, e3)) ==>
-		Core(e2) !== none[Elem] &&
-		exists e4 Elem :: { IsElem(e4) } IsElem(e4) && get(Core(e2)) === Compose(get(Core(e1)), e4)
+	requires IsElem(e1) && IsElem(e2)
+	requires Core(e1) !== none[Elem]
+	// fully expanded version of <= due to Gobra's lack of `Self` in interface specs
+	requires exists e3 Elem :: { IsElem(e3) } IsElem(e3) && e2 === Compose(e1, e3)
+	ensures  Core(e2) !== none[Elem]
+	ensures  exists e4 Elem :: { IsElem(e4) } IsElem(e4) && get(Core(e2)) === Compose(get(Core(e1)), e4)
 	decreases
-	CoreMonoQ()
+	pure CoreMono(e1 Elem, e2 Elem) Unit
 
 	ghost
-	ensures  forall e1, e2 Elem :: { Compose(e1, e2) } IsElem(e1) && IsElem(e2) && IsValid(Compose(e1, e2)) ==>
-		IsValid(e1)
+	requires IsElem(e1) && IsElem(e2)
+	requires IsValid(Compose(e1, e2))
+	ensures  IsValid(e1)
 	decreases
-	ValidOpQ()
+	pure ValidOp(e1 Elem, e2 Elem) Unit
 }
 
+// The following wrappers should be treated as automatically generated code, their implementation
+// is not to be read closely
+
 ghost
+opaque
 requires ra != nil
-requires ra.IsElem(e1) && ra.IsElem(e2) && ra.IsElem(e3)
-ensures  ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3))
+ensures  forall e1, e2, e3 Elem :: { ra.Compose(ra.Compose(e1, e2), e3) } { ra.Compose(e1, ra.Compose(e2, e3)) } ra.IsElem(e1) &&
+	ra.IsElem(e2) && ra.IsElem(e3) ==>
+		ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3))
 decreases
-func ComposeAssoc(ra RA, e1 Elem, e2 Elem, e3 Elem) {
-	ra.ComposeAssocQ()
+pure func ComposeAssocQ(ra RA) Unit {
+	return asserting(forall e1, e2, e3 Elem :: { ra.Compose(ra.Compose(e1, e2), e3) } { ra.Compose(e1, ra.Compose(e2, e3)) } ra.IsElem(e1) && ra.IsElem(e2) && ra.IsElem(e3) ==> let _ := ra.ComposeAssoc(e1, e2, e3) in ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3)))
 }
 
 ghost
+opaque
 requires ra != nil
-requires ra.IsElem(e1) && ra.IsElem(e2)
-ensures  ra.Compose(e1, e2) === ra.Compose(e2, e1)
+ensures  forall e1, e2 Elem :: { ra.Compose(e1, e2) } { ra.Compose(e2, e1) } ra.IsElem(e1) && ra.IsElem(e2) ==>
+	ra.Compose(e1, e2) === ra.Compose(e2, e1)
 decreases
-func ComposeComm(ra RA, e1 Elem, e2 Elem) {
-	ra.ComposeCommQ()
+pure func ComposeCommQ(ra RA) Unit {
+	return asserting(forall e1, e2 Elem :: { ra.Compose(e1, e2) } { ra.Compose(e2, e1) } ra.IsElem(e1) && ra.IsElem(e2) ==> let _ := ra.ComposeComm(e1, e2) in ra.Compose(e1, e2) === ra.Compose(e2, e1))
 }
 
 ghost
+opaque
 requires ra != nil
-requires ra.IsElem(e)
-ensures  let c := ra.Core(e) in
-	c !== none[Elem] ==> ra.Compose(get(c), e) === e
+ensures  forall e Elem :: { ra.Core(e) } ra.IsElem(e) ==>
+	let c := ra.Core(e) in
+		c !== none[Elem] ==> ra.Compose(get(c), e) === e
 decreases
-func CoreId(ra RA, e Elem) {
-	ra.CoreIdQ()
+pure func CoreIdQ(ra RA) Unit {
+	return asserting(forall e Elem :: { ra.Core(e) } ra.IsElem(e) ==> let _ := ra.CoreId(e) in ra.Core(e) !== none[Elem] ==> ra.Compose(get(ra.Core(e)), e) === e)
 }
 
 ghost
+opaque
 requires ra != nil
-requires ra.IsElem(e)
-requires ra.Core(e) !== none[Elem]
-ensures  let c := ra.Core(e) in
+ensures  forall e Elem :: { ra.Core(e) } ra.IsElem(e) && ra.Core(e) !== none[Elem] ==>
+	let c := ra.Core(e) in
 	let cc := ra.Core(get(c)) in
 	cc !== none[Elem] &&
 	get(cc) === get(c)
 decreases
-func CoreIdem(ra RA, e Elem) {
-	ra.CoreIdemQ()
+pure func CoreIdemQ(ra RA) Unit {
+	return asserting(forall e Elem :: { ra.Core(e) } ra.IsElem(e) && ra.Core(e) !== none[Elem] ==> let _ := ra.CoreIdem(e) in let c := ra.Core(e) in let cc := ra.Core(get(c)) in cc !== none[Elem] && get(cc) === get(c))
 }
 
 ghost
+opaque
 requires ra != nil
-requires ra.IsElem(e1) && ra.IsElem(e2)
-requires ra.Core(e1) !== none[Elem]
-// fully expanded version of <= due to Gobra's lack of `Self` in interface specs
-requires exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 === ra.Compose(e1, e3)
-ensures  ra.Core(e2) !== none[Elem]
-ensures  exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4)
+ensures  forall e1, e2 Elem ::  { ra.Core(e1), ra.Core(e2) } ra.IsElem(e1) && ra.IsElem(e2) && ra.Core(e1) !== none[Elem] &&
+	// fully expanded version of <= due to Gobra's lack of `Self` in interface specs
+	(exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 === ra.Compose(e1, e3)) ==>
+	ra.Core(e2) !== none[Elem] &&
+	exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4)
 decreases
-func CoreMono(ra RA, e1 Elem, e2 Elem) {
-	ra.CoreMonoQ()
+pure func CoreMonoQ(ra RA) Unit {
+	return asserting(forall e1, e2 Elem :: { ra.Core(e1), ra.Core(e2) } ra.IsElem(e1) && ra.IsElem(e2) && ra.Core(e1) !== none[Elem] && (exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 === ra.Compose(e1, e3)) ==> let _ := ra.CoreMono(e1, e2) in ra.Core(e2) !== none[Elem] &&
+	exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4))
 }
 
 ghost
+opaque
 requires ra != nil
-requires ra.IsElem(e1) && ra.IsElem(e2)
-requires ra.IsValid(ra.Compose(e1, e2))
-ensures  ra.IsValid(e1)
+ensures  forall e1, e2 Elem :: { ra.Compose(e1, e2) } ra.IsElem(e1) && ra.IsElem(e2) && ra.IsValid(ra.Compose(e1, e2)) ==>
+	ra.IsValid(e1)
 decreases
-func ValidOp(ra RA, e1 Elem, e2 Elem) {
-	ra.ValidOpQ()
+pure func ValidOpQ(ra RA) Unit {
+	return asserting(forall e1, e2 Elem :: { ra.Compose(e1, e2) } ra.IsElem(e1) && ra.IsElem(e2) && ra.IsValid(ra.Compose(e1, e2)) ==> let _ := ra.ValidOp(e1, e2) in ra.IsValid(e1))
+}
+
+ghost
+requires b
+decreases
+pure func asserting(ghost b bool) Unit {
+	return Unit{}
 }
