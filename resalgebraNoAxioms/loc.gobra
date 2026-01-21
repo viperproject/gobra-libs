@@ -18,9 +18,7 @@ pkgInvariant GlobalMem() // todo: replace this by a dup invariant that GlobalMem
 package resalgebraNoAxioms
 
 // TODO:
-// - change to quantified lemmas, make the old lemmas available as a function defined outside the RA
-// - use Monoset and monomap, copy to this package if need be; delete cooliosetio and mapio
-// - use a cooliomapio for ras
+// - use Monoset and monomap for the model, copy to this package if need be; delete cooliosetio and mapio
 // - add triggers to invariants
 
 // At the moment, all of these definitions are trusted, and this,
@@ -224,17 +222,16 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	fold GhostLocationW(newl, ra, e, newi)
 
 	assert acc(newl, 1/2)
-	// TODO: prolly missing triggers
-	assume forall k LocName :: k elem domain(toDict(model)) ==> acc(k, 1/2)
-	// TODO: fixed when we have a monotonic set and with permissions for showing injectivity
-	assume forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras.ToDict())
-	assume forall k LocName :: k elem domain(ras.ToDict()) ==> ras.ToDict()[k] != RA(nil)
+	assert forall k LocName :: k elem domain(toDict(model)) ==> acc(k, 1/2)
+	assert forall k LocName :: k elem domain(toDict(model)) ==> k elem domain(ras.ToDict())
+	assert forall k LocName :: k elem domain(ras.ToDict()) ==> ras.ToDict()[k] != RA(nil)
+
+	// problem with triggers?
 	assume forall k1, k2 LocName :: k1 elem domain(toDict(model)) && k2 elem domain(toDict(model)) && k1 != k2 ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k1]) ==> !(i elem toCoolSet(toDict(model)[k2])))
-	// problem with triggers?
 	assume forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==> acc(i, 1/2))
-	assume forall k LocName :: k elem domain(toDict(model)) ==>
+	assert forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))
 	fold GlobalMem()
@@ -264,10 +261,10 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	assert i.c.witness(i.i)
 	i.c.lemmaWitness(i.i, 1/3)
 	assert i.i elem toCoolSet(i.c)
-	ra.ValidOp(e1, e2)
+	ValidOp(ra, e1, e2)
 	assert ra.IsValid(e1)
-	ra.ComposeComm(e1, e2)
-	ra.ValidOp(e2, e1)
+	ComposeComm(ra, e1, e2)
+	ValidOp(ra, e2, e1)
 	assert ra.IsValid(e2)
 
 	i.i.inUse = false
@@ -290,11 +287,11 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	// not hard to prove, requires applying commutativity and associativity to get (i1 x i2) x k == (i1 x k) x i2. Because the lhs is valid, the rhs is also valid, and by ValidOp, i1 x k is also valid
 	// TODO: requires changing the API of RAs so that all lemmas are universally quantified
 	assume forall k LocName :: k elem domain(toDict(model)) ==>
-		  (forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
-				  i.inUse ==> (
-						  forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-								  ras.ToDict()[k].IsElem( ras.ToDict()[k].Compose(i.val, i2.val)) &&
-								  ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+			i.inUse ==> (
+				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+					ras.ToDict()[k].IsElem( ras.ToDict()[k].Compose(i.val, i2.val)) &&
+					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
 
 	fold GlobalMem()
 	return i1, i2
