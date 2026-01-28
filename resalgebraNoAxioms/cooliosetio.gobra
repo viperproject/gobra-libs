@@ -16,6 +16,8 @@
 
 package resalgebraNoAxioms
 
+// TODO: rename this file, improve all names. This is more like a list with stable membership than a set
+
 // sets that can only grow monotically. adding a new element to the set
 // requires and ensures the set invariant, but checking that a value is in the set
 // should not require the set inv
@@ -128,3 +130,128 @@ func (m cooliosetio) dupWitness(v valSet) {
 	fold m.witness(v)
 	fold m.witness(v)
 }
+
+// TODO: add API to manipulate the cool set (e.g., cancel an element, add an element), and specify how this changes the view as a list. use these primitves in loc.gobra rather than low level manipulation
+
+// Global validity req.
+
+ghost
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i)
+decreases m.Inv()
+pure func toCoolList(m cooliosetio) seq[Elem] {
+	return unfolding m.Inv() in (m.inUse ? (m.v.inUse? seq[Elem]{m.v.val} : seq[Elem]{}) ++ toCoolList(m.next) : seq[Elem]{})
+}
+
+ghost
+requires m.Inv()
+requires forall i idx :: i elem toCoolSet(m) ==> acc(i)
+// find a way to encapsulate this pre, maybe have a way to retrieve a set of the active refs?
+requires i elem toCoolSet(m) && i.inUse
+ensures  0 <= res && res < len(toCoolList(m))
+ensures  toCoolList(m)[res] === i.val
+decreases m.Inv()
+pure func getIndexInListOf(m cooliosetio, i idx) (res int) {
+	return unfolding m.Inv() in (m.inUse ? (m.v === i ? 0 : ((m.v.inUse ? 1 : 0) + getIndexInListOf(m.next, i))) : 0)
+}
+
+// TODO: getIndexInListOf is injective
+
+// Composing seqs of elems
+
+ghost
+requires ra != nil
+requires 0 < len(elems)
+requires forall e Elem :: { ra.IsElem(e) } e elem elems ==> ra.IsElem(e)
+ensures  ra.IsElem(res)
+decreases len(elems)
+pure func composeAll(ra RA, elems seq[Elem]) (res Elem) {
+	return len(elems) == 1 ? elems[0] : ra.Compose(elems[0], composeAll(ra, elems[1:]))
+}
+
+// ghost
+// requires e elem elems
+// decreases len(elems)
+// pure func removeElem(e Elem, elems seq[Elem]) seq[Elem] {
+// 	return elems[0] === e ? elems[1:] : seq[Elem]{elems[0]} ++ removeElem(e, elems[1:])
+// }
+
+ghost
+requires 0 <= i && i < len(elems)
+decreases len(elems)
+pure func removeElemAt(elems seq[Elem], i int) seq[Elem] {
+	return i == 0 ? elems[1:] : seq[Elem]{elems[0]} ++ removeElemAt(elems[1:], i - 1)
+}
+
+// ghost
+// requires 0 <= i && i < len(elems)
+// decreases i
+// pure func replaceElem(elems seq[Elem], i int, newE Elem) seq[Elem] {
+// 	return i == 0 ? seq[Elem]{newE} ++ elems[1:] : seq[Elem]{elems[0]} ++ replaceElem(elems, i - 1, newE)
+// }
+
+// lemmas:
+
+// TODO
+ghost
+requires ra != nil
+requires 2 <= len(elems)
+requires 0 <= i && i < len(elems)
+requires forall e Elem :: { ra.IsElem(e) } e elem elems ==> ra.IsElem(e)
+ensures  forall e Elem :: { ra.IsElem(e) }{ e elem removeElemAt(elems, i) } e elem removeElemAt(elems, i) ==> ra.IsElem(e)
+ensures  ra.Compose(elems[i], composeAll(ra, removeElemAt(elems, i))) === composeAll(ra, elems)
+decreases i
+func removeElemLemma(ra RA, i int, elems seq[Elem]) /*{
+	if i == 0 {
+		// proved
+	} else if len(elems) == 2 {
+		assert i == 0 || i == 1
+		assert composeAll(ra, elems) === ra.Compose(elems[0], composeAll(ra, elems[1:]))
+		assert elems[1:][0] === elems[1]
+		// assert ra.IsValid(composeAll(ra, elems)) == ra.IsValid(ra.Compose(elems[0], elems[1]))
+		// ra.ValidOp(elems[0], elems[1])
+		// assert ra.IsValid(elems[0])
+		ra.ComposeComm(elems[0], elems[1])
+		// assert ra.IsValid(ra.Compose(elems[1], elems[0]))
+		// ra.ValidOp(elems[1], elems[0])
+		//assert ra.IsValid(elems[1])
+		assert removeElemAt(0, elems) == elems[1:]
+		assert elems[1:] == seq[Elem]{elems[1]}
+		assert removeElemAt(1, elems) == seq[Elem]{elems[0]} ++ removeElemAt(0, elems[1:])
+		assert removeElemAt(0, elems[1:]) == seq[Elem]{}
+	} else {
+		// ra.ComposeComm(elems[0], composeAll(ra, elems[1:]))
+		// ra.ValidOp(composeAll(ra, elems[1:]), elems[0])
+		removeElemLemma(ra, i - 1, elems[1:])
+		// TODO: should follow from IH
+		assume ra.Compose(elems[i - 1], composeAll(ra, removeElemAt(i - 1, elems[1:]))) === composeAll(ra, elems[1:]) // TODO: should follow from IH
+		// assume ra.IsValid(ra.Compose(elems[i-1], composeAll(ra, removeElemAt(i - 1, elems[1:])))) // TODO: should follow from IH
+		// assert ra.IsValid(ra.Compose(elems[i-1], composeAll(ra, removeElemAt(i - 1, elems[1:]))))
+		assert elems[1:][i-1] === elems[i]
+		assert removeElemAt(i, elems) === seq[Elem]{elems[0]} ++ removeElemAt(i - 1, elems[1:])
+		assert composeAll(ra, removeElemAt(i, elems)) === ra.Compose(elems[0], composeAll(ra, removeElemAt(i - 1, elems[1:])))
+		// assert composeAll(ra, elems) === ra.Compose(elems[0], composeAll(ra, elems[1:]))
+		
+
+	}
+}*/
+
+/*
+ghost
+requires ra != nil
+requires 0 <= i && i < len(elems)
+requires forall e Elem :: { ra.IsElem(e) } e elem elems ==> ra.IsElem(e)
+ensures  forall e Elem :: { ra.IsElem(e) }{ e elem removeElemAt(elems, i) } e elem replaceElemLemma(elems, i) ==> ra.IsElem(e)
+ensures  ra.Compose(elems[i], composeAll(ra, removeElemAt(elems, i))) === composeAll(ra, elems)
+decreases i
+func replaceElemLemma(ra RA, i int, elems seq[Elem], newE Elem)
+*/
+
+
+// validity preserved by frame preserving update
+
+// validity preserved by reordering elements in the list
+
+// validity preserved by decomposing one element in a list (i.e., if an elem of the list is e = Compose(e1, e2), then removing e and appending e1 and e2 should be fine)
+
+// if two elems / idxs are in the list and they are valid, their composition is Valid (requires special provisions for when the elements are the same, as they must be in different indexes)
