@@ -160,7 +160,10 @@ pred GlobalMem() {
 			i.inUse ==> (
 				forall i2 idx :: { ras.ToDict()[k].Compose(i.val, i2.val) } i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
 					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
-					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val)))))
+					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))) &&
+	(forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] } k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
+			0 <= len(toCoolList(toDict(model)[k]))))
 	// MISSING: the product of all inUse elements is valid. requires proving all kinds of facts
 	//          about the updates to the set of values inUse and the order in which the multiplication is performed.
 	//          this is easy to show ghostOp1 and ghostOp2 and frame-preserving updates
