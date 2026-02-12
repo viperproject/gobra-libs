@@ -1,0 +1,179 @@
+// Copyright 2025 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// Lib for proving refinement of implementations against a transition system.
+// It allows selecting any transition system (defined below) as the specification
+// for the current program. The main function may obtain a resource `Init()`
+// that can be used to pick a transition system that the current program must refine.
+//
+// PS: the soundness of this approach depends on Go's visibility rules (in particular,
+// no package can access this package's private global variables).
+
+pkgInvariant Init()
+package refinementguard
+
+type State interface{}
+type Event interface{}
+type GuardV interface{}
+
+// type guardMetadata struct {
+// 	lastSt State
+// 	// maybe requires path to show that the current state is reachable without v?
+// }
+
+ghost type traceEntry ghost struct {
+	s State
+	e option[Event] // only the initial state is none
+}
+
+// private state, must not be accessed outside this packet!
+// this might be possible in Gobra atm, but this should be fixed soon
+ghost var s@ State
+ghost var lastSeen@ dict[GuardV](gpointer[State])
+ghost var traces@ dict[GuardV](seq[traceEntry])
+
+ghost var TS@ TransitionSystem
+ghost var EG@ EventGuard
+
+type Unit struct{}
+
+// Labeled Transition Systems
+type TransitionSystem interface {
+	// returns true iff s is a valid initial
+	// state of the system
+	ghost
+	ensures r ==> Valid(s)
+	decreases
+	pure Init(s State) (r bool)
+
+	ghost
+	decreases
+	pure Valid(s State) bool
+
+	// returns whether event e may be performed
+	// in the current state of the system
+	ghost
+	decreases
+	pure Enabled(s State, e Event) bool
+
+	ghost
+	requires Enabled(s, e)
+	decreases
+	pure Update(s State, e Event) State
+
+	ghost
+	requires Valid(s)
+	requires Enabled(s, e)
+	ensures  let ns := Update(s, e) in
+		ns != nil && Valid(ns)
+	decreases
+	UpdateValidIsValid(s State, e Event)
+}
+
+type EventGuard interface {
+	ghost
+	decreases
+	pure Guards() (ghost set[GuardV])
+
+	ghost
+	ensures  res ==> g elem Guards()
+	decreases
+	pure Requires(e Event, g GuardV) (res bool)
+}
+
+func init() {
+	fold Init()
+}
+
+pred Init() {
+	acc(&TS)  &&
+	TS == nil &&
+	acc(&s)   &&
+	s == nil  &&
+	acc(&EG)  &&
+	EG == nil &&
+	acc(&lastSeen) &&
+	acc(&traces)   &&
+	lastSeen === dict[GuardV](gpointer[State]){} &&
+	traces === dict[GuardV](seq[traceEntry]){}
+	
+}
+
+pred Own() {
+	acc(&TS, _)  &&
+	acc(&s)      &&
+	TS != nil    &&
+	s != nil     &&
+	TS.Valid(s)  &&
+	acc(&EG, _ ) &&
+	EG != nil    &&
+	acc(&traces) &&
+	(forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)) &&
+	(forall g GuardV :: g elem EG.Guards() ==> GuardR(TS, g))         &&
+	(forall g GuardV :: g elem EG.Guards() ==> guardCompatibleWithState(TS, EG, g, s, traces[g]))
+}
+
+// todo: drop t
+pred GuardR(t TransitionSystem, v GuardV) {
+	// acc(&TS, _)             &&
+	// TS != nil               &&
+	// acc(&EG, _ )            &&
+	// EG != nil               &&
+	acc(&lastSeen, _)       &&
+	v elem domain(lastSeen) &&
+	let md := lastSeen[v]   in
+	acc(md, 1/2)
+}
+
+ghost
+requires GuardR(t, v)
+// TODO: remove this assumption of termination, currently failing for unclear reasons
+decreases _
+pure func guardCompatibleWithState(t TransitionSystem, eg EventGuard, v GuardV, s State, trace seq[traceEntry]) bool {
+	return t != nil &&
+		eg != nil   &&
+		t.Valid(s)  &&
+		unfolding GuardR(t, v)       in
+		let lastObs := *lastSeen[v]  in
+		t.Valid(lastObs)             &&
+		0 < len(trace)               &&
+		trace[0].s === lastObs       &&
+		trace[0].e === none[Event]   &&
+		// TODO: check if 2nd trigger leads to Viper issues
+		(forall i int :: {trace[i]} {trace[i+1]} 0 <= i && i < len(trace) - 1 ==>
+			trace[i].e != none[Event]           &&
+			!eg.Requires(get(trace[i].e), v)    &&
+			t.Enabled(trace[i].s, trace[i+1].e) &&
+			trace[i+1].s === t.Update(trace[i].s, trace[i+1].e)) &&
+		trace[len(trace) - 1].s === s
+		// not needed
+		// trace[len(trace) - 1].e === none[Event]
+}
+
+ghost
+requires GuardR(t, v)
+decreases
+pure func LastObservedState(t TransitionSystem, v GuardV) (s State) {
+	return unfolding GuardR(t, v) in
+		lastSeen[v]
+}
+
+// there is no choice nor way of traversing sets at the moment.
+ghost
+requires 0 < len(s)
+ensures  g elem s
+decreases _
+pure func chooseGuardV(s set[GuardV]) (g GuardV)

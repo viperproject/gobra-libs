@@ -1,0 +1,75 @@
+// Copyright 2026 ETH Zurich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package refinementguard
+
+// locally inductive inv
+// TODO: rename stuff
+type LII interface{
+	/*
+	ghost
+	ensures res != nil
+	decreases
+	pure LII_TS() (res TransitionSystem)
+
+	ghost
+	ensures res != nil
+	decreases
+	pure LII_EG() (res EventGuard)
+	*/
+
+	ghost
+	decreases
+	pure Prop(s State) bool
+
+	/*
+	ghost
+	requires v elem LII_EG().Guards(LII_TS())
+	ensures forall s1 State :: (forall e Event, vv GuardV :: Prop(s1) && v !== vv && !LII_EG().Requires(LII_TS(), e, vv) && LII_TS().Enabled(s1, e) ==>
+		Prop(LII_TS().Update(s1, e)))
+	decreases
+	PreservedByTransitionsExcept(v GuardV)
+	*/
+}
+
+/*
+// todo: separate permission to TS from the perm to the state, helps with a better api where i don't need to pass Own anywhere and I don't need selectedTS
+
+ghost
+requires t != nil
+decreases
+pure func ReachableWithoutGuard(t TransitionSystem, g EventGuard, v GuardV, s1 State, s2 State) bool
+
+ghost
+requires i != nil
+requires ReachableWithoutGuard(i.LII_TS(), i.LII_EG(), v, s1, s2)
+requires i.Prop(s1)
+ensures  i.Prop(s2)
+decreases
+func ObserveLII(v GuardV, s1 State, s2 State, i LII)
+*/
+
+// Focus on this one, ignore the previous ones
+ghost
+requires Own()
+requires acc(&TS, _) && TS != nil
+requires GuardR(TS, v)
+requires i != nil
+requires i.Prop(LastObservedState(TS, v))
+ensures  i.Prop(CurrState())
+decreases
+pure func ObserveLIIG(v GuardV, i LII) Unit
+
