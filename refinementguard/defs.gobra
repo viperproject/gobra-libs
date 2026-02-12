@@ -123,7 +123,7 @@ pred Own() {
 	acc(&traces) &&
 	(forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)) &&
 	(forall g GuardV :: g elem EG.Guards() ==> GuardR(TS, g))         &&
-	(forall g GuardV :: g elem EG.Guards() ==> guardCompatibleWithState(TS, EG, g, s, traces[g]))
+	(forall g GuardV :: g elem EG.Guards() ==> guardCompatibleWithState(TS, EG, g, LastObservedState(TS, g), s, traces[g]))
 }
 
 // todo: drop t
@@ -139,25 +139,22 @@ pred GuardR(t TransitionSystem, v GuardV) {
 }
 
 ghost
-requires GuardR(t, v)
-// TODO: remove this assumption of termination, currently failing for unclear reasons
+// TODO: remove this assumption of termination, fix issue
 decreases _
-pure func guardCompatibleWithState(t TransitionSystem, eg EventGuard, v GuardV, s State, trace seq[traceEntry]) bool {
+pure func guardCompatibleWithState(t TransitionSystem, eg EventGuard, v GuardV, oldS State, s State, trace seq[traceEntry]) bool {
 	return t != nil &&
 		eg != nil   &&
 		t.Valid(s)  &&
-		unfolding GuardR(t, v)       in
-		let lastObs := *lastSeen[v]  in
-		t.Valid(lastObs)             &&
-		0 < len(trace)               &&
-		trace[0].s === lastObs       &&
-		trace[0].e === none[Event]   &&
+		t.Valid(oldS)              &&
+		0 < len(trace)             &&
+		trace[0].s === oldS        &&
+		trace[0].e === none[Event] &&
 		// TODO: check if 2nd trigger leads to Viper issues
-		(forall i int :: {trace[i]} {trace[i+1]} 0 <= i && i < len(trace) - 1 ==>
-			trace[i].e != none[Event]           &&
-			!eg.Requires(get(trace[i].e), v)    &&
-			t.Enabled(trace[i].s, trace[i+1].e) &&
-			trace[i+1].s === t.Update(trace[i].s, trace[i+1].e)) &&
+		(forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			trace[i].e != none[Event]              &&
+			!eg.Requires(get(trace[i].e), v)       &&
+			t.Enabled(trace[i-1].s, trace[i].e)    &&
+			trace[i].s === t.Update(trace[i-1].s, trace[i].e)) &&
 		trace[len(trace) - 1].s === s
 		// not needed
 		// trace[len(trace) - 1].e === none[Event]
@@ -168,7 +165,7 @@ requires GuardR(t, v)
 decreases
 pure func LastObservedState(t TransitionSystem, v GuardV) (s State) {
 	return unfolding GuardR(t, v) in
-		lastSeen[v]
+		*lastSeen[v]
 }
 
 // there is no choice nor way of traversing sets at the moment.
