@@ -48,7 +48,7 @@ func InitTS(t TransitionSystem, g EventGuard, i State) {
 	TS = t
 	s = i
 	EG = g
-	
+
 	guardsIt := g.Guards()
 
 	invariant acc(&traces)
@@ -111,7 +111,56 @@ ensures  CurrState() === old(TS.Update(CurrState(), e))
 decreases
 func UpdateTS(e Event) {
 	unfold Own()
+	assert forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)
+	assert forall g GuardV :: g elem EG.Guards() ==> GuardR(TS, g)
+	assert forall g GuardV :: g elem EG.Guards() ==> guardCompatibleWithState(TS, EG, g, s, traces[g])
 	TS.UpdateValidIsValid(s, e)
+	olds := s
 	s = TS.Update(s, e)
+
+	// update guard state
+	guardsIt := EG.Guards()
+
+	invariant acc(&traces)
+	invariant acc(&TS, _) && TS != nil
+	invariant acc(&EG, _) && EG != nil
+	invariant acc(&s, 1/2)
+	invariant TS.Enabled(olds, e)
+	invariant s === TS.Update(olds, e)
+	invariant forall g GuardV :: g elem guardsIt ==> g elem EG.Guards()
+	invariant forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)
+	invariant forall g GuardV :: g elem EG.Guards() ==> GuardR(TS, g)
+	invariant forall g GuardV :: EG.Requires(e, g) ==> GuardR(TS, g)
+	invariant forall g GuardV :: g elem EG.Guards() && g elem guardsIt ==>
+		guardCompatibleWithState(TS, EG, g, olds, traces[g])
+	invariant forall g GuardV :: g elem EG.Guards() && !(g elem guardsIt) ==>
+		guardCompatibleWithState(TS, EG, g, s, traces[g])
+	decreases len(guardsIt)
+	for 0 < len(guardsIt) {
+		v := chooseGuardV(guardsIt)
+		ghost if EG.Requires(e, v) {
+			assert v elem EG.Guards()
+			assert EG.Requires(e, v)
+			oldTracesV := traces[v]
+			{
+				assert guardCompatibleWithState(TS, EG, v, olds, oldTracesV)
+			}
+			newTracesV := oldTracesV ++ seq[traceEntry]{traceEntry{s, some(e)}}
+
+			unfold GuardR(TS, v)
+			unfold GuardR(TS, v)
+			gptr := lastSeen[v]
+			*gptr = s
+			fold GuardR(TS, v)
+						{
+				assert guardCompatibleWithState(TS, EG, v, s, newTracesV)
+			}
+			fold GuardR(TS, v)
+
+		}
+
+		guardsIt = guardsIt setminus set[GuardV]{v}
+	}
+
 	fold Own()
 }
