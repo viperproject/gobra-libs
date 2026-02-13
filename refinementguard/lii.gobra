@@ -19,7 +19,6 @@ package refinementguard
 // locally inductive inv
 // TODO: rename stuff
 type LII interface{
-	/*
 	ghost
 	ensures res != nil
 	decreases
@@ -29,7 +28,6 @@ type LII interface{
 	ensures res != nil
 	decreases
 	pure LII_EG() (res EventGuard)
-	*/
 
 	ghost
 	decreases
@@ -66,9 +64,9 @@ func ObserveLII(v GuardV, s1 State, s2 State, i LII)
 ghost
 requires Own()
 requires acc(&TS, _) && TS != nil
-requires GuardR(TS, v)
+requires GuardR(v)
 requires i != nil
-requires i.Prop(LastObservedState(TS, v))
+requires i.Prop(LastObservedState(v))
 ensures  i.Prop(CurrState())
 decreases
 pure func ObserveLIIG(v GuardV, i LII) Unit

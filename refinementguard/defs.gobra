@@ -116,16 +116,11 @@ pred Own() {
 	EG != nil    &&
 	acc(&traces) &&
 	(forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)) &&
-	(forall g GuardV :: g elem EG.Guards() ==> GuardR(TS, g))         &&
-	(forall g GuardV :: g elem EG.Guards() ==> guardCompatibleWithState(TS, EG, g, LastObservedState(TS, g), s, traces[g]))
+	(forall g GuardV :: g elem EG.Guards() ==> GuardR(g))             &&
+	(forall g GuardV :: g elem EG.Guards() ==> guardCompatibleWithState(TS, EG, g, LastObservedState(g), s, traces[g]))
 }
 
-// todo: drop t
-pred GuardR(t TransitionSystem, v GuardV) {
-	// acc(&TS, _)             &&
-	// TS != nil               &&
-	// acc(&EG, _ )            &&
-	// EG != nil               &&
+pred GuardR(v GuardV) {
 	acc(&lastSeen, _)       &&
 	v elem domain(lastSeen) &&
 	let md := lastSeen[v]   in
@@ -218,10 +213,10 @@ func inductiveStepGuardCompatibleWithState(
 }
 
 ghost
-requires GuardR(t, v)
+requires GuardR(v)
 decreases
-pure func LastObservedState(t TransitionSystem, v GuardV) (s State) {
-	return unfolding GuardR(t, v) in
+pure func LastObservedState(v GuardV) (s State) {
+	return unfolding GuardR(v) in
 		*lastSeen[v]
 }
 
