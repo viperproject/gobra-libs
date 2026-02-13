@@ -29,11 +29,6 @@ type State interface{}
 type Event interface{}
 type GuardV interface{}
 
-// type guardMetadata struct {
-// 	lastSt State
-// 	// maybe requires path to show that the current state is reachable without v?
-// }
-
 ghost type traceEntry ghost struct {
 	s State
 	e option[Event] // only the initial state is none
@@ -109,7 +104,6 @@ pred Init() {
 	acc(&traces)   &&
 	lastSeen === dict[GuardV](gpointer[State]){} &&
 	traces === dict[GuardV](seq[traceEntry]){}
-	
 }
 
 pred Own() {
@@ -149,15 +143,78 @@ pure func guardCompatibleWithState(t TransitionSystem, eg EventGuard, v GuardV, 
 		0 < len(trace)             &&
 		trace[0].s === oldS        &&
 		trace[0].e === none[Event] &&
-		// TODO: check if 2nd trigger leads to Viper issues
 		(forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
 			trace[i].e != none[Event]              &&
 			!eg.Requires(get(trace[i].e), v)       &&
-			t.Enabled(trace[i-1].s, trace[i].e)    &&
-			trace[i].s === t.Update(trace[i-1].s, trace[i].e)) &&
+			t.Enabled(trace[i-1].s, get(trace[i].e))    &&
+			trace[i].s === t.Update(trace[i-1].s, get(trace[i].e))) &&
 		trace[len(trace) - 1].s === s
-		// not needed
-		// trace[len(trace) - 1].e === none[Event]
+}
+
+ghost
+requires guardCompatibleWithState(t, eg, v, oldS, s, trace)
+requires !eg.Requires(e, v)
+requires t.Enabled(s, e)
+ensures  guardCompatibleWithState(t, eg, v, oldS, t.Update(s, e), n)
+decreases
+func inductiveStepGuardCompatibleWithState(
+	t TransitionSystem,
+	eg EventGuard,
+	v GuardV,
+	oldS State,
+	s State,
+	trace seq[traceEntry],
+	e Event) (n seq[traceEntry]) {
+	{
+		assert guardCompatibleWithState(t, eg, v, oldS, s, trace)
+		assert t != nil
+		assert eg != nil
+		assert t.Valid(s)
+		assert t.Valid(oldS)
+		assert 0 < len(trace)
+		assert trace[0].s === oldS
+		assert trace[0].e === none[Event]
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			trace[i].e != none[Event]                &&
+			!eg.Requires(get(trace[i].e), v)         &&
+			t.Enabled(trace[i-1].s, get(trace[i].e)) &&
+			trace[i].s === t.Update(trace[i-1].s, get(trace[i].e)))
+		assert trace[len(trace) - 1].s === s
+	}
+	t.UpdateValidIsValid(s, e)
+	var newTrace seq[traceEntry]
+	{
+		prevS := s
+		s := t.Update(s, e)
+		trace := trace ++ seq[traceEntry]{traceEntry{s, some(e)}}
+		assert t != nil
+		assert eg != nil
+		assert t.Valid(s)
+		assert t.Valid(oldS)
+		assert 0 < len(trace)
+		assert trace[0].s === oldS
+		assert trace[0].e === none[Event]
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			trace[i].e != none[Event])
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			!eg.Requires(get(trace[i].e), v))
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) - 1 ==>
+			t.Enabled(trace[i-1].s, get(trace[i].e)))
+		assert trace[len(trace) - 2].s === prevS
+		assert trace[len(trace) - 1].s === s
+		assert t.Enabled(trace[len(trace) - 2].s, get(trace[len(trace) - 1].e))
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			t.Enabled(trace[i-1].s, get(trace[i].e)))
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			trace[i].e != none[Event]                &&
+			!eg.Requires(get(trace[i].e), v)         &&
+			t.Enabled(trace[i-1].s, get(trace[i].e)) &&
+			trace[i].s === t.Update(trace[i-1].s, get(trace[i].e)))
+		assert trace[len(trace) - 1].s === s
+		newTrace = trace
+		assert guardCompatibleWithState(t, eg, v, oldS, s, trace)
+	}
+	return newTrace
 }
 
 ghost

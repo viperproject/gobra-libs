@@ -114,7 +114,7 @@ func UpdateTS(e Event) {
 	unfold Own()
 	assert forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)
 	assert forall g GuardV :: g elem EG.Guards() ==> GuardR(TS, g)
-	// assert forall g GuardV :: g elem EG.Guards() ==> guardCompatibleWithState(TS, EG, g, s, traces[g])
+
 	TS.UpdateValidIsValid(s, e)
 	olds := s
 	s = TS.Update(s, e)
@@ -154,16 +154,7 @@ func UpdateTS(e Event) {
 			fold GuardR(TS, v)
 		} else {
 			oldTrace := traces[v]
-			assert guardCompatibleWithState(TS, EG, v, LastObservedState(TS, v), olds, oldTrace)
-			assert TS.Valid(oldTrace[0].s)
-			newTrace := oldTrace ++ seq[traceEntry]{traceEntry{s, some(e)}}
-			assert newTrace[0] === oldTrace[0]
-			assert TS.Valid(newTrace[0].s)
-			assert newTrace[0].s === oldTrace[0].s
-			assert newTrace[0].e === none[Event]
-
-			assert newTrace[len(newTrace) - 1].s === s
-			assert guardCompatibleWithState(TS, EG, v, LastObservedState(TS, v), s, newTrace)
+			traces[v] = inductiveStepGuardCompatibleWithState(TS, EG, v, LastObservedState(TS, v), olds, oldTrace, e)
 		}
 		guardsIt = guardsIt setminus set[GuardV]{v}
 	}
