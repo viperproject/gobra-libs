@@ -16,7 +16,23 @@
 
 package refinementguard
 
-/*
+///// Example
+
+requires Own()
+requires acc(&TS, _) && TS == ts{}
+requires acc(&EG, _) && EG == InvDecEG{}
+requires GuardR(GuardV(Inc))
+requires i.ITS() === TS
+requires i.IEG() === EG
+requires i.Prop(LastObservedState(GuardV(Inc)))
+func exampleLII(i StLII) {
+	st1 := CurrState().(state)
+	InstantiateLII(i)
+	assert st1.count <= 10
+}
+
+///// Definitions to support the example
+
 type ts struct{}
 
 type state struct {
@@ -29,9 +45,6 @@ type inc struct {
 
 ts implements TransitionSystem
 
-
-// Definition of LTS: we may update the value of the counter,
-// as long as it is always within bounds ([0..3])
 ghost
 decreases
 pure func (t ts) Init(s State) bool {
@@ -76,47 +89,69 @@ requires t.Enabled(s, e)
 ensures  let ns := t.Update(s, e) in
 	ns != nil && t.Valid(ns)
 decreases
-func (t ts) UpdateValidIsValid(s State, e Event) {
-	// proven
+pure func (t ts) UpdateValidIsValid(s State, e Event) Unit {
+	return Unit{}
 }
 
-// end of definition of LTS
-
+type InvDecEG struct{}
 type IncDec bool
 
 const Inc IncDec = true
 const Dec IncDec = false
 
-
 ghost
-requires t != nil
 decreases
-pure func (i IncDec) Guards(t TransitionSystem) (ghost set[GuardV]) {
+pure func (i InvDecEG) Guards() (ghost set[GuardV]) {
 	return set[GuardV]{ GuardV(Inc), GuardV(Dec) }
 }
 
 ghost
-requires t != nil
-ensures  res ==> g elem i.Guards(t)
+ensures  res ==> g elem i.Guards()
 decreases
-pure func (i IncDec) Requires(t TransitionSystem, e Event, g GuardV) (res bool) {
+pure func (i InvDecEG) Requires(e Event, g GuardV) (res bool) {
 	return e != nil &&
 		typeOf(e) == type[inc] &&
 		let ee := e.(inc)      in
 		ee.delta >= 0 ? g === Inc : g === Dec
 }
 
-IncDec implements EventGuard
+InvDecEG implements EventGuard
 
-requires Own()
-requires TS() === ts{}
-requires GuardR(TS(), GuardV(Inc))
-requires i != nil
-requires forall st state :: i.Prop(GuardV(Inc)) == (st.count <= 10)
-requires i.Prop(LastObservedState(TS(), GuardV(Inc)))
-func exampleLII(i LII) {
-	st1 := CurrState().(state)
-	ObserveLIIG(GuardV(Inc), i)
-	assert st1.count <= 10
+type StLII struct{}
+
+ghost
+ensures res != nil
+decreases
+pure func (l StLII) ITS() (res TransitionSystem) {
+	return ts{}
 }
-*/
+
+ghost
+ensures res != nil
+decreases
+pure func (l StLII) IEG() (res EventGuard) {
+	return InvDecEG{}
+}
+
+ghost
+decreases
+pure func (l StLII) Prop(s State) bool {
+	return l.ITS().Valid(s) && s.(state).count <= 10
+}
+
+ghost
+decreases
+pure func (l StLII) Guard() (res GuardV) {
+	return Inc
+}
+
+ghost
+requires l.ITS().Enabled(s, e)
+requires l.Prop(s)
+ensures  !l.IEG().Requires(e, l.Guard()) ==> l.Prop(l.ITS().Update(s, e))
+decreases
+pure func (l StLII) PreservedByTransitionsExcept(s State, e Event) Unit {
+	return l.ITS().UpdateValidIsValid(s, e)
+}
+
+StLII implements LII

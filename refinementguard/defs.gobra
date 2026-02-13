@@ -43,8 +43,6 @@ ghost var traces@ dict[GuardV](seq[traceEntry])
 ghost var TS@ TransitionSystem
 ghost var EG@ EventGuard
 
-type Unit struct{}
-
 // Labeled Transition Systems
 type TransitionSystem interface {
 	// returns true iff s is a valid initial
@@ -75,7 +73,7 @@ type TransitionSystem interface {
 	ensures  let ns := Update(s, e) in
 		ns != nil && Valid(ns)
 	decreases
-	UpdateValidIsValid(s State, e Event)
+	pure UpdateValidIsValid(s State, e Event) Unit
 }
 
 type EventGuard interface {
@@ -117,10 +115,14 @@ pred Own() {
 	acc(&traces) &&
 	(forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)) &&
 	(forall g GuardV :: g elem EG.Guards() ==> GuardR(g))             &&
-	(forall g GuardV :: g elem EG.Guards() ==> guardCompatibleWithState(TS, EG, g, LastObservedState(g), s, traces[g]))
+	(forall g GuardV :: { g elem EG.Guards() } g elem EG.Guards() ==>
+		guardCompatibleWithState(TS, EG, g, LastObservedState(g), s, traces[g]))
 }
 
 pred GuardR(v GuardV) {
+	acc(&EG, _ )            &&
+	EG != nil               &&
+	v elem EG.Guards()      &&
 	acc(&lastSeen, _)       &&
 	v elem domain(lastSeen) &&
 	let md := lastSeen[v]   in
@@ -128,8 +130,7 @@ pred GuardR(v GuardV) {
 }
 
 ghost
-// TODO: remove this assumption of termination, fix issue
-decreases _
+decreases
 pure func guardCompatibleWithState(t TransitionSystem, eg EventGuard, v GuardV, oldS State, s State, trace seq[traceEntry]) bool {
 	return t != nil &&
 		eg != nil   &&
@@ -220,7 +221,8 @@ pure func LastObservedState(v GuardV) (s State) {
 		*lastSeen[v]
 }
 
-// there is no choice nor way of traversing sets at the moment.
+// There is no choice nor way of traversing sets at the moment.
+// This implements a limited form of hilbert's choice operator
 ghost
 requires 0 < len(s)
 ensures  g elem s

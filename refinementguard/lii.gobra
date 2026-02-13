@@ -17,57 +17,81 @@
 package refinementguard
 
 // locally inductive inv
-// TODO: rename stuff
+// Gobra disallows calling the methods bellow TS and EG due to name conflicts
 type LII interface{
 	ghost
 	ensures res != nil
 	decreases
-	pure LII_TS() (res TransitionSystem)
+	pure ITS() (res TransitionSystem)
 
 	ghost
 	ensures res != nil
 	decreases
-	pure LII_EG() (res EventGuard)
+	pure IEG() (res EventGuard)
 
 	ghost
 	decreases
 	pure Prop(s State) bool
 
-	/*
 	ghost
-	requires v elem LII_EG().Guards(LII_TS())
-	ensures forall s1 State :: (forall e Event, vv GuardV :: Prop(s1) && v !== vv && !LII_EG().Requires(LII_TS(), e, vv) && LII_TS().Enabled(s1, e) ==>
-		Prop(LII_TS().Update(s1, e)))
 	decreases
-	PreservedByTransitionsExcept(v GuardV)
-	*/
+	pure Guard() (res GuardV)
+
+	ghost
+	requires ITS().Enabled(s, e)
+	requires Prop(s)
+	ensures  !IEG().Requires(e, Guard()) ==> Prop(ITS().Update(s, e))
+	decreases
+	pure PreservedByTransitionsExcept(s State, e Event) Unit
 }
-
-/*
-// todo: separate permission to TS from the perm to the state, helps with a better api where i don't need to pass Own anywhere and I don't need selectedTS
-
-ghost
-requires t != nil
-decreases
-pure func ReachableWithoutGuard(t TransitionSystem, g EventGuard, v GuardV, s1 State, s2 State) bool
-
-ghost
-requires i != nil
-requires ReachableWithoutGuard(i.LII_TS(), i.LII_EG(), v, s1, s2)
-requires i.Prop(s1)
-ensures  i.Prop(s2)
-decreases
-func ObserveLII(v GuardV, s1 State, s2 State, i LII)
-*/
 
 // Focus on this one, ignore the previous ones
 ghost
-requires Own()
 requires acc(&TS, _) && TS != nil
-requires GuardR(v)
+requires acc(&EG, _) && EG != nil
 requires i != nil
-requires i.Prop(LastObservedState(v))
+requires i.ITS() === TS && i.IEG() === EG
+requires Own()
+requires GuardR(i.Guard())
+requires i != nil
+requires i.Prop(LastObservedState(i.Guard()))
 ensures  i.Prop(CurrState())
 decreases
-pure func ObserveLIIG(v GuardV, i LII) Unit
+pure func InstantiateLII(i LII) Unit {
+	return let cs := CurrState()       in
+		unfolding Own()                in
+		unfolding GuardR(i.Guard())    in
+		let trace := traces[i.Guard()] in
+		let _ := Asserting(i.Guard() elem EG.Guards()) in
+		let _ := Asserting(guardCompatibleWithState(TS, EG, i.Guard(), LastObservedState(i.Guard()), s, trace)) in
+		let _ := Asserting(0 < len(trace)) in
+		let _ := Asserting(trace[len(trace) - 1].s === cs) in
+		instantiateLIIAux(i, traces[i.Guard()], 0)
+}
 
+ghost
+requires acc(&TS, _) && TS != nil
+requires acc(&EG, _) && EG != nil
+requires i != nil
+requires i.ITS() === TS && i.IEG() === EG
+requires 0 < len(trace)
+requires 0 <= currIdx && currIdx <= len(trace)
+requires 0 <= currIdx && currIdx < len(trace) ==> i.Prop(trace[currIdx].s)
+requires 0 <= currIdx && currIdx < len(trace) ==> i.Prop(trace[currIdx].s)
+requires (forall idx int :: {trace[idx]} 0 < idx && idx < len(trace) ==>
+	trace[idx].e != none[Event]                      &&
+	!EG.Requires(get(trace[idx].e), i.Guard())       &&
+	TS.Enabled(trace[idx-1].s, get(trace[idx].e))    &&
+	trace[idx].s === TS.Update(trace[idx-1].s, get(trace[idx].e)))
+ensures  forall idx int :: currIdx <= idx && idx < len(trace) ==> i.Prop(trace[idx].s)
+decreases len(trace) - currIdx
+pure func instantiateLIIAux(i LII, trace seq[traceEntry], currIdx int) Unit {
+	return currIdx == len(trace) ?
+		Unit{} :
+		(currIdx == len(trace) - 1 ?
+			Unit{} :
+			let _ := i.PreservedByTransitionsExcept(trace[currIdx].s, get(trace[currIdx+1].e)) in
+			let _ := Asserting(TS.Update(trace[currIdx].s, get(trace[currIdx+1].e)) === trace[currIdx+1].s) in
+			let _ := Asserting(i.Prop(trace[currIdx+1].s)) in
+			instantiateLIIAux(i, trace, currIdx+1))
+}

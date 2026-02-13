@@ -73,6 +73,7 @@ func InitTS(t TransitionSystem, g EventGuard, i State) {
 
 	invariant acc(&traces)
 	invariant acc(&lastSeen, _)
+	invariant acc(&EG, _) && EG === g
 	invariant forall v GuardV :: v elem guardsIt ==> v elem g.Guards()
 	invariant forall v GuardV :: v elem g.Guards() ==> v elem domain(traces)
 	invariant forall v GuardV :: v elem g.Guards() ==> v elem domain(lastSeen)
