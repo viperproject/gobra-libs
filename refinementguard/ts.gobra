@@ -1,0 +1,165 @@
+// Copyright 2026 ETH Zurich, João Pereira
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package refinementguard
+
+ghost
+requires Own()
+requires acc(&TS) && TS != nil
+ensures  st != nil && TS.Valid(st)
+decreases
+pure func CurrState() (st State) {
+	return unfolding Own() in s
+}
+
+ghost
+requires Own()
+requires acc(&TS) && TS != nil
+decreases
+pure func EnabledTS(e Event) bool {
+	return TS.Enabled(CurrState(), e)
+}
+
+ghost
+requires Init()
+requires t != nil && i != nil && g != nil
+requires t.Init(i)
+ensures  Own()
+ensures  acc(&TS, _) && TS === t
+ensures  acc(&EG, _) && EG === g
+ensures  CurrState() === i
+ensures  forall gg GuardV :: gg elem g.Guards() ==> GuardR(gg)
+decreases
+func InitTS(t TransitionSystem, g EventGuard, i State) {
+	unfold Init()
+	TS = t
+	s = i
+	EG = g
+
+	guardsIt := g.Guards()
+
+	invariant acc(&traces)
+	invariant acc(&lastSeen)
+	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
+		v elem domain(traces) && traces[v] == seq[traceEntry]{traceEntry{i, none[Event]}}
+	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
+		v elem domain(lastSeen)
+	invariant forall v1, v2 GuardV :: v1 elem g.Guards() && !(v1 elem guardsIt) &&
+		v2 elem g.Guards() && !(v2 elem guardsIt) && v1 !== v2 ==>
+		lastSeen[v1] != lastSeen[v2]
+	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
+		acc(lastSeen[v]) && *lastSeen[v] === i
+	decreases len(guardsIt)
+	for 0 < len(guardsIt) {
+		v := chooseGuardV(guardsIt)
+		newL@ := i
+		lastSeen[v] = &newL
+		traces[v] = seq[traceEntry]{traceEntry{i, none[Event]}}
+		guardsIt = guardsIt setminus set[GuardV]{v}
+	}
+
+	guardsIt = g.Guards()
+
+	invariant acc(&traces)
+	invariant acc(&lastSeen, _)
+	invariant acc(&EG, _) && EG === g
+	invariant forall v GuardV :: v elem guardsIt ==> v elem g.Guards()
+	invariant forall v GuardV :: v elem g.Guards() ==> v elem domain(traces)
+	invariant forall v GuardV :: v elem g.Guards() ==> v elem domain(lastSeen)
+	invariant forall v GuardV :: v elem g.Guards() && (v elem guardsIt) ==>
+		v elem domain(traces) && traces[v] == seq[traceEntry]{traceEntry{i, none[Event]}}
+	invariant forall v GuardV :: v elem g.Guards() ==>
+		v elem domain(lastSeen)
+	invariant forall v1, v2 GuardV :: v1 elem g.Guards() &&
+		v2 elem g.Guards() && v1 !== v2 ==>
+			lastSeen[v1] != lastSeen[v2]
+	invariant forall v GuardV :: v elem g.Guards() && (v elem guardsIt) ==>
+		acc(lastSeen[v]) && *lastSeen[v] === i
+	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
+		GuardR(v) && GuardR(v) && LastObservedState(v) === i
+	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
+		guardCompatibleWithState(t, g, v, i, i, traces[v])
+	decreases len(guardsIt)
+	for 0 < len(guardsIt) {
+		v := chooseGuardV(guardsIt)
+		fold GuardR(v)
+		assert LastObservedState(v) === i
+		fold GuardR(v)
+		guardsIt = guardsIt setminus set[GuardV]{v}
+	}
+	fold Own()
+}
+
+ghost
+requires Own()
+requires acc(&TS, _) && TS != nil
+requires acc(&EG, _) && EG != nil
+requires EnabledTS(e)
+requires forall g GuardV :: EG.Requires(e, g) ==> GuardR(g)
+ensures  Own()
+ensures  acc(&TS, _)  && TS != nil
+ensures  CurrState() === old(TS.Update(CurrState(), e))
+decreases
+func UpdateTS(e Event) {
+	unfold Own()
+	assert forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)
+	assert forall g GuardV :: g elem EG.Guards() ==> GuardR(g)
+
+	TS.UpdateValidIsValid(s, e)
+	olds := s
+	s = TS.Update(s, e)
+
+	// update guard state
+	guardsIt := EG.Guards()
+
+	invariant acc(&traces)
+	invariant acc(&TS, _) && TS != nil
+	invariant acc(&EG, _) && EG != nil
+	invariant acc(&s, 1/2)
+	invariant TS.Enabled(olds, e)
+	invariant s === TS.Update(olds, e)
+	invariant TS.Valid(s)
+	invariant forall g GuardV :: g elem guardsIt ==> g elem EG.Guards()
+	invariant forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)
+	invariant forall g GuardV :: g elem EG.Guards() ==> GuardR(g)
+	invariant forall g GuardV :: EG.Requires(e, g) ==> GuardR(g)
+	invariant forall g GuardV :: g elem EG.Guards() && g elem guardsIt ==>
+		guardCompatibleWithState(TS, EG, g, LastObservedState(g), olds, traces[g])
+	invariant forall g GuardV :: g elem EG.Guards() && !(g elem guardsIt) ==>
+		guardCompatibleWithState(TS, EG, g, LastObservedState(g), s, traces[g])
+	decreases len(guardsIt)
+	for 0 < len(guardsIt) {
+		v := chooseGuardV(guardsIt)
+		ghost if EG.Requires(e, v) {
+			assert v elem EG.Guards()
+			assert EG.Requires(e, v)
+			unfold GuardR(v)
+			unfold GuardR(v)
+			gptr := lastSeen[v]
+			*gptr = s
+			fold GuardR(v)
+			assert LastObservedState(v) === s
+			newTrace := seq[traceEntry]{traceEntry{s, none[Event]}}
+			traces[v] = newTrace
+			fold GuardR(v)
+		} else {
+			oldTrace := traces[v]
+			traces[v] = inductiveStepGuardCompatibleWithState(TS, EG, v, LastObservedState(v), olds, oldTrace, e)
+		}
+		guardsIt = guardsIt setminus set[GuardV]{v}
+	}
+	fold Own()
+}

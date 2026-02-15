@@ -1,0 +1,157 @@
+// Copyright 2026 ETH Zurich, João Pereira
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+package refinementguard
+
+///// Example
+
+requires Own()
+requires acc(&TS, _) && TS == ts{}
+requires acc(&EG, _) && EG == InvDecEG{}
+requires GuardR(GuardV(Inc))
+requires i.ITS() === TS
+requires i.IEG() === EG
+requires i.Prop(LastObservedState(GuardV(Inc)))
+func exampleLII(i StLII) {
+	st1 := CurrState().(state)
+	InstantiateLII(i)
+	assert st1.count <= 10
+}
+
+///// Definitions to support the example
+
+type ts struct{}
+
+type state struct {
+	count int
+}
+
+type inc struct {
+	delta int
+}
+
+ts implements TransitionSystem
+
+ghost
+decreases
+pure func (t ts) Init(s State) bool {
+	return s != nil              &&
+		typeOf(s) == type[state] &&
+		let st := s.(state)      in
+		st.count == 0
+}
+
+ghost
+decreases
+pure func (t ts) Valid(s State) bool {
+	return s != nil              &&
+		typeOf(s) == type[state] &&
+		let st := s.(state)      in
+		0 <= st.count
+}
+
+ghost
+decreases
+pure func (t ts) Enabled(s State, e Event) bool {
+	return t.Valid(s) && typeOf(e) == type[inc] ?
+			(let ee := e.(inc)            in
+			let st := s.(state)           in
+			let nv := st.count + ee.delta in
+			0 <= nv) :
+		false
+}
+
+ghost
+requires t.Enabled(s, e)
+decreases
+pure func (t ts) Update(s State, e Event) State {
+	return let ee := e.(inc) in
+		let st := s.(state)  in
+		state{ st.count + ee.delta }
+}
+
+ghost
+requires t.Valid(s)
+requires t.Enabled(s, e)
+ensures  let ns := t.Update(s, e) in
+	ns != nil && t.Valid(ns)
+decreases
+pure func (t ts) UpdateValidIsValid(s State, e Event) Unit {
+	return Unit{}
+}
+
+type InvDecEG struct{}
+type IncDec bool
+
+const Inc IncDec = true
+const Dec IncDec = false
+
+ghost
+decreases
+pure func (i InvDecEG) Guards() (ghost set[GuardV]) {
+	return set[GuardV]{ GuardV(Inc), GuardV(Dec) }
+}
+
+ghost
+ensures  res ==> g elem i.Guards()
+decreases
+pure func (i InvDecEG) Requires(e Event, g GuardV) (res bool) {
+	return e != nil &&
+		typeOf(e) == type[inc] &&
+		let ee := e.(inc)      in
+		ee.delta >= 0 ? g === Inc : g === Dec
+}
+
+InvDecEG implements EventGuard
+
+type StLII struct{}
+
+ghost
+ensures res != nil
+decreases
+pure func (l StLII) ITS() (res TransitionSystem) {
+	return ts{}
+}
+
+ghost
+ensures res != nil
+decreases
+pure func (l StLII) IEG() (res EventGuard) {
+	return InvDecEG{}
+}
+
+ghost
+decreases
+pure func (l StLII) Prop(s State) bool {
+	return l.ITS().Valid(s) && s.(state).count <= 10
+}
+
+ghost
+decreases
+pure func (l StLII) Guard() (res GuardV) {
+	return Inc
+}
+
+ghost
+requires l.ITS().Enabled(s, e)
+requires l.Prop(s)
+ensures  !l.IEG().Requires(e, l.Guard()) ==> l.Prop(l.ITS().Update(s, e))
+decreases
+pure func (l StLII) PreservedByTransitionsExcept(s State, e Event) Unit {
+	return l.ITS().UpdateValidIsValid(s, e)
+}
+
+StLII implements LII
