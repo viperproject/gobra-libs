@@ -45,7 +45,6 @@ type LII interface{
 	pure PreservedByTransitionsExcept(s State, e Event) Unit
 }
 
-// Focus on this one, ignore the previous ones
 ghost
 requires acc(&TS, _) && TS != nil
 requires acc(&EG, _) && EG != nil

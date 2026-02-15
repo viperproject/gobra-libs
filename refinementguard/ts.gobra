@@ -56,10 +56,12 @@ func InitTS(t TransitionSystem, g EventGuard, i State) {
 	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
 		v elem domain(traces) && traces[v] == seq[traceEntry]{traceEntry{i, none[Event]}}
 	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
-		v elem domain(lastSeen) && acc(lastSeen[v]) && *lastSeen[v] === i
+		v elem domain(lastSeen)
 	invariant forall v1, v2 GuardV :: v1 elem g.Guards() && !(v1 elem guardsIt) &&
 		v2 elem g.Guards() && !(v2 elem guardsIt) && v1 !== v2 ==>
 		lastSeen[v1] != lastSeen[v2]
+	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
+		acc(lastSeen[v]) && *lastSeen[v] === i
 	decreases len(guardsIt)
 	for 0 < len(guardsIt) {
 		v := chooseGuardV(guardsIt)
@@ -79,17 +81,17 @@ func InitTS(t TransitionSystem, g EventGuard, i State) {
 	invariant forall v GuardV :: v elem g.Guards() ==> v elem domain(lastSeen)
 	invariant forall v GuardV :: v elem g.Guards() && (v elem guardsIt) ==>
 		v elem domain(traces) && traces[v] == seq[traceEntry]{traceEntry{i, none[Event]}}
+	invariant forall v GuardV :: v elem g.Guards() ==>
+		v elem domain(lastSeen)
+	invariant forall v1, v2 GuardV :: v1 elem g.Guards() &&
+		v2 elem g.Guards() && v1 !== v2 ==>
+			lastSeen[v1] != lastSeen[v2]
 	invariant forall v GuardV :: v elem g.Guards() && (v elem guardsIt) ==>
-		v elem domain(lastSeen) && acc(lastSeen[v]) && *lastSeen[v] === i
+		acc(lastSeen[v]) && *lastSeen[v] === i
 	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
 		GuardR(v) && GuardR(v) && LastObservedState(v) === i
 	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
 		guardCompatibleWithState(t, g, v, i, i, traces[v])
-	invariant forall v GuardV :: v elem g.Guards() && !(v elem guardsIt) ==>
-		v elem domain(lastSeen)
-	invariant forall v1, v2 GuardV :: v1 elem g.Guards() &&
-		v2 elem g.Guards() && v1 !== v2 ==>
-		lastSeen[v1] != lastSeen[v2]
 	decreases len(guardsIt)
 	for 0 < len(guardsIt) {
 		v := chooseGuardV(guardsIt)
