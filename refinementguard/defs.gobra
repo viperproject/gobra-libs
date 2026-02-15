@@ -221,6 +221,30 @@ pure func LastObservedState(v GuardV) (s State) {
 		*lastSeen[v]
 }
 
+ghost
+requires acc(&EG) && EG != nil
+requires Own()
+requires v elem EG.Guards()
+decreases
+pure func LastObservedStateOwn(v GuardV) (s State) {
+	return unfolding Own()  in
+		unfolding GuardR(v) in
+		*lastSeen[v]
+}
+
+ghost
+requires acc(&EG) && EG != nil
+requires v elem EG.Guards()
+requires Own()
+requires GuardR(v)
+ensures  LastObservedState(v) === LastObservedStateOwn(v)
+decreases
+pure func LastObservedStatesMatch(v GuardV) Unit {
+	return unfolding Own()  in
+		unfolding GuardR(v) in
+		Unit{}
+}
+
 // There is no choice nor way of traversing sets at the moment.
 // This implements a limited form of hilbert's choice operator
 ghost
