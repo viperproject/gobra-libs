@@ -41,7 +41,7 @@ ensures  Own()
 ensures  acc(&TS, _) && TS === t
 ensures  acc(&EG, _) && EG === g
 ensures  CurrState() === i
-ensures  forall gg GuardV :: gg elem g.Guards() ==> GuardR(gg)
+ensures  forall gg GuardV :: { GuardR(gg) } gg elem g.Guards() ==> GuardR(gg)
 decreases
 func InitTS(t TransitionSystem, g EventGuard, i State) {
 	unfold Init()
@@ -110,8 +110,11 @@ requires acc(&EG, _) && EG != nil
 requires EnabledTS(e)
 requires forall g GuardV :: EG.Requires(e, g) ==> GuardR(g)
 ensures  Own()
-ensures  acc(&TS, _)  && TS != nil
+ensures  acc(&TS, _) && TS != nil
+ensures  acc(&EG, _) && EG != nil
 ensures  CurrState() === old(TS.Update(CurrState(), e))
+ensures  forall g GuardV :: { GuardR(g) } EG.Requires(e, g) ==>
+	GuardR(g) && LastObservedState(g) === CurrState()
 decreases
 func UpdateTS(e Event) {
 	unfold Own()
@@ -136,6 +139,8 @@ func UpdateTS(e Event) {
 	invariant forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)
 	invariant forall g GuardV :: g elem EG.Guards() ==> GuardR(g)
 	invariant forall g GuardV :: EG.Requires(e, g) ==> GuardR(g)
+	invariant forall g GuardV :: EG.Requires(e, g) && !(g elem guardsIt) ==>
+		LastObservedState(g) === s
 	invariant forall g GuardV :: g elem EG.Guards() && g elem guardsIt ==>
 		guardCompatibleWithState(TS, EG, g, LastObservedState(g), olds, traces[g])
 	invariant forall g GuardV :: g elem EG.Guards() && !(g elem guardsIt) ==>

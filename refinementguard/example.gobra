@@ -31,6 +31,34 @@ func exampleLII(i StLII) {
 	assert st1.count <= 10
 }
 
+requires Init()
+func fullExample() {
+	InitTS(ts{}, InvDecEG{}, state{0})
+	assert GuardR(Inc) && GuardR(Dec)
+	UpdateTS(inc{3})
+	assert GuardR(Inc)
+	assert GuardR(Dec)
+	UpdateTS(inc{4})
+	assert GuardR(Inc)
+	assert GuardR(Dec)
+	UpdateTS(inc{-2})
+	assert GuardR(Inc)
+	assert GuardR(Dec)
+	assert LastObservedState(Inc) === state{7}
+	assert LastObservedState(Dec) === state{5}
+
+	// fails, as expected:
+	// exhale GuardR(Dec)
+	// UpdateTS(inc{-2})
+
+	exhale Own() && GuardR(Dec)
+	inhale Own()
+
+	lii := StLII{}
+	InstantiateLII(lii)
+	assert CurrState().(state).count <= 10
+}
+
 ///// Definitions to support the example
 
 type ts struct{}
