@@ -1,0 +1,254 @@
+// Copyright 2026 ETH Zurich, João Pereira
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +gobra
+
+// Lib for proving refinement of implementations against a transition system.
+// It allows selecting any transition system (defined below) as the specification
+// for the current program. The main function may obtain a resource `Init()`
+// that can be used to pick a transition system that the current program must refine.
+//
+// PS: the soundness of this approach depends on Go's visibility rules (in particular,
+// no package can access this package's private global variables).
+
+pkgInvariant Init()
+package refinementguard
+
+type State interface{}
+type Event interface{}
+type GuardV interface{}
+
+ghost type traceEntry ghost struct {
+	s State
+	e option[Event] // only the initial state is none
+}
+
+// private state, must not be accessed outside this packet!
+// this might be possible in Gobra atm, but this should be fixed soon
+ghost var s@ State
+ghost var lastSeen@ dict[GuardV](gpointer[State])
+ghost var traces@ dict[GuardV](seq[traceEntry])
+
+ghost var TS@ TransitionSystem
+ghost var EG@ EventGuard
+
+// Labeled Transition Systems
+type TransitionSystem interface {
+	// returns true iff s is a valid initial
+	// state of the system
+	ghost
+	ensures r ==> Valid(s)
+	decreases
+	pure Init(s State) (r bool)
+
+	ghost
+	decreases
+	pure Valid(s State) bool
+
+	// returns whether event e may be performed
+	// in the current state of the system
+	ghost
+	decreases
+	pure Enabled(s State, e Event) bool
+
+	ghost
+	requires Enabled(s, e)
+	decreases
+	pure Update(s State, e Event) State
+
+	ghost
+	requires Valid(s)
+	requires Enabled(s, e)
+	ensures  let ns := Update(s, e) in
+		ns != nil && Valid(ns)
+	decreases
+	pure UpdateValidIsValid(s State, e Event) Unit
+}
+
+type EventGuard interface {
+	ghost
+	decreases
+	pure Guards() (ghost set[GuardV])
+
+	ghost
+	ensures  res ==> g elem Guards()
+	decreases
+	pure Requires(e Event, g GuardV) (res bool)
+}
+
+func init() {
+	fold Init()
+}
+
+pred Init() {
+	acc(&TS)  &&
+	TS == nil &&
+	acc(&s)   &&
+	s == nil  &&
+	acc(&EG)  &&
+	EG == nil &&
+	acc(&lastSeen) &&
+	acc(&traces)   &&
+	lastSeen === dict[GuardV](gpointer[State]){} &&
+	traces === dict[GuardV](seq[traceEntry]){}
+}
+
+pred Own() {
+	acc(&TS, _)  &&
+	acc(&s)      &&
+	TS != nil    &&
+	s != nil     &&
+	TS.Valid(s)  &&
+	acc(&EG, _ ) &&
+	EG != nil    &&
+	acc(&traces) &&
+	(forall g GuardV :: g elem EG.Guards() ==> g elem domain(traces)) &&
+	(forall g GuardV :: g elem EG.Guards() ==> GuardR(g))             &&
+	(forall g GuardV :: { g elem EG.Guards() } g elem EG.Guards() ==>
+		guardCompatibleWithState(TS, EG, g, LastObservedState(g), s, traces[g]))
+}
+
+pred GuardR(v GuardV) {
+	acc(&EG, _ )            &&
+	EG != nil               &&
+	v elem EG.Guards()      &&
+	acc(&lastSeen, _)       &&
+	v elem domain(lastSeen) &&
+	let md := lastSeen[v]   in
+	acc(md, 1/2)
+}
+
+ghost
+decreases
+pure func guardCompatibleWithState(t TransitionSystem, eg EventGuard, v GuardV, oldS State, s State, trace seq[traceEntry]) bool {
+	return t != nil &&
+		eg != nil   &&
+		t.Valid(s)  &&
+		t.Valid(oldS)              &&
+		0 < len(trace)             &&
+		trace[0].s === oldS        &&
+		trace[0].e === none[Event] &&
+		(forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			trace[i].e != none[Event]              &&
+			!eg.Requires(get(trace[i].e), v)       &&
+			t.Enabled(trace[i-1].s, get(trace[i].e))    &&
+			trace[i].s === t.Update(trace[i-1].s, get(trace[i].e))) &&
+		trace[len(trace) - 1].s === s
+}
+
+ghost
+requires guardCompatibleWithState(t, eg, v, oldS, s, trace)
+requires !eg.Requires(e, v)
+requires t.Enabled(s, e)
+ensures  guardCompatibleWithState(t, eg, v, oldS, t.Update(s, e), n)
+decreases
+func inductiveStepGuardCompatibleWithState(
+	t TransitionSystem,
+	eg EventGuard,
+	v GuardV,
+	oldS State,
+	s State,
+	trace seq[traceEntry],
+	e Event) (n seq[traceEntry]) {
+	{
+		assert guardCompatibleWithState(t, eg, v, oldS, s, trace)
+		assert t != nil
+		assert eg != nil
+		assert t.Valid(s)
+		assert t.Valid(oldS)
+		assert 0 < len(trace)
+		assert trace[0].s === oldS
+		assert trace[0].e === none[Event]
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			trace[i].e != none[Event]                &&
+			!eg.Requires(get(trace[i].e), v)         &&
+			t.Enabled(trace[i-1].s, get(trace[i].e)) &&
+			trace[i].s === t.Update(trace[i-1].s, get(trace[i].e)))
+		assert trace[len(trace) - 1].s === s
+	}
+	t.UpdateValidIsValid(s, e)
+	var newTrace seq[traceEntry]
+	{
+		prevS := s
+		s := t.Update(s, e)
+		trace := trace ++ seq[traceEntry]{traceEntry{s, some(e)}}
+		assert t != nil
+		assert eg != nil
+		assert t.Valid(s)
+		assert t.Valid(oldS)
+		assert 0 < len(trace)
+		assert trace[0].s === oldS
+		assert trace[0].e === none[Event]
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			trace[i].e != none[Event])
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			!eg.Requires(get(trace[i].e), v))
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) - 1 ==>
+			t.Enabled(trace[i-1].s, get(trace[i].e)))
+		assert trace[len(trace) - 2].s === prevS
+		assert trace[len(trace) - 1].s === s
+		assert t.Enabled(trace[len(trace) - 2].s, get(trace[len(trace) - 1].e))
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			t.Enabled(trace[i-1].s, get(trace[i].e)))
+		assert (forall i int :: {trace[i]} 0 < i && i < len(trace) ==>
+			trace[i].e != none[Event]                &&
+			!eg.Requires(get(trace[i].e), v)         &&
+			t.Enabled(trace[i-1].s, get(trace[i].e)) &&
+			trace[i].s === t.Update(trace[i-1].s, get(trace[i].e)))
+		assert trace[len(trace) - 1].s === s
+		newTrace = trace
+		assert guardCompatibleWithState(t, eg, v, oldS, s, trace)
+	}
+	return newTrace
+}
+
+ghost
+requires GuardR(v)
+decreases
+pure func LastObservedState(v GuardV) (s State) {
+	return unfolding GuardR(v) in
+		*lastSeen[v]
+}
+
+ghost
+requires acc(&EG) && EG != nil
+requires Own()
+requires v elem EG.Guards()
+decreases
+pure func LastObservedStateOwn(v GuardV) (s State) {
+	return unfolding Own()  in
+		unfolding GuardR(v) in
+		*lastSeen[v]
+}
+
+ghost
+requires acc(&EG) && EG != nil
+requires v elem EG.Guards()
+requires Own()
+requires GuardR(v)
+ensures  LastObservedState(v) === LastObservedStateOwn(v)
+decreases
+pure func LastObservedStatesMatch(v GuardV) Unit {
+	return unfolding Own()  in
+		unfolding GuardR(v) in
+		Unit{}
+}
+
+// There is no choice nor way of traversing sets at the moment.
+// This implements a limited form of hilbert's choice operator
+ghost
+requires 0 < len(s)
+ensures  g elem s
+decreases _
+pure func chooseGuardV(s set[GuardV]) (g GuardV)
