@@ -162,7 +162,8 @@ pure func getIndexInListOf(m cooliosetio, i idx) (res int) {
 ghost
 requires ra != nil
 requires 0 < len(elems)
-requires forall e Elem :: { ra.IsElem(e) } e elem elems ==> ra.IsElem(e)
+requires forall e Elem :: { ra.IsElem(e) } e elem elems ==>
+	ra.IsElem(e)
 ensures  ra.IsElem(res)
 decreases len(elems)
 pure func composeAll(ra RA, elems seq[Elem]) (res Elem) {
