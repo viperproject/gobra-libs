@@ -61,6 +61,13 @@ pure func toCoolSet(m cooliosetio) set[valSet] {
 	return unfolding m.Inv() in (m.inUse ? (toCoolSet(m.next) union set[valSet]{m.v}) : set[valSet]{})
 }
 
+ghost
+requires m.Inv()
+decreases m.Inv()
+pure func toCoolSeq(m cooliosetio) seq[valSet] {
+	return unfolding m.Inv() in (m.inUse ? (seq[valSet]{m.v} ++ toCoolSeq(m.next)) : seq[valSet]{})
+}
+
 pred (m cooliosetio) witness(v valSet) {
 	acc(&m.inUse, _) && acc(&m.next, _) && acc(&m.v, _) &&
 	(!m.inUse ==> false) &&

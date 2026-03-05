@@ -129,6 +129,65 @@ pure func LiftedIsValid(ra RA, e option[Elem]) bool {
 		true
 }
 
+ghost
+requires cs.Inv()
+requires forall i idx :: i elem toCoolSet(cs) ==> acc(i, 1/2)
+decreases cs.Inv()
+opaque
+pure func LiveVals(cs cooliosetio) seq[Elem] {
+	return unfolding cs.Inv() in
+		(cs.inUse ?
+			(cs.v.inUse ?
+				seq[Elem]{cs.v.val} ++ LiveVals(cs.next) :
+				LiveVals(cs.next)) :
+			seq[Elem]{})
+}
+
+ghost
+requires ra != nil
+requires cs.Inv()
+requires forall i idx :: i elem toCoolSet(cs) ==> acc(i, 1/2)
+requires forall i idx :: i elem toCoolSet(cs) ==> i.inUse ==> ra.IsElem(i.val)
+ensures  res !== none[Elem] ==> ra.IsElem(get(res))
+decreases cs.Inv()
+opaque
+pure func FoldLiveVals(ra RA, cs cooliosetio) (res option[Elem]) {
+	return unfolding cs.Inv() in
+		(cs.inUse ?
+			(cs.v.inUse ?
+				LiftedCompose(ra, some(cs.v.val), FoldLiveVals(ra, cs.next)) :
+				FoldLiveVals(ra, cs.next)) :
+			none[Elem])
+}
+
+ghost
+trusted
+requires ra != nil
+requires cs.Inv()
+requires forall j idx :: j elem toCoolSet(cs) ==> acc(j, 1/2)
+requires forall j idx :: j elem toCoolSet(cs) ==> j.inUse ==> ra.IsElem(j.val)
+requires unfolding cs.Inv() in cs.inUse && cs.v === i
+requires unfolding cs.Inv() in toCoolSet(cs.next) === set[idx]{}
+requires i.inUse
+requires ra.IsElem(i.val) && ra.IsValid(i.val)
+ensures  cs.Inv()
+ensures  forall j idx :: j elem toCoolSet(cs) ==> acc(j, 1/2)
+ensures  forall j idx :: j elem toCoolSet(cs) ==> j.inUse ==> ra.IsElem(j.val)
+ensures  LiftedIsValid(ra, FoldLiveVals(ra, cs))
+decreases cs.Inv()
+func FoldLiveValsValidSingleton(ra RA, cs cooliosetio, i idx) {
+	unfold cs.Inv()
+	assert cs.inUse
+	assert cs.v === i
+	assert forall j idx :: j elem toCoolSet(cs.next) ==> acc(j, 1/2)
+	assert forall j idx :: j elem toCoolSet(cs.next) ==> j.inUse ==> ra.IsElem(j.val)
+	assert unfolding cooliosetio(cs.next).Inv() in !cs.next.inUse
+	assert reveal FoldLiveVals(ra, cs.next) === none[Elem]
+	fold cs.Inv()
+	assert reveal FoldLiveVals(ra, cs) === some(i.val)
+	assert LiftedIsValid(ra, FoldLiveVals(ra, cs))
+}
+
 /***** Model: Global State *****/
 
 pred GlobalMem() {
@@ -155,15 +214,18 @@ pred GlobalMem() {
 	(forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] } k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))) &&
-	(forall k LocName :: { k elem domain(toDict(model)) } { toDict(model)[k] }{ ras.ToDict()[k] } k elem domain(toDict(model)) ==>
-		(forall i idx :: { i elem toCoolSet(toDict(model)[k]) } { i.inUse } i elem toCoolSet(toDict(model)[k]) ==>
-			i.inUse ==> (
-				forall i2 idx :: { ras.ToDict()[k].Compose(i.val, i2.val) } i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
-					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
-					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val)))))
-	// MISSING: the product of all inUse elements is valid. requires proving all kinds of facts
-	//          about the updates to the set of values inUse and the order in which the multiplication is performed.
-	//          this is easy to show ghostOp1 and ghostOp2 and frame-preserving updates
+		(forall k LocName :: { k elem domain(toDict(model)) } { toDict(model)[k] }{ ras.ToDict()[k] } k elem domain(toDict(model)) ==>
+			(forall i idx :: { i elem toCoolSet(toDict(model)[k]) } { i.inUse } i elem toCoolSet(toDict(model)[k]) ==>
+				i.inUse ==> (
+					forall i2 idx :: { ras.ToDict()[k].Compose(i.val, i2.val) } i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
+						ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
+						ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))) &&
+		(forall k LocName :: { k elem domain(toDict(model)) } { FoldLiveVals(ras.ToDict()[k], toDict(model)[k]) } k elem domain(toDict(model)) ==>
+			FoldLiveVals(ras.ToDict()[k], toDict(model)[k]) !== none[Elem] ==> ras.ToDict()[k].IsElem(get(FoldLiveVals(ras.ToDict()[k], toDict(model)[k])))) &&
+		true
+		// MISSING: the product of all inUse elements is valid. requires proving all kinds of facts
+		//          about the updates to the set of values inUse and the order in which the multiplication is performed.
+		//          this is easy to show ghostOp1 and ghostOp2 and frame-preserving updates
 }
 
 // TODO: use MonoSet and MonoMap for the model; delete cooliosetio and mapio
@@ -217,6 +279,16 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	var cs cooliosetio = allocSet()
 	iii := &meta{true, e}
 	cs.add(iii)
+	assert toCoolSet(cs) === set[idx]{iii}
+	assert forall i idx :: i elem toCoolSet(cs) ==> i.inUse ==> ra.IsElem(i.val)
+	unfold cs.Inv()
+	assert cs.inUse && cs.v === iii
+	unfold cooliosetio(cs.next).Inv()
+	assert !cs.next.inUse
+	fold cooliosetio(cs.next).Inv()
+	assert toCoolSet(cs.next) === set[idx]{}
+	fold cs.Inv()
+	FoldLiveValsValidSingleton(ra, cs, iii)
 	if (newl elem domain(toDict(model))) {
 		assert acc(newl, 3/2)
 	}
@@ -245,6 +317,11 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	assert forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))
+	assert ras.ToDict()[newl] === ra
+	assert toDict(model)[newl] === cs
+	assert LiftedIsValid(ra, FoldLiveVals(ra, cs))
+	assert forall k LocName :: k elem domain(toDict(model)) ==>
+		LiftedIsValid(ras.ToDict()[k], FoldLiveVals(ras.ToDict()[k], toDict(model)[k]))
 	fold GlobalMem()
 
 	return newl, newi
