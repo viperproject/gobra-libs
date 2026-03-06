@@ -16,8 +16,8 @@
 
 package resalgebraNoAxioms
 
-var _ RA = TypeAuthRA{}
-var AuthRA TypeAuthRA = TypeAuthRA{}
+ghost var _ RA = TypeAuthRA{}
+ghost var AuthRA TypeAuthRA = TypeAuthRA{}
 
 type IntWithTopBot interface {}
 type Top struct{}
