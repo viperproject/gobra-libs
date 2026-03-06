@@ -28,7 +28,7 @@ type TypeOneShotRA struct{}
 
 TypeOneShotRA implements RA
 
-var OneShotRA TypeOneShotRA = TypeOneShotRA{}
+ghost var OneShotRA TypeOneShotRA = TypeOneShotRA{}
 
 ghost
 decreases
