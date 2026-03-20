@@ -14,8 +14,7 @@
 
 // +gobra
 
-// todo: replace this by a dup invariant that GlobalMem() is an invariant
-pkgInvariant GlobalMem()
+dup pkgInvariant Invariant(GlobalMem!<!>)
 package resalgebraNoAxioms
 
 // At the moment, all of these definitions are trusted, and this,
@@ -171,7 +170,8 @@ ghost var model cooliomapio = allocMap()
 ghost var ras rasMap = rasMapAlloc()
 
 func init() {
-	fold GlobalMem()
+	fold GlobalMem!<!>()
+	EstablishInvariant(GlobalMem!<!>)
 }
 
 /***** Model *****/
@@ -548,20 +548,23 @@ func GhostValidW(l LocName, ra RA, e Elem, w Witness) {
 /***** Model: wrappers that acquire the global invariant; these functions may not be called from critical regions *****/
 
 ghost
-// opensInvariants
+opensInvariants
 requires ra != nil
 requires ra.IsElem(e) && ra.IsValid(e)
 ensures  l != nil
 ensures  GhostLocationW(l, ra, e, w)
 decreases
 func AllocW(ra RA, e Elem) (l LocName, w Witness) {
-	inhale GlobalMem() // acquire dup pkg invariant && open invariant
+	openDupPkgInv
+	critical GlobalMem!<!> (
+	changeView1()
 	l, w = AllocWI(ra, e)
-	exhale GlobalMem() // close invariant
+	changeView2()
+	)
 }
 
 ghost
-// opensInvariants
+opensInvariants
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)
@@ -569,13 +572,16 @@ requires GhostLocationW(l, ra, ra.Compose(e1, e2), w)
 ensures  GhostLocationW(l, ra, e1, w1) && GhostLocationW(l, ra, e2, w2)
 decreases
 func GhostOp1W(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 Witness) {
-	inhale GlobalMem() // acquire dup pkg invariant && open invariant
+	openDupPkgInv
+	critical GlobalMem!<!> (
+	changeView1()
 	w1, w2 = GhostOp1WI(l, ra, e1, e2, w)
-	exhale GlobalMem() // close invariant
+	changeView2()
+	)
 }
 
 ghost
-// opensInvariants
+opensInvariants
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)
@@ -583,13 +589,16 @@ requires GhostLocationW(l, ra, e1, w1) && GhostLocationW(l, ra, e2, w2)
 ensures  GhostLocationW(l, ra, ra.Compose(e1, e2), w1)
 decreases
 func GhostOp2W(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
-	inhale GlobalMem() // acquire dup pkg invariant && open invariant
+	openDupPkgInv
+	critical GlobalMem!<!> (
+	changeView1()
 	GhostOp2WI(l, ra, e1, e2, w1, w2)
-	exhale GlobalMem() // close invariant
+	changeView2()
+	)
 }
 
 ghost
-// opensInvariants
+opensInvariants
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)
@@ -598,7 +607,28 @@ requires IsFramePreservingUpdate(ra, e1, e2)
 ensures  GhostLocationW(l, ra, e2, w)
 decreases
 func GhostUpdateW(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
-	inhale GlobalMem() // acquire dup pkg invariant && open invariant
+	openDupPkgInv
+	critical GlobalMem!<!> (
+	changeView1()
 	GhostUpdateWI(l, ra, e1, e2, w)
-	exhale GlobalMem() // close invariant
+	changeView2()
+	)
+}
+
+ghost
+requires GlobalMem!<!>()
+ensures  GlobalMem()
+decreases
+func changeView1() {
+	unfold GlobalMem!<!>()
+	fold GlobalMem()
+}
+
+ghost
+requires GlobalMem()
+ensures  GlobalMem!<!>()
+decreases
+func changeView2() {
+	unfold GlobalMem()
+	fold GlobalMem!<!>()
 }
