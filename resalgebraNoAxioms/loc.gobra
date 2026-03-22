@@ -160,10 +160,14 @@ pred GlobalMem() {
 			i.inUse ==> (
 				forall i2 idx :: { ras.ToDict()[k].Compose(i.val, i2.val) } i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
 					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
-					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val)))))
-	// MISSING: the product of all inUse elements is valid. requires proving all kinds of facts
-	//          about the updates to the set of values inUse and the order in which the multiplication is performed.
-	//          this is easy to show ghostOp1 and ghostOp2 and frame-preserving updates
+					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))) &&
+	// Total product invariant: the RA composition of all meta-inUse elements at each location
+	// is non-empty, is a valid RA element, and is valid. This enables proving pairwise-after-merge
+	// validity (IsValid(Compose(Compose(e1,e2), c.val))) via composeInUseTripleValid + ValidOp.
+	(forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] }{ ras.ToDict()[k] } k elem domain(toDict(model)) ==>
+		composeInUse(toDict(model)[k], ras.ToDict()[k]) !== none[Elem] &&
+		ras.ToDict()[k].IsElem(get(composeInUse(toDict(model)[k], ras.ToDict()[k]))) &&
+		ras.ToDict()[k].IsValid(get(composeInUse(toDict(model)[k], ras.ToDict()[k]))))
 }
 
 // TODO: use MonoSet and MonoMap for the model; delete cooliosetio and mapio
@@ -245,6 +249,23 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	assert forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))
+
+	// Establish total product invariant for the new location:
+	// cs has exactly one meta-inUse element (iii with val=e), so composeInUseSingle gives total = some(e).
+	assert iii elem toCoolSet(cs) && iii.inUse
+	assert forall i idx :: { i elem toCoolSet(cs) } i elem toCoolSet(cs) && i.inUse ==> i === iii
+	composeInUseSingle(cs, ra, iii)
+	assert composeInUse(cs, ra) === some(e)
+	assert ra.IsElem(get(composeInUse(cs, ra)))
+	assert ra.IsValid(get(composeInUse(cs, ra)))
+
+	// For old locations k != newl, their lists are unchanged so the total product facts
+	// from the unfolded GlobalMem still hold (toDict(model)[k] is unchanged by add(model,newl,cs)).
+	assert forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] }{ ras.ToDict()[k] } k elem domain(toDict(model)) ==>
+		composeInUse(toDict(model)[k], ras.ToDict()[k]) !== none[Elem] &&
+		ras.ToDict()[k].IsElem(get(composeInUse(toDict(model)[k], ras.ToDict()[k]))) &&
+		ras.ToDict()[k].IsValid(get(composeInUse(toDict(model)[k], ras.ToDict()[k])))
+
 	fold GlobalMem()
 
 	return newl, newi
@@ -278,6 +299,12 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	ra.ValidOp(e2, e1)
 	assert ra.IsValid(e2)
 
+	// Save pre-split total product for location l before any mutations.
+	old_total_l := composeInUse(i.c, ra)
+	assert old_total_l !== none[Elem]
+	assert ra.IsElem(get(old_total_l))
+	assert ra.IsValid(get(old_total_l))
+
 	i.i.inUse = false
 	iii1 := &meta{true, e1}
 	dupWitness(model, l, i.c)
@@ -308,13 +335,30 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	// not hard to prove, requires applying commutativity and associativity to get (i1 x i2) x k == (i1 x k) x i2. Because the lhs is valid, the rhs is also valid, and by ValidOp, i1 x k is also valid
 
 	ghostOp1WIAux(ra, iii1.val, iii2.val)
-	
+
 	assert forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (
 				forall i2 idx :: i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
 					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
 					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
+
+	// Total product invariant: after split (i.i.inUse=false, iii1/iii2 added with vals e1/e2),
+	// composeInUseSplitPreserve establishes that the new total product equals old_total_l.
+	assert i.i elem toCoolSet(i.c) && !i.i.inUse
+	assert iii1 elem toCoolSet(i.c) && iii1.inUse && iii1.val === e1
+	assert iii2 elem toCoolSet(i.c) && iii2.inUse && iii2.val === e2
+	composeInUseSplitPreserve(i.c, ra, i.i, iii1, iii2, e1, e2, old_total_l)
+	assert composeInUse(i.c, ra) === old_total_l
+	assert composeInUse(i.c, ra) !== none[Elem]
+	assert ra.IsElem(get(composeInUse(i.c, ra)))
+	assert ra.IsValid(get(composeInUse(i.c, ra)))
+
+	// For k != l, lists are unchanged so their total products are unchanged.
+	assert forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] }{ ras.ToDict()[k] } k elem domain(toDict(model)) ==>
+		composeInUse(toDict(model)[k], ras.ToDict()[k]) !== none[Elem] &&
+		ras.ToDict()[k].IsElem(get(composeInUse(toDict(model)[k], ras.ToDict()[k]))) &&
+		ras.ToDict()[k].IsValid(get(composeInUse(toDict(model)[k], ras.ToDict()[k])))
 
 	fold GlobalMem()
 	return i1, i2
@@ -415,10 +459,19 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 	assert ra.IsElem(ra.Compose(i1.i.val, i2.i.val))
 	assert ra.IsValid(ra.Compose(i1.i.val, i2.i.val))
 
-	// TODO: this is where the invariant of Validity of the product of all elements comes in handy
-	//       to prove this assumption
-	assume forall ii idx :: ii elem toCoolSet(toDict(model)[l]) && ii.inUse && ii !== i1.i && ii != i2.i ==>
-		// let _ := ghostOp2WIaux(ra, e1, e2, ii.val) in
+	// Save pre-merge total product for location l.
+	old_total_l := composeInUse(toDict(model)[l], ra)
+	assert old_total_l !== none[Elem]
+	assert ra.IsElem(get(old_total_l))
+	assert ra.IsValid(get(old_total_l))
+
+	// Replace assume with proof using the total product invariant.
+	// For each remaining inUse element ii (not i1.i, not i2.i):
+	// composeInUseTripleValid gives IsValid(Compose(Compose(i1.i.val, i2.i.val), ii.val))
+	// = IsValid(Compose(Compose(e1, e2), ii.val)).
+	// All preconditions of composeInUseTripleValid are pure, so it can be called inside assert forall.
+	assert forall ii idx :: { ii elem toCoolSet(toDict(model)[l]) } ii elem toCoolSet(toDict(model)[l]) && ii.inUse && ii !== i1.i && ii !== i2.i ==>
+		let _ := composeInUseTripleValid(ra, i1.i.val, i2.i.val, ii.val, old_total_l) in
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(ra.Compose(e1, e2), ii.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(ra.Compose(e1, e2), ii.val))
 
@@ -438,6 +491,23 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 		let _ := ra.ComposeComm(i2.val, i1.i.val) in
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i2.val, i1.i.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i2.val, i1.i.val))
+
+	// Total product invariant: after merge (i1.i.val = Compose(e1,e2), i2.i.inUse = false),
+	// composeInUseMergePreserve establishes the new total equals old_total_l.
+	assert i1.i elem toCoolSet(toDict(model)[l]) && i1.i.inUse && i1.i.val === ra.Compose(e1, e2)
+	assert i2.i elem toCoolSet(toDict(model)[l]) && !i2.i.inUse
+	composeInUseMergePreserve(toDict(model)[l], ra, i1.i, i2.i, e1, e2, old_total_l)
+	assert composeInUse(toDict(model)[l], ra) === old_total_l
+	assert composeInUse(toDict(model)[l], ra) !== none[Elem]
+	assert ra.IsElem(get(composeInUse(toDict(model)[l], ra)))
+	assert ra.IsValid(get(composeInUse(toDict(model)[l], ra)))
+
+	// For k != l, their lists are unchanged so their total products are unchanged.
+	assert forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] }{ ras.ToDict()[k] } k elem domain(toDict(model)) ==>
+		composeInUse(toDict(model)[k], ras.ToDict()[k]) !== none[Elem] &&
+		ras.ToDict()[k].IsElem(get(composeInUse(toDict(model)[k], ras.ToDict()[k]))) &&
+		ras.ToDict()[k].IsValid(get(composeInUse(toDict(model)[k], ras.ToDict()[k])))
+
 	fold GlobalMem()
 }
 
@@ -471,6 +541,12 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(e2, i2.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(e2, i2.val))
 
+	// Save pre-update total product for location l.
+	old_total_l := composeInUse(toDict(model)[l], ra)
+	assert old_total_l !== none[Elem]
+	assert ra.IsElem(get(old_total_l))
+	assert ra.IsValid(get(old_total_l))
+
 	i.i.val = e2
 
 	if forall e Elem :: ra.IsElem(e) ==> LiftedCompose(ra, some(e1), some(e)) === none[Elem] {
@@ -501,6 +577,21 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 		let _ := ra.ComposeComm(i2.val, i.i.val) in
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i2.val, i.i.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i2.val, i.i.val))
+
+	// Total product invariant: after update (i.i.val: e1 -> e2),
+	// composeInUseUpdatePreserve establishes the new total is valid.
+	assert i.i elem toCoolSet(toDict(model)[l]) && i.i.inUse && i.i.val === e2
+	assert forall i2 idx :: { i2 elem toCoolSet(toDict(model)[l]) } i2 elem toCoolSet(toDict(model)[l]) && i2.inUse ==> ra.IsElem(i2.val)
+	composeInUseUpdatePreserve(toDict(model)[l], ra, i.i, e1, e2, old_total_l)
+	assert composeInUse(toDict(model)[l], ra) !== none[Elem]
+	assert ra.IsElem(get(composeInUse(toDict(model)[l], ra)))
+	assert ra.IsValid(get(composeInUse(toDict(model)[l], ra)))
+
+	// For k != l, their lists are unchanged so their total products are unchanged.
+	assert forall k LocName :: { k elem domain(toDict(model)) }{ toDict(model)[k] }{ ras.ToDict()[k] } k elem domain(toDict(model)) ==>
+		composeInUse(toDict(model)[k], ras.ToDict()[k]) !== none[Elem] &&
+		ras.ToDict()[k].IsElem(get(composeInUse(toDict(model)[k], ras.ToDict()[k]))) &&
+		ras.ToDict()[k].IsValid(get(composeInUse(toDict(model)[k], ras.ToDict()[k])))
 
 	fold GhostLocationW(l, ra, e2, i)
 	fold GlobalMem()

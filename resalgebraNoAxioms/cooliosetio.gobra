@@ -128,3 +128,145 @@ func (m cooliosetio) dupWitness(v valSet) {
 	fold m.witness(v)
 	fold m.witness(v)
 }
+
+// ===== composeInUse: fold RA composition over meta-inUse elements =====
+//
+// composeInUse(m, ra) is the RA composition of all i in toCoolSet(m) with i.inUse.
+// Returns none if no such elements exist.
+// These functions are trusted because Gobra cannot thread the meta-field permissions
+// (acc(i, p) for i : gpointer[meta]) through the unfolding of m.Inv() in a pure
+// function — the same technical limitation that motivates IntroExists/ElimExists in doc.gobra.
+
+ghost
+trusted
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+decreases m.Inv()
+pure func composeInUse(m cooliosetio, ra RA) (res option[Elem])
+
+// Like composeInUse but skipping element a (whether or not a.inUse).
+ghost
+trusted
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+decreases m.Inv()
+pure func composeInUse_without(m cooliosetio, ra RA, a idx) (res option[Elem])
+
+// If a is the only meta-inUse element in m, then composeInUse(m, ra) === some(a.val).
+ghost
+trusted
+opaque
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+requires a elem toCoolSet(m) && a.inUse
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) && i.inUse ==> i === a
+ensures  composeInUse(m, ra) === some(a.val)
+decreases
+pure func composeInUseSingle(m cooliosetio, ra RA, a idx) Unit
+
+// Pull a meta-inUse element to the front of the composition:
+//   composeInUse(m, ra) === LiftedCompose(ra, some(a.val), composeInUse_without(m, ra, a))
+ghost
+trusted
+opaque
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+requires a elem toCoolSet(m)
+requires a.inUse
+ensures  composeInUse(m, ra) === LiftedCompose(ra, some(a.val), composeInUse_without(m, ra, a))
+decreases
+pure func composeInUsePullFront(m cooliosetio, ra RA, a idx) Unit
+
+// If any meta-inUse element exists, composeInUse !== none.
+ghost
+trusted
+opaque
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+requires a elem toCoolSet(m) && a.inUse
+ensures  composeInUse(m, ra) !== none[Elem]
+decreases
+pure func composeInUseNonEmpty(m cooliosetio, ra RA, a idx) Unit
+
+// Total product is an RA element when all meta-inUse elements are RA elements.
+ghost
+trusted
+opaque
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) && i.inUse ==> ra.IsElem(i.val)
+ensures  composeInUse(m, ra) !== none[Elem] ==> ra.IsElem(get(composeInUse(m, ra)))
+decreases
+pure func composeInUseIsElem(m cooliosetio, ra RA) Unit
+
+// For any three distinct meta-inUse elements with vals a_val, b_val, c_val:
+// if the total product old_total (= composeInUse of the list containing them) is valid,
+// then IsValid(Compose(Compose(a_val, b_val), c_val)).
+// All preconditions are pure so this can be called inside assert forall.
+// Proved by pulling a, b, c to the front via ComposeAssoc/Comm, then applying ValidOp.
+ghost
+trusted
+opaque
+requires ra != nil
+requires ra.IsElem(a_val) && ra.IsElem(b_val) && ra.IsElem(c_val)
+requires old_total !== none[Elem] && ra.IsElem(get(old_total)) && ra.IsValid(get(old_total))
+ensures  ra.IsValid(ra.Compose(ra.Compose(a_val, b_val), c_val))
+decreases
+pure func composeInUseTripleValid(ra RA, a_val Elem, b_val Elem, c_val Elem, old_total option[Elem]) Unit
+
+// After GhostOp2 merge (a.val = Compose(e1,e2), b.inUse = false):
+// composeInUse of the new list equals the pre-merge total old_total.
+// Sound because Compose(Compose(e1,e2), rest) = Compose(e1, Compose(e2, rest)) by assoc,
+// and the fold just re-associates the same elements.
+ghost
+trusted
+opaque
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+requires a elem toCoolSet(m) && a.inUse && a.val === ra.Compose(e1, e2)
+requires b elem toCoolSet(m) && !b.inUse && b !== a
+requires old_total !== none[Elem] && ra.IsElem(get(old_total)) && ra.IsValid(get(old_total))
+ensures  composeInUse(m, ra) === old_total
+decreases
+pure func composeInUseMergePreserve(m cooliosetio, ra RA, a idx, b idx, e1 Elem, e2 Elem, old_total option[Elem]) Unit
+
+// After GhostOp1 split (a.inUse = false, b.val = e1, c.val = e2 newly added,
+// where old a.val was Compose(e1,e2)): composeInUse equals the pre-split total old_total.
+ghost
+trusted
+opaque
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+requires a elem toCoolSet(m) && !a.inUse
+requires b elem toCoolSet(m) && b.inUse && b.val === e1 && b !== a
+requires c elem toCoolSet(m) && c.inUse && c.val === e2 && c !== a && c !== b
+requires old_total !== none[Elem] && ra.IsElem(get(old_total)) && ra.IsValid(get(old_total))
+ensures  composeInUse(m, ra) === old_total
+decreases
+pure func composeInUseSplitPreserve(m cooliosetio, ra RA, a idx, b idx, c idx, e1 Elem, e2 Elem, old_total option[Elem]) Unit
+
+// After GhostUpdate frame-preserving update (a.val: e1 -> e2): composeInUse of the new
+// list is not none, is an RA element, and is valid.
+ghost
+trusted
+opaque
+requires ra != nil
+requires m.Inv()
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) ==> acc(i, 1/4)
+requires a elem toCoolSet(m) && a.inUse && a.val === e2
+requires forall i idx :: { i elem toCoolSet(m) } i elem toCoolSet(m) && i.inUse ==> ra.IsElem(i.val)
+requires IsFramePreservingUpdate(ra, e1, e2)
+requires old_total !== none[Elem] && ra.IsElem(get(old_total)) && ra.IsValid(get(old_total))
+ensures  composeInUse(m, ra) !== none[Elem]
+ensures  ra.IsElem(get(composeInUse(m, ra)))
+ensures  ra.IsValid(get(composeInUse(m, ra)))
+decreases
+pure func composeInUseUpdatePreserve(m cooliosetio, ra RA, a idx, e1 Elem, e2 Elem, old_total option[Elem]) Unit
