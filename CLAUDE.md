@@ -68,3 +68,10 @@ Refer to the Gobra documentation for installation and usage details.
 - Contributed definitions should be generally reusable across verification projects.
 - Follow the existing file header conventions (license comment + `//+gobra`).
 - Keep packages focused; add new packages for unrelated functionality rather than expanding existing ones.
+
+## Gobra-Specific Notes
+
+- `ghost` keyword marks verification-only (non-executable) code
+- `trusted` functions are assumed correct without proof
+- `opaque` functions hide their body from the verifier unless explicitly revealed
+- Predicates (`pred`) define separation logic assertions
