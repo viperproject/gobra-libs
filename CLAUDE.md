@@ -48,7 +48,6 @@ Verification runs automatically via GitHub Actions (`.github/workflows/gobra.yml
 - `checkConsistency`: enabled
 - `assumeInjectivityOnInhale`: disabled
 - `parallelizeBranches`: disabled
-- `mceMode`: on (default setting)
 - Timeout: 5 minutes per run
 
 ### Running Locally
