@@ -19,9 +19,9 @@ Each top-level directory is a Gobra package:
 | `runeslice/` | Rune slice helper functions |
 | `math/` | Natural numbers and math utilities |
 | `util/` | General utility functions |
-| `resalgebra/` | Resource algebra framework (with axioms) |
+| `resalgebra/` | Resource algebra framework (with axioms) (deprecated) |
 | `resalgebraNoAxioms/` | Resource algebra framework (without axioms) |
-| `refinement/` | Refinement type support |
+| `refinement/` | Refinement type support (deprecated) |
 | `refinementguard/` | Refinement with guards and LIIs |
 | `genericmonomap/` | Generic monotonic map |
 | `genericmonoset/` | Generic monotonic set |
@@ -48,7 +48,7 @@ Verification runs automatically via GitHub Actions (`.github/workflows/gobra.yml
 - `checkConsistency`: enabled
 - `assumeInjectivityOnInhale`: disabled
 - `parallelizeBranches`: disabled
-- `mceMode`: off
+- `mceMode`: on (default setting)
 - Timeout: 5 minutes per run
 
 ### Running Locally
@@ -56,7 +56,7 @@ Verification runs automatically via GitHub Actions (`.github/workflows/gobra.yml
 To verify locally, use the [gobra-action](https://github.com/viperproject/gobra-action) or run Gobra directly:
 
 ```bash
-gobra --recursive --projectLocation gobra-libs --includePaths . \
+java -Xss1g -Xmx4g -XX:-UseContainerSupport -Dcom.sun.management.jmxremote=false -jar /gobra/gobra.jar --recursive --projectLocation gobra-libs --includePaths . \
   --viperBackend SILICON --checkConsistency
 ```
 
