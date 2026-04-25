@@ -16,13 +16,10 @@
 
 package resalgebraNoAxioms
 
-// ProductOfSeq composes all elements of `s` under `ra`. The sequence must be
-// non-empty. Used by GlobalMem() to state the invariant that the composition
-// of all in-use values at a location is valid.
-
+// ProductOfSeq composes all elements of `s` under `ra`.
 ghost
 requires ra != nil
-requires len(s) >= 1
+requires 0 < len(s)
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
 ensures  ra.IsElem(res)
 decreases len(s)
@@ -33,12 +30,10 @@ pure func ProductOfSeq(s seq[Elem], ra RA) (res Elem) {
 }
 
 // Concatenation: ProductOfSeq(s1 ++ s2) === Compose(ProductOfSeq(s1), ProductOfSeq(s2)).
-//
-// `pure` so it can be used inside `let _ := ...` chains in forall bodies.
-
 ghost
+opaque
 requires ra != nil
-requires len(s1) >= 1 && len(s2) >= 1
+requires 0 < len(s1) && 0 < len(s2)
 requires forall j int :: { s1[j] } 0 <= j && j < len(s1) ==> ra.IsElem(s1[j])
 requires forall j int :: { s2[j] } 0 <= j && j < len(s2) ==> ra.IsElem(s2[j])
 ensures  forall j int :: { (s1 ++ s2)[j] } 0 <= j && j < len(s1 ++ s2) ==> ra.IsElem((s1 ++ s2)[j])
@@ -47,26 +42,21 @@ decreases len(s1)
 pure func ProductOfSeqConcat(s1 seq[Elem], s2 seq[Elem], ra RA) Unit {
 	return len(s1) == 1 ?
 		(let _ := asserting((s1 ++ s2)[1:] === s2) in
-		 let _ := asserting(ProductOfSeq(s1, ra) === s1[0]) in
-		 Unit{}) :
+		 asserting(ProductOfSeq(s1, ra) === s1[0])) :
 		(let _ := ProductOfSeqConcat(s1[1:], s2, ra) in
 		 let _ := asserting((s1 ++ s2)[1:] === s1[1:] ++ s2) in
 		 let _ := ra.ComposeAssoc(s1[0], ProductOfSeq(s1[1:], ra), ProductOfSeq(s2, ra)) in
-		 let _ := asserting(ProductOfSeq(s1, ra) === ra.Compose(s1[0], ProductOfSeq(s1[1:], ra))) in
-		 Unit{})
+		 asserting(ProductOfSeq(s1, ra) === ra.Compose(s1[0], ProductOfSeq(s1[1:], ra))))
 }
 
 // Swap positions k and k+1: ProductOfSeq(s) === ProductOfSeq(swap(s, k)).
-// Pure recursion on k.
-
 ghost
+opaque
 requires ra != nil
-requires len(s) >= 2
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
 requires 0 <= k && k + 1 < len(s)
 ensures  let s2 := s[:k] ++ seq[Elem]{s[k+1], s[k]} ++ s[k+2:] in
 	len(s2) == len(s) &&
-	(forall j int :: { s2[j] } 0 <= j && j < len(s2) ==> ra.IsElem(s2[j])) &&
 	ProductOfSeq(s, ra) === ProductOfSeq(s2, ra)
 decreases k
 pure func AdjacentSwapProduct(s seq[Elem], ra RA, k int) Unit {
@@ -84,8 +74,7 @@ pure func AdjacentSwapProduct(s seq[Elem], ra RA, k int) Unit {
 			 let _ := asserting(s2[1:] === seq[Elem]{a}) in
 			 let _ := asserting(ProductOfSeq(s2[1:], ra) === a) in
 			 let _ := asserting(ProductOfSeq(s2, ra) === ra.Compose(b, a)) in
-			 let _ := ra.ComposeComm(a, b) in
-			 Unit{}) :
+			 ra.ComposeComm(a, b)) :
 			(let _ := asserting(s === seq[Elem]{a, b} ++ rest) in
 			 let _ := asserting(s[1:] === seq[Elem]{b} ++ rest) in
 			 let _ := asserting((s[1:])[0] === b) in
@@ -100,8 +89,7 @@ pure func AdjacentSwapProduct(s seq[Elem], ra RA, k int) Unit {
 			 let _ := asserting(ProductOfSeq(s2, ra) === ra.Compose(b, ra.Compose(a, ProductOfSeq(rest, ra)))) in
 			 let _ := ra.ComposeAssoc(a, b, ProductOfSeq(rest, ra)) in
 			 let _ := ra.ComposeAssoc(b, a, ProductOfSeq(rest, ra)) in
-			 let _ := ra.ComposeComm(a, b) in
-			 Unit{})) :
+			 ra.ComposeComm(a, b))) :
 		(let _ := AdjacentSwapProduct(s[1:], ra, k - 1) in
 		 let tail := s[1:] in
 		 let tailSwapped := tail[:k-1] ++ seq[Elem]{tail[k], tail[k-1]} ++ tail[k+1:] in
@@ -109,26 +97,22 @@ pure func AdjacentSwapProduct(s seq[Elem], ra RA, k int) Unit {
 		 let _ := asserting(sSwapped[0] === s[0]) in
 		 let _ := asserting(sSwapped[1:] === tailSwapped) in
 		 let _ := asserting(ProductOfSeq(s, ra) === ra.Compose(s[0], ProductOfSeq(tail, ra))) in
-		 let _ := asserting(ProductOfSeq(sSwapped, ra) === ra.Compose(s[0], ProductOfSeq(tailSwapped, ra))) in
-		 Unit{})
+		 asserting(ProductOfSeq(sSwapped, ra) === ra.Compose(s[0], ProductOfSeq(tailSwapped, ra))))
 }
 
 // Move position k to the front: ProductOfSeq(s) === ProductOfSeq([s[k]] ++ s[:k] ++ s[k+1:]).
-
 ghost
+opaque
 requires ra != nil
-requires len(s) >= 1
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
 requires 0 <= k && k < len(s)
 ensures  let s2 := seq[Elem]{s[k]} ++ s[:k] ++ s[k+1:] in
 	len(s2) == len(s) &&
-	(forall j int :: { s2[j] } 0 <= j && j < len(s2) ==> ra.IsElem(s2[j])) &&
 	ProductOfSeq(s, ra) === ProductOfSeq(s2, ra)
 decreases k
 pure func ProductOfSeqMoveFront(s seq[Elem], ra RA, k int) Unit {
 	return k == 0 ?
-		(let _ := asserting(s === seq[Elem]{s[0]} ++ s[:0] ++ s[1:]) in
-		 Unit{}) :
+		asserting(s === seq[Elem]{s[0]} ++ s[:0] ++ s[1:]) :
 		(let _ := AdjacentSwapProduct(s, ra, k - 1) in
 		 let sSwapped := s[:k-1] ++ seq[Elem]{s[k], s[k-1]} ++ s[k+1:] in
 		 let _ := ProductOfSeqMoveFront(sSwapped, ra, k - 1) in
@@ -136,16 +120,14 @@ pure func ProductOfSeqMoveFront(s seq[Elem], ra RA, k int) Unit {
 		 let _ := asserting(sSwapped[:k-1] === s[:k-1]) in
 		 let _ := asserting(sSwapped[k:] === seq[Elem]{s[k-1]} ++ s[k+1:]) in
 		 let _ := asserting(s[:k] === s[:k-1] ++ seq[Elem]{s[k-1]}) in
-		 let _ := asserting(seq[Elem]{s[k]} ++ s[:k] ++ s[k+1:] ===
-			seq[Elem]{sSwapped[k-1]} ++ sSwapped[:k-1] ++ sSwapped[k:]) in
-		 Unit{})
+		 asserting(seq[Elem]{s[k]} ++ s[:k] ++ s[k+1:] ===
+			seq[Elem]{sSwapped[k-1]} ++ sSwapped[:k-1] ++ sSwapped[k:]))
 }
 
 // Given ProductOfSeq(s) is valid, and three distinct positions p1, p2, p3,
 // derive that Compose(Compose(s[p1], s[p2]), s[p3]) is valid.
-// `pure` so it is callable from forall bodies via `let _ := ...`.
-
 ghost
+opaque
 requires ra != nil
 requires len(s) >= 3
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
@@ -187,22 +169,20 @@ pure func ExtractThreeValid(s seq[Elem], ra RA, p1 int, p2 int, p3 int) Unit {
 		let _ := ra.ComposeAssoc(s[p1], s[p2], s[p3]) in
 		let _ := asserting(ProductOfSeq(sHead, ra) === ra.Compose(ra.Compose(s[p1], s[p2]), s[p3])) in
 		(len(s) == 3 ?
-			(let _ := asserting(sC === sHead) in Unit{}) :
+			asserting(sC === sHead) :
 			(let sTail := sC[3:] in
 			 let _ := asserting(sC === sHead ++ sTail) in
 			 let _ := ProductOfSeqConcat(sHead, sTail, ra) in
 			 let _ := asserting(ProductOfSeq(sC, ra) ===
 				ra.Compose(ProductOfSeq(sHead, ra), ProductOfSeq(sTail, ra))) in
-			 let _ := ra.ValidOp(ProductOfSeq(sHead, ra), ProductOfSeq(sTail, ra)) in
-			 Unit{}))
+			 ra.ValidOp(ProductOfSeq(sHead, ra), ProductOfSeq(sTail, ra))))
 }
 
 // Given ProductOfSeq(s) is valid, split out the value at position p.
 // (Non-pure variant retained for the lemma chain in maintenance proofs.)
-
 ghost
 requires ra != nil
-requires len(s) >= 1
+requires 0 < len(s)
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
 requires ra.IsValid(ProductOfSeq(s, ra))
 requires 0 <= p && p < len(s)
@@ -342,7 +322,7 @@ func ProductMergeAt(s seq[Elem], p1 int, p2 int, ra RA) {
 // preserves product validity.
 ghost
 requires ra != nil
-requires len(s) >= 1
+requires 0 < len(s)
 requires 0 <= posI && posI < len(s)
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
 requires ra.IsElem(e1) && ra.IsElem(e2)
