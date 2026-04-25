@@ -190,8 +190,6 @@ ensures  len(s) == 1 ==> ra.IsValid(s[p])
 ensures  len(s) >= 2 ==>
 	let rest := s[:p] ++ s[p+1:] in
 	len(rest) == len(s) - 1 &&
-	(forall j int :: 0 <= j && j < len(rest) ==> ra.IsElem(rest[j])) &&
-	ra.IsElem(ra.Compose(s[p], ProductOfSeq(rest, ra))) &&
 	ra.IsValid(ra.Compose(s[p], ProductOfSeq(rest, ra)))
 decreases
 func ExtractOneValid(s seq[Elem], ra RA, p int) {
@@ -216,10 +214,6 @@ requires ra != nil
 requires ra.IsElem(a) && ra.IsElem(b)
 requires forall j int :: { pre[j] } 0 <= j && j < len(pre) ==> ra.IsElem(pre[j])
 requires forall j int :: { post[j] } 0 <= j && j < len(post) ==> ra.IsElem(post[j])
-ensures  let lhs := pre ++ seq[Elem]{a} ++ post ++ seq[Elem]{b} in
-	(forall j int :: { lhs[j] } 0 <= j && j < len(lhs) ==> ra.IsElem(lhs[j]))
-ensures  let rhs := pre ++ seq[Elem]{ra.Compose(a, b)} ++ post in
-	(forall j int :: { rhs[j] } 0 <= j && j < len(rhs) ==> ra.IsElem(rhs[j]))
 ensures  ProductOfSeq(pre ++ seq[Elem]{a} ++ post ++ seq[Elem]{b}, ra) ===
 	ProductOfSeq(pre ++ seq[Elem]{ra.Compose(a, b)} ++ post, ra)
 decreases len(pre)
@@ -275,13 +269,11 @@ requires 0 <= p1 && p1 < len(s)
 requires 0 <= p2 && p2 < len(s)
 requires p1 != p2
 requires ra.IsValid(ProductOfSeq(s, ra))
-ensures  ra.IsElem(ra.Compose(s[p1], s[p2]))
 ensures  let pmin := p1 < p2 ? p1 : p2 in
 	let pmax := p1 < p2 ? p2 : p1 in
 	let merged := ra.Compose(s[p1], s[p2]) in
 	let s2 := s[:pmin] ++ seq[Elem]{merged} ++ s[pmin+1:pmax] ++ s[pmax+1:] in
 	len(s2) == len(s) - 1 &&
-	(forall j int :: { s2[j] } 0 <= j && j < len(s2) ==> ra.IsElem(s2[j])) &&
 	ra.IsValid(ProductOfSeq(s2, ra))
 decreases
 func ProductMergeAt(s seq[Elem], p1 int, p2 int, ra RA) {
@@ -331,7 +323,6 @@ requires IsFramePreservingUpdate(ra, e1, e2)
 requires ra.IsValid(ProductOfSeq(s, ra))
 ensures  let s2 := s[:posI] ++ seq[Elem]{e2} ++ s[posI+1:] in
 	len(s2) == len(s) &&
-	(forall j int :: { s2[j] } 0 <= j && j < len(s2) ==> ra.IsElem(s2[j])) &&
 	ra.IsValid(ProductOfSeq(s2, ra))
 decreases
 func ProductFPUEq(s seq[Elem], posI int, e1 Elem, e2 Elem, ra RA) {

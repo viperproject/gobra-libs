@@ -195,14 +195,14 @@ pred GlobalMem() {
 
 // Helper accessors returning a single seq for a given key (force single-typed lookup).
 ghost
-requires acc(&inUseIdx, _)
+requires acc(&inUseIdx)
 decreases
 pure func getIdxAt(k LocName) seq[idx] {
 	return idxSeqLookup(inUseIdx, k)
 }
 
 ghost
-requires acc(&inUseVal, _)
+requires acc(&inUseVal)
 decreases
 pure func getValAt(k LocName) seq[Elem] {
 	return valSeqLookup(inUseVal, k)
@@ -222,7 +222,6 @@ pure func valSeqLookup(d dict[LocName](seq[Elem]), k LocName) seq[Elem] {
 
 // Find the (first) position of x in s. Requires x to be present in s.
 ghost
-requires len(s) >= 1
 requires x elem s
 ensures  0 <= res && res < len(s)
 ensures  s[res] === x
