@@ -132,8 +132,10 @@ pure func LiftedIsValid(ra RA, e option[Elem]) bool {
 /***** Model: Global State *****/
 
 pred GlobalMem() {
-	inv(model) &&
-	ras.Inv()  &&
+	inv(model)        &&
+	ras.Inv()         &&
+	acc(&inUseIdx)    &&
+	acc(&inUseVal)    &&
 	// necessary for proving key freshness
 	(forall k LocName :: { k elem domain(toDict(model)) } k elem domain(toDict(model)) ==> acc(k, 1/2)) &&
 	// complicated way of saying that the domains of model and ras are the same:
@@ -160,15 +162,84 @@ pred GlobalMem() {
 			i.inUse ==> (
 				forall i2 idx :: { ras.ToDict()[k].Compose(i.val, i2.val) } i2 elem toCoolSet(toDict(model)[k]) && i2.inUse && i2 !== i ==>
 					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
-					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val)))))
-	// MISSING: the product of all inUse elements is valid. requires proving all kinds of facts
-	//          about the updates to the set of values inUse and the order in which the multiplication is performed.
-	//          this is easy to show ghostOp1 and ghostOp2 and frame-preserving updates
+					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))) &&
+	// In-use value tracking: per-location seqs of currently-in-use idx pointers and their
+	// values. Foundation for the product-of-in-use-values invariant.
+	domain(toDict(model)) subset domain(inUseIdx) &&
+	domain(toDict(model)) subset domain(inUseVal) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		len(getIdxAt(k)) >= 1) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		len(getValAt(k)) >= 1) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		len(getIdxAt(k)) == len(getValAt(k))) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall i idx :: i elem toCoolSet(toDict(model)[k]) && i.inUse ==>
+			i elem getIdxAt(k))) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall j int :: 0 <= j && j < len(getIdxAt(k)) ==>
+			getIdxAt(k)[j] elem toCoolSet(toDict(model)[k]))) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall j1, j2 int :: 0 <= j1 && j1 < j2 && j2 < len(getIdxAt(k)) ==>
+			getIdxAt(k)[j1] !== getIdxAt(k)[j2])) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall j int :: 0 <= j && j < len(getIdxAt(k)) ==>
+			getIdxAt(k)[j].val === getValAt(k)[j])) &&
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		(forall j int :: 0 <= j && j < len(getValAt(k)) ==>
+			ras.ToDict()[k].IsElem(getValAt(k)[j]))) &&
+	// Product validity: the composition of all in-use values at k is valid under ras[k].
+	(forall k LocName :: k elem domain(toDict(model)) ==>
+		ras.ToDict()[k].IsValid(ProductOfSeq(getValAt(k), ras.ToDict()[k])))
+}
+
+// Helper accessors returning a single seq for a given key (force single-typed lookup).
+ghost
+requires acc(&inUseIdx, _)
+decreases
+pure func getIdxAt(k LocName) seq[idx] {
+	return idxSeqLookup(inUseIdx, k)
+}
+
+ghost
+requires acc(&inUseVal, _)
+decreases
+pure func getValAt(k LocName) seq[Elem] {
+	return valSeqLookup(inUseVal, k)
+}
+
+ghost
+decreases
+pure func idxSeqLookup(d dict[LocName](seq[idx]), k LocName) seq[idx] {
+	return k elem domain(d) ? d[k] : seq[idx]{}
+}
+
+ghost
+decreases
+pure func valSeqLookup(d dict[LocName](seq[Elem]), k LocName) seq[Elem] {
+	return k elem domain(d) ? d[k] : seq[Elem]{}
+}
+
+// Find the (first) position of x in s. Requires x to be present in s.
+ghost
+requires len(s) >= 1
+requires x elem s
+ensures  0 <= res && res < len(s)
+ensures  s[res] === x
+decreases len(s)
+pure func idxPos(s seq[idx], x idx) (res int) {
+	return (s[0] === x) ? 0 : 1 + idxPos(s[1:], x)
 }
 
 // TODO: use MonoSet and MonoMap for the model; delete cooliosetio and mapio
 ghost var model cooliomapio = allocMap()
 ghost var ras rasMap = rasMapAlloc()
+
+// Per-location sequences of currently-in-use idx pointers and their values.
+// Maintained in lockstep with the in-use indices in `model`. These are used
+// by `GlobalMem()` to state the product-of-all-in-use-values invariant.
+ghost var inUseIdx@ dict[LocName](seq[idx])
+ghost var inUseVal@ dict[LocName](seq[Elem])
 
 func init() {
 	fold GlobalMem()
@@ -245,6 +316,9 @@ func AllocWI(ra RA, e Elem) (l LocName, w Witness) {
 	assert forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall i idx :: i elem toCoolSet(toDict(model)[k]) ==>
 			i.inUse ==> (ras.ToDict()[k].IsElem(i.val) && ras.ToDict()[k].IsValid(i.val)))
+
+	inUseIdx[newl] = seq[idx]{iii}
+	inUseVal[newl] = seq[Elem]{e}
 	fold GlobalMem()
 
 	return newl, newi
@@ -316,6 +390,17 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
 					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))
 
+	// Replace i.i's slot in the seqs with iii1 (val e1) and append iii2 (val e2).
+	// i.i is no longer in-use, but by the completeness invariant it was in getIdxAt(l) while still in-use.
+	posI := idxPos(getIdxAt(l), i.i)
+	oldVals := getValAt(l)
+	pre := oldVals[:posI]
+	post := oldVals[posI+1:]
+	assert oldVals[posI] === ra.Compose(e1, e2)
+	assert oldVals === pre ++ seq[Elem]{ra.Compose(e1, e2)} ++ post
+	ProductSplitEq(pre, post, e1, e2, ra)
+	inUseIdx[l] = getIdxAt(l)[:posI] ++ seq[idx]{iii1} ++ getIdxAt(l)[posI+1:] ++ seq[idx]{iii2}
+	inUseVal[l] = pre ++ seq[Elem]{e1} ++ post ++ seq[Elem]{e2}
 	fold GlobalMem()
 	return i1, i2
 }
@@ -415,10 +500,30 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 	assert ra.IsElem(ra.Compose(i1.i.val, i2.i.val))
 	assert ra.IsValid(ra.Compose(i1.i.val, i2.i.val))
 
-	// TODO: this is where the invariant of Validity of the product of all elements comes in handy
-	//       to prove this assumption
-	assume forall ii idx :: ii elem toCoolSet(toDict(model)[l]) && ii.inUse && ii !== i1.i && ii != i2.i ==>
-		// let _ := ghostOp2WIaux(ra, e1, e2, ii.val) in
+	// Capture seq positions and values BEFORE mutating i1.i.val or i2.i.inUse.
+	posI1 := idxPos(getIdxAt(l), i1.i)
+	posI2 := idxPos(getIdxAt(l), i2.i)
+	pmin, pmax := posI1, posI2
+	if posI1 > posI2 {
+		pmin, pmax = posI2, posI1
+	}
+	oldVals := getValAt(l)
+	oldIdxs := getIdxAt(l)
+	assert oldVals[posI1] === e1
+	assert oldVals[posI2] === e2
+	ProductMergeAt(oldVals, posI1, posI2, ra)
+	// ProductMergeAt yields IsValid of the merged seq:
+	//   oldVals[:pmin] ++ [Compose(e1,e2)] ++ oldVals[pmin+1:pmax] ++ oldVals[pmax+1:]
+
+	// Discharge: derive `IsValid(Compose(Compose(e1, e2), ii.val))` for any other in-use ii at l.
+	// By completeness, every in-use i at l appears in inUseIdx[l] (= oldIdxs).
+	// By distinctness, the positions of i1.i, i2.i, and any third ii are all distinct.
+	// By IsElem invariant on values, all entries of oldVals are RA elements.
+	// By the product-validity invariant, ProductOfSeq(oldVals, ra) is valid, so by
+	// `ExtractThreeValid` (pure, in product.gobra) any triple of values has its triple-Compose valid.
+	assert forall ii idx :: ii elem toCoolSet(toDict(model)[l]) && ii.inUse && ii !== i1.i && ii != i2.i ==>
+		let posIi := idxPos(oldIdxs, ii) in
+		let _ := ExtractThreeValid(oldVals, ra, posI1, posI2, posIi) in
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(ra.Compose(e1, e2), ii.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(ra.Compose(e1, e2), ii.val))
 
@@ -438,6 +543,10 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 		let _ := ra.ComposeComm(i2.val, i1.i.val) in
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i2.val, i1.i.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i2.val, i1.i.val))
+
+	inUseVal[l] = oldVals[:pmin] ++ seq[Elem]{ra.Compose(e1, e2)} ++ oldVals[pmin+1:pmax] ++ oldVals[pmax+1:]
+	inUseIdx[l] = oldIdxs[:pmin] ++ seq[idx]{i1.i} ++ oldIdxs[pmin+1:pmax] ++ oldIdxs[pmax+1:]
+
 	fold GlobalMem()
 }
 
@@ -471,6 +580,12 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(e2, i2.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(e2, i2.val))
 
+	// Capture seq position and apply product FPU lemma BEFORE mutating i.i.val.
+	posI := idxPos(getIdxAt(l), i.i)
+	oldVals := getValAt(l)
+	assert oldVals[posI] === e1
+	ProductFPUEq(oldVals, posI, e1, e2, ra)
+
 	i.i.val = e2
 
 	if forall e Elem :: ra.IsElem(e) ==> LiftedCompose(ra, some(e1), some(e)) === none[Elem] {
@@ -501,6 +616,9 @@ func GhostUpdateWI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) {
 		let _ := ra.ComposeComm(i2.val, i.i.val) in
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i2.val, i.i.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i2.val, i.i.val))
+
+	// Update inUseVal[l] at i.i's position to the new value e2 using the captured oldVals.
+	inUseVal[l] = oldVals[:posI] ++ seq[Elem]{e2} ++ oldVals[posI+1:]
 
 	fold GhostLocationW(l, ra, e2, i)
 	fold GlobalMem()
