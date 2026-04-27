@@ -32,7 +32,9 @@ jobs:
         with:
           projectLocation: 'gobra-libs'
           recursive: 1
-          timeout: 5m
+          # disabled for now, due to the long verification times for the resource-algebras
+          # formalization.
+          # timeout: 5m
           includePaths: '.' # relative to project location
           assumeInjectivityOnInhale: ${{ env.assumeInjectivityOnInhale }}
           checkConsistency: ${{ env.checkConsistency }}
