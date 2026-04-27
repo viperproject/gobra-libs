@@ -19,8 +19,7 @@ Each top-level directory is a Gobra package:
 | `runeslice/` | Rune slice helper functions |
 | `math/` | Natural numbers and math utilities |
 | `util/` | General utility functions |
-| `resalgebra/` | Resource algebra framework (with axioms) (deprecated) |
-| `resalgebraNoAxioms/` | Resource algebra framework (without axioms) |
+| `resalgebra/` | Resource algebra framework |
 | `refinement/` | Refinement type support (deprecated) |
 | `refinementguard/` | Refinement with guards and LIIs |
 | `genericmonomap/` | Generic monotonic map |

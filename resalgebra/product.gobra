@@ -14,7 +14,7 @@
 
 // +gobra
 
-package resalgebraNoAxioms
+package resalgebra
 
 // ProductOfSeq composes all elements of `s` under `ra`.
 ghost

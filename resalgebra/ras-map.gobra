@@ -17,7 +17,7 @@
 // Instantiation of genericmonomap for `ras` (Key is LocName and Val is RA).
 // Copying this is easier than implementing wrappers around MonoMap.
 
-package resalgebraNoAxioms
+package resalgebra
 
 ghost type keyRasMap = LocName
 type valRasMap = RA
