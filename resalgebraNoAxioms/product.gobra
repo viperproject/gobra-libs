@@ -36,7 +36,6 @@ requires ra != nil
 requires 0 < len(s1) && 0 < len(s2)
 requires forall j int :: { s1[j] } 0 <= j && j < len(s1) ==> ra.IsElem(s1[j])
 requires forall j int :: { s2[j] } 0 <= j && j < len(s2) ==> ra.IsElem(s2[j])
-ensures  forall j int :: { (s1 ++ s2)[j] } 0 <= j && j < len(s1 ++ s2) ==> ra.IsElem((s1 ++ s2)[j])
 ensures  ProductOfSeq(s1 ++ s2, ra) === ra.Compose(ProductOfSeq(s1, ra), ProductOfSeq(s2, ra))
 decreases len(s1)
 pure func ProductOfSeqConcat(s1 seq[Elem], s2 seq[Elem], ra RA) Unit {
@@ -129,13 +128,12 @@ pure func ProductOfSeqMoveFront(s seq[Elem], ra RA, k int) Unit {
 ghost
 opaque
 requires ra != nil
-requires len(s) >= 3
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
-requires ra.IsValid(ProductOfSeq(s, ra))
 requires 0 <= p1 && p1 < len(s)
 requires 0 <= p2 && p2 < len(s)
 requires 0 <= p3 && p3 < len(s)
 requires p1 != p2 && p1 != p3 && p2 != p3
+requires ra.IsValid(ProductOfSeq(s, ra))
 ensures  ra.IsElem(ra.Compose(ra.Compose(s[p1], s[p2]), s[p3]))
 ensures  ra.IsValid(ra.Compose(ra.Compose(s[p1], s[p2]), s[p3]))
 decreases
@@ -182,10 +180,9 @@ pure func ExtractThreeValid(s seq[Elem], ra RA, p1 int, p2 int, p3 int) Unit {
 // (Non-pure variant retained for the lemma chain in maintenance proofs.)
 ghost
 requires ra != nil
-requires 0 < len(s)
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
-requires ra.IsValid(ProductOfSeq(s, ra))
 requires 0 <= p && p < len(s)
+requires ra.IsValid(ProductOfSeq(s, ra))
 ensures  len(s) == 1 ==> ra.IsValid(s[p])
 ensures  len(s) >= 2 ==>
 	let rest := s[:p] ++ s[p+1:] in
@@ -262,7 +259,6 @@ func ProductSplitEq(pre seq[Elem], post seq[Elem], a Elem, b Elem, ra RA) {
 // The merged value lives at min(p1, p2); max(p1, p2) is removed.
 ghost
 requires ra != nil
-requires len(s) >= 2
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
 requires 0 <= p1 && p1 < len(s)
 requires 0 <= p2 && p2 < len(s)
@@ -272,7 +268,6 @@ ensures  let pmin := p1 < p2 ? p1 : p2 in
 	let pmax := p1 < p2 ? p2 : p1 in
 	let merged := ra.Compose(s[p1], s[p2]) in
 	let s2 := s[:pmin] ++ seq[Elem]{merged} ++ s[pmin+1:pmax] ++ s[pmax+1:] in
-	len(s2) == len(s) - 1 &&
 	ra.IsValid(ProductOfSeq(s2, ra))
 decreases
 func ProductMergeAt(s seq[Elem], p1 int, p2 int, ra RA) {
@@ -320,7 +315,6 @@ requires s[posI] === e1
 requires IsFramePreservingUpdate(ra, e1, e2)
 requires ra.IsValid(ProductOfSeq(s, ra))
 ensures  let s2 := s[:posI] ++ seq[Elem]{e2} ++ s[posI+1:] in
-	len(s2) == len(s) &&
 	ra.IsValid(ProductOfSeq(s2, ra))
 decreases
 func ProductFPUEq(s seq[Elem], posI int, e1 Elem, e2 Elem, ra RA) {
