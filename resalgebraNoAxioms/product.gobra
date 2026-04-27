@@ -207,8 +207,7 @@ func ExtractOneValid(s seq[Elem], ra RA, p int) {
 	}
 }
 
-// Split lemma (inductive on `pre`):
-//   ProductOfSeq(pre ++ [a] ++ post ++ [b]) === ProductOfSeq(pre ++ [Compose(a,b)] ++ post)
+// ProductOfSeq(pre ++ [a] ++ post ++ [b]) === ProductOfSeq(pre ++ [Compose(a,b)] ++ post)
 ghost
 requires ra != nil
 requires ra.IsElem(a) && ra.IsElem(b)
@@ -314,7 +313,6 @@ func ProductMergeAt(s seq[Elem], p1 int, p2 int, ra RA) {
 // preserves product validity.
 ghost
 requires ra != nil
-requires 0 < len(s)
 requires 0 <= posI && posI < len(s)
 requires forall j int :: { s[j] } 0 <= j && j < len(s) ==> ra.IsElem(s[j])
 requires ra.IsElem(e1) && ra.IsElem(e2)

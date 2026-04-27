@@ -193,7 +193,7 @@ pred GlobalMem() {
 		ras.ToDict()[k].IsValid(ProductOfSeq(getValAt(k), ras.ToDict()[k])))
 }
 
-// Helper accessors returning a single seq for a given key (force single-typed lookup).
+// Returns the sequence of active elements for a given reference.
 ghost
 requires acc(&inUseIdx)
 decreases
