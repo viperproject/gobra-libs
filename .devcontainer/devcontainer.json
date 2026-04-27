@@ -1,0 +1,7 @@
+{
+  "name": "gobra-libs dev container",
+  "image": "ghcr.io/viperproject/gobra:latest",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  }
+}
