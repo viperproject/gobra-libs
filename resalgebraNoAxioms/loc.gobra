@@ -164,7 +164,7 @@ pred GlobalMem() {
 					ras.ToDict()[k].IsElem(ras.ToDict()[k].Compose(i.val, i2.val)) &&
 					ras.ToDict()[k].IsValid(ras.ToDict()[k].Compose(i.val, i2.val))))) &&
 	// In-use value tracking: per-location seqs of currently-in-use idx pointers and their
-	// values. Foundation for the product-of-in-use-values invariant.
+	// values.
 	domain(toDict(model)) subset domain(inUseIdx) &&
 	domain(toDict(model)) subset domain(inUseVal) &&
 	(forall k LocName :: k elem domain(toDict(model)) ==>
