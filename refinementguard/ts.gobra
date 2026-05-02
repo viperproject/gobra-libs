@@ -64,7 +64,7 @@ func InitTS(t TransitionSystem, g EventGuard, i State) {
 		acc(lastSeen[v]) && *lastSeen[v] === i
 	decreases len(guardsIt)
 	for 0 < len(guardsIt) {
-		v := chooseGuardV(guardsIt)
+		var v GuardV |= v elem guardsIt
 		newL@ := i
 		lastSeen[v] = &newL
 		traces[v] = seq[traceEntry]{traceEntry{i, none[Event]}}
@@ -94,7 +94,7 @@ func InitTS(t TransitionSystem, g EventGuard, i State) {
 		guardCompatibleWithState(t, g, v, i, i, traces[v])
 	decreases len(guardsIt)
 	for 0 < len(guardsIt) {
-		v := chooseGuardV(guardsIt)
+		var v GuardV |= v elem guardsIt
 		fold GuardR(v)
 		assert LastObservedState(v) === i
 		fold GuardR(v)
@@ -147,7 +147,7 @@ func UpdateTS(e Event) {
 		guardCompatibleWithState(TS, EG, g, LastObservedState(g), s, traces[g])
 	decreases len(guardsIt)
 	for 0 < len(guardsIt) {
-		v := chooseGuardV(guardsIt)
+		var v GuardV |= v elem guardsIt
 		ghost if EG.Requires(e, v) {
 			assert v elem EG.Guards()
 			assert EG.Requires(e, v)

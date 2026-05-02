@@ -244,11 +244,3 @@ pure func LastObservedStatesMatch(v GuardV) Unit {
 		unfolding GuardR(v) in
 		Unit{}
 }
-
-// There is no choice nor way of traversing sets at the moment.
-// This implements a limited form of hilbert's choice operator
-ghost
-requires 0 < len(s)
-ensures  g elem s
-decreases _
-pure func chooseGuardV(s set[GuardV]) (g GuardV)
