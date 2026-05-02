@@ -4,9 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This package (`resalgebraNoAxioms`) is part of the `gobra-libs` project—a collection of reusable Gobra verification libraries. It provides a **verified model of ghost locations and relational algebras without axioms**, inspired by the Iris separation logic framework but implemented entirely in Gobra.
-
-Key distinction from the `resalgebra` sibling package: all lemmas are proven within Gobra using pure functions rather than relying on axioms (hence "NoAxioms").
+This package (`resalgebra`) is part of the `gobra-libs` project—a collection of reusable Gobra verification libraries. It provides a **verified model of ghost locations and relational algebras**, inspired by the Iris separation logic framework but implemented entirely in Gobra. All RA lemmas are proven within Gobra using pure functions rather than relying on axioms.
 
 ## Architecture
 
