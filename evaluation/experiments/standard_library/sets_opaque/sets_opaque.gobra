@@ -181,7 +181,8 @@ requires len(xs) == len(ys)
 ensures xs == ys
 decreases
 pure func SubsetEquality(xs, ys set[int]) util.Unit {
-	return asserting (len(ys setminus xs) == len(ys) - len(xs)) in util.Unit{}
+	return asserting len(ys setminus xs) == len(ys) - len(xs) in
+	util.Unit{}
 }
 
 // Returns whether xs is a proper subset of ys.
@@ -417,8 +418,8 @@ pure func UnionLenLower(xs, ys set[int]) util.Unit {
 		(let yr := Remove(ys, y) in
 		(y elem xs ?
 			(let xr := Remove(xs, y) in
-			(asserting (xr union yr == Remove(xs union ys, y)) in UnionLenLower(xr, yr))) :
-			(asserting (xs union yr == Remove(xs union ys, y)) in UnionLenLower(xs, yr))))
+			(asserting xr union yr == Remove(xs union ys, y) in UnionLenLower(xr, yr))) :
+			(asserting xs union yr == Remove(xs union ys, y) in UnionLenLower(xs, yr))))
 }
 
 // The cardinality of a union of two sets is less than or equal to the cardinality of
@@ -440,7 +441,7 @@ decreases xs
 pure func IntersectLenUpper(xs, ys set[int]) util.Unit {
 	return IsEmpty(xs) ? util.Unit{} :
 		let x := Choose(xs) in
-		(asserting ((Remove(xs, x)) intersection ys == Remove((xs intersection ys), x)) in
+		(asserting (Remove(xs, x)) intersection ys == Remove((xs intersection ys), x) in
 		(IntersectLenUpper(Remove(xs, x), ys)))
 }
 

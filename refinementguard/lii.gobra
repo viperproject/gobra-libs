@@ -61,10 +61,10 @@ pure func InstantiateLII(i LII) Unit {
 		unfolding Own()                in
 		unfolding GuardR(i.Guard())    in
 		let trace := traces[i.Guard()] in
-		asserting (i.Guard() elem EG.Guards()) in
-		asserting (guardCompatibleWithState(TS, EG, i.Guard(), LastObservedState(i.Guard()), s, trace)) in
-		asserting (0 < len(trace)) in
-		asserting (trace[len(trace) - 1].s === cs) in
+		asserting i.Guard() elem EG.Guards() in
+		asserting guardCompatibleWithState(TS, EG, i.Guard(), LastObservedState(i.Guard()), s, trace) in
+		asserting 0 < len(trace) in
+		asserting trace[len(trace) - 1].s === cs in
 		instantiateLIIAux(i, traces[i.Guard()], 0)
 }
 
@@ -90,7 +90,7 @@ pure func instantiateLIIAux(i LII, trace seq[traceEntry], currIdx int) Unit {
 		(currIdx == len(trace) - 1 ?
 			Unit{} :
 			let _ := i.PreservedByTransitionsExcept(trace[currIdx].s, get(trace[currIdx+1].e)) in
-			asserting (TS.Update(trace[currIdx].s, get(trace[currIdx+1].e)) === trace[currIdx+1].s) in
-			asserting (i.Prop(trace[currIdx+1].s)) in
+			asserting TS.Update(trace[currIdx].s, get(trace[currIdx+1].e)) === trace[currIdx+1].s in
+			asserting i.Prop(trace[currIdx+1].s) in
 			instantiateLIIAux(i, trace, currIdx+1))
 }

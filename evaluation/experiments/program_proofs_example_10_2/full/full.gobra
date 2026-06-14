@@ -17,21 +17,22 @@ pure func (pq PQueue) InsertCorrect(y int) Unit {
 			let min := y < x ? y : x in
 			let max := y < x ? x : y in
 			(let newRight := r.Insert(max) in
-			asserting (pqPrime == Node{min, newRight, l}) in
+			asserting pqPrime == Node{min, newRight, l} in
 			asserting (
 				let L := len(l.Elements()) in
 				let R := len(r.Elements()) in
 				L == R || L == R + 1) in
 			let _ := r.InsertCorrect(max) in
-			asserting (newRight.Valid()) in
-			asserting (newRight.IsBalanced()) in
-			asserting (l.IsBalanced()) in
+			asserting newRight.Valid() in
+			asserting newRight.IsBalanced() in
+			asserting l.IsBalanced() in
 			asserting (
 				let Lprime := len(newRight.Elements()) in
 				let Rprime := len(l.Elements()) in
 				Lprime == Rprime || Lprime == Rprime + 1) in
-			asserting (pqPrime.IsBalanced()) in
-			asserting (pqPrime.IsBinaryHeap()) in Unit{})
+			asserting pqPrime.IsBalanced() in
+			asserting pqPrime.IsBinaryHeap() in
+			Unit{})
 	}
 }
 
