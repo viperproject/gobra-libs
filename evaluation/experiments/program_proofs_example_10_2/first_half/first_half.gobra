@@ -17,8 +17,8 @@ pure func (pq PQueue) InsertCorrect(y int) Unit {
 			let min := y < x ? y : x in
 			let max := y < x ? x : y in
 			let newRight := r.Insert(max) in
-			let _ := asserting(pqPrime == Node{min, newRight, l}) in
-			let _ := asserting(
+			asserting (pqPrime == Node{min, newRight, l}) in
+			asserting (
 				let L := len(l.Elements()) in
 				let R := len(r.Elements()) in
 				L == R || L == R + 1) in
@@ -83,13 +83,6 @@ pure func (pq PQueue) IsBinaryHeap() bool {
 
 
 type Unit struct{}
-
-ghost
-requires b
-decreases
-pure func asserting(b bool) Unit {
-	return Unit{}
-}
 
 ghost type PQueue = BraunTree
 

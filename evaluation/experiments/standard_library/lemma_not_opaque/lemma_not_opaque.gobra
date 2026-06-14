@@ -66,7 +66,7 @@ requires len(xs) == len(ys)
 ensures xs == ys
 decreases
 pure func SubsetEquality(xs, ys set[int]) util.Unit {
-	return util.Asserting(len(ys setminus xs) == len(ys) - len(xs))
+	return asserting (len(ys setminus xs) == len(ys) - len(xs)) in util.Unit{}
 }
 
 // If xs is a subset of ys, then the cardinality of xs is less than or equal to the cardinality of ys.

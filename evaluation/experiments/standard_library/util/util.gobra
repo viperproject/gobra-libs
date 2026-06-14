@@ -36,9 +36,3 @@ ensures false
 decreases
 func TODO()
 
-ghost
-requires b
-decreases
-pure func Asserting(ghost b bool) Unit {
-	return Unit{}
-}
