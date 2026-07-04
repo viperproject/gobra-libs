@@ -373,7 +373,8 @@ requires 0 <= a && a < b && b <= len(xs)
 ensures Max(xs[a:b]) <= Max(xs)
 decreases
 pure func MaxOfSubseq(xs seq[int], a, b int) util.Unit {
-	return util.Asserting(Max(xs[a:b]) elem xs)
+	return asserting Max(xs[a:b]) elem xs in
+	util.Unit{}
 }
 
 // The minimum element in a non-empty sequence is less than or equal to the
@@ -383,7 +384,8 @@ requires 0 <= a && a < b && b <= len(xs)
 ensures Min(xs[a:b]) >= Min(xs)
 decreases
 pure func MinOfSubseq(xs seq[int], a, b int) util.Unit {
-	return util.Asserting(Min(xs[a:b]) elem xs)
+	return asserting Min(xs[a:b]) elem xs in
+	util.Unit{}
 }
 
 // Flattens a sequence of sequences into a single sequence.
@@ -399,7 +401,7 @@ ensures Flatten(xs ++ ys) == Flatten(xs) ++ Flatten(ys)
 decreases xs
 pure func FlattenConcat(xs, ys seq[seq[int]]) util.Unit {
 	return len(xs) == 0 ? util.Unit{} :
-	let _ := util.Asserting((xs ++ ys)[1:] == xs[1:] ++ ys) in
+	asserting (xs ++ ys)[1:] == xs[1:] ++ ys in
 	FlattenConcat(xs[1:], ys)
 }
 
@@ -410,7 +412,8 @@ decreases
 pure func FlattenSingleton(xs seq[int]) util.Unit {
 	// See https://github.com/viperproject/silicon/issues/803 for an explanation
 	// of this proof.
-	return util.Asserting(Flatten(seq[seq[int]]{xs}[1:]) == Empty())
+	return asserting Flatten(seq[seq[int]]{xs}[1:]) == Empty() in
+	util.Unit{}
 }
 
 // The length of a flattened sequence of sequences xs is greater than or equal

@@ -634,18 +634,18 @@ ensures  ra.IsElem(ra.Compose(e3, e2))
 ensures  ra.IsValid(ra.Compose(e3, e2))
 decreases
 pure func updateFrameLemma(ra RA, e1 Elem, e2 Elem, e3 Elem) Unit {
-	return let _ := Asserting(ra.IsValid(ra.Compose(e1, e2)))   in
-		let _ := Asserting(IsFramePreservingUpdate(ra, e1, e3)) in
-		let _ := Asserting(forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] ==> ra.IsElem(get(c))) ==>
+	return asserting ra.IsValid(ra.Compose(e1, e2))   in
+		asserting IsFramePreservingUpdate(ra, e1, e3) in
+		asserting (forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] ==> ra.IsElem(get(c))) ==>
 			(LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) ==> LiftedIsValid(ra, LiftedCompose(ra, some(e3), c)))) in
-		let _ := Asserting(forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
+		asserting (forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { LiftedCompose(ra, some(e2), c) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
 			LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) === ra.IsValid(ra.Compose(e1, get(c)))) in
-		let _ := Asserting(forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { ra.Compose(e3, get(c)) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
+		asserting (forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { ra.Compose(e3, get(c)) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
 			LiftedIsValid(ra, LiftedCompose(ra, some(e3), c)) === ra.IsValid(ra.Compose(e3, get(c)))) in
-		let _ := Asserting(forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { ra.Compose(e3, get(c)) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
+		asserting (forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { ra.Compose(e3, get(c)) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
 			ra.IsValid(ra.Compose(e1, get(c))) ==> ra.IsValid(ra.Compose(e3, get(c)))) in
 		// the term `get(some(e2))` is used to trigger the previous quantifier
-		let _ := Asserting(ra.IsElem(ra.Compose(e3, get(some(e2))))) in
+		asserting ra.IsElem(ra.Compose(e3, get(some(e2)))) in
 		Unit{}
 }
 

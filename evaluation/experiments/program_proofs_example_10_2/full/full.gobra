@@ -17,21 +17,22 @@ pure func (pq PQueue) InsertCorrect(y int) Unit {
 			let min := y < x ? y : x in
 			let max := y < x ? x : y in
 			(let newRight := r.Insert(max) in
-			let _ := Asserting(pqPrime == Node{min, newRight, l}) in
-			let _ := Asserting(
+			asserting pqPrime == Node{min, newRight, l} in
+			asserting (
 				let L := len(l.Elements()) in
 				let R := len(r.Elements()) in
 				L == R || L == R + 1) in
 			let _ := r.InsertCorrect(max) in
-			let _ := Asserting(newRight.Valid()) in
-			let _ := Asserting(newRight.IsBalanced()) in
-			let _ := Asserting(l.IsBalanced()) in
-			let _ := Asserting(
+			asserting newRight.Valid() in
+			asserting newRight.IsBalanced() in
+			asserting l.IsBalanced() in
+			asserting (
 				let Lprime := len(newRight.Elements()) in
 				let Rprime := len(l.Elements()) in
 				Lprime == Rprime || Lprime == Rprime + 1) in
-			let _ := Asserting(pqPrime.IsBalanced()) in
-			Asserting(pqPrime.IsBinaryHeap()))
+			asserting pqPrime.IsBalanced() in
+			asserting pqPrime.IsBinaryHeap() in
+			Unit{})
 	}
 }
 
@@ -92,13 +93,6 @@ pure func (pq PQueue) IsBinaryHeap() bool {
 
 
 type Unit struct{}
-
-ghost
-requires b
-decreases
-pure func Asserting(b bool) Unit {
-	return Unit{}
-}
 
 ghost type PQueue = BraunTree
 

@@ -68,6 +68,9 @@ ensures !(k elem domain(d)) ==> len(result) == len(d)
 decreases
 pure func Remove(d dict[int]int, k int) (result dict[int]int) {
 	return let ys := (sets_opaque.Remove(domain(d), k)) in
+		// This fact must be established via `util.Asserting` (not an `asserting`
+		// expression) so that it is available at call sites when this body is
+		// inlined; `Union`'s termination proof relies on it.
 		let _ := util.Asserting(ys intersection domain(d) == ys) in
 		RemoveKeys(d, sets_opaque.SingletonSet(k))
 }
@@ -433,7 +436,8 @@ decreases
 pure func RemoveOccurrences(d dict[int]int, k int) util.Unit {
 	return let ks1 := reveal Keys(d, d[k]) in
 	let ks2 := reveal Keys(Remove(d, k), d[k]) in
-	util.Asserting(ks2 == sets_opaque.Remove(ks1, k))
+	asserting ks2 == sets_opaque.Remove(ks1, k) in
+	util.Unit{}
 }
 
 // Adding a new key-value pair increases the occurrence of the value by one.
@@ -445,7 +449,8 @@ decreases
 pure func AddOccurrences(d dict[int]int, k, v int) util.Unit {
 	return let ks1 := reveal Keys(d, v) in
 		let ks2 := reveal Keys(d[k = v], v) in
-		util.Asserting(ks2 == sets_opaque.Add(ks1, k))
+		asserting ks2 == sets_opaque.Add(ks1, k) in
+		util.Unit{}
 }
 
 // Updating a key to a new value results in an additional occurrences for the
@@ -460,10 +465,11 @@ decreases
 pure func UpdateOccurrences(d dict[int]int, k, v int) util.Unit {
 	return let ks1v := reveal Keys(d, v) in
 		let ks2v := reveal Keys(d[k = v], v) in
-		let _ := util.Asserting(ks2v == sets_opaque.Add(ks1v, k)) in
+		asserting ks2v == sets_opaque.Add(ks1v, k) in
 		let ks1dk := reveal Keys(d, d[k]) in
 		let ks2dk := reveal Keys(d[k = v], d[k]) in
-		util.Asserting(ks2dk == sets_opaque.Remove(ks1dk, k))
+		asserting ks2dk == sets_opaque.Remove(ks1dk, k) in
+		util.Unit{}
 }
 
 // v can occur at most once as a value in injective dictionaries.
