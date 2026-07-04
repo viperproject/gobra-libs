@@ -645,8 +645,7 @@ pure func updateFrameLemma(ra RA, e1 Elem, e2 Elem, e3 Elem) Unit {
 		asserting (forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { ra.Compose(e3, get(c)) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
 			ra.IsValid(ra.Compose(e1, get(c))) ==> ra.IsValid(ra.Compose(e3, get(c)))) in
 		// the term `get(some(e2))` is used to trigger the previous quantifier
-		asserting ra.IsElem(ra.Compose(e3, get(some(e2)))) in
-		Unit{}
+		Asserting(ra.IsElem(ra.Compose(e3, get(some(e2)))))
 }
 
 /***** Model: functions that do not depend on the global invariant *****/

@@ -445,8 +445,7 @@ decreases
 pure func RemoveOccurrences(d dict[int]int, k int) util.Unit {
 	return let ks1 := reveal Keys(d, d[k]) in
 	let ks2 := reveal Keys(Remove(d, k), d[k]) in
-	asserting ks2 == sets.Remove(ks1, k) in
-	util.Unit{}
+	util.Asserting(ks2 == sets.Remove(ks1, k))
 }
 
 // Adding a new key-value pair increases the occurrence of the value by one.
@@ -458,8 +457,7 @@ decreases
 pure func AddOccurrences(d dict[int]int, k, v int) util.Unit {
 	return let ks1 := reveal Keys(d, v) in
 		let ks2 := reveal Keys(d[k = v], v) in
-		asserting ks2 == sets.Add(ks1, k) in
-		util.Unit{}
+		util.Asserting(ks2 == sets.Add(ks1, k))
 }
 
 // Updating a key to a new value results in an additional occurrences for the
@@ -477,8 +475,7 @@ pure func UpdateOccurrences(d dict[int]int, k, v int) util.Unit {
 		asserting ks2v == sets.Add(ks1v, k) in
 		let ks1dk := reveal Keys(d, d[k]) in
 		let ks2dk := reveal Keys(d[k = v], d[k]) in
-		asserting ks2dk == sets.Remove(ks1dk, k) in
-		util.Unit{}
+		util.Asserting(ks2dk == sets.Remove(ks1dk, k))
 }
 
 // v can occur at most once as a value in injective dictionaries.
