@@ -40,12 +40,12 @@ ensures  ProductOfSeq(s1 ++ s2, ra) === ra.Compose(ProductOfSeq(s1, ra), Product
 decreases len(s1)
 pure func ProductOfSeqConcat(s1 seq[Elem], s2 seq[Elem], ra RA) Unit {
 	return len(s1) == 1 ?
-		(let _ := asserting((s1 ++ s2)[1:] === s2) in
-		 asserting(ProductOfSeq(s1, ra) === s1[0])) :
+		(let _ := Asserting((s1 ++ s2)[1:] === s2) in
+		 Asserting(ProductOfSeq(s1, ra) === s1[0])) :
 		(let _ := ProductOfSeqConcat(s1[1:], s2, ra) in
-		 let _ := asserting((s1 ++ s2)[1:] === s1[1:] ++ s2) in
+		 let _ := Asserting((s1 ++ s2)[1:] === s1[1:] ++ s2) in
 		 let _ := ra.ComposeAssoc(s1[0], ProductOfSeq(s1[1:], ra), ProductOfSeq(s2, ra)) in
-		 asserting(ProductOfSeq(s1, ra) === ra.Compose(s1[0], ProductOfSeq(s1[1:], ra))))
+		 Asserting(ProductOfSeq(s1, ra) === ra.Compose(s1[0], ProductOfSeq(s1[1:], ra))))
 }
 
 // Swap positions k and k+1: ProductOfSeq(s) === ProductOfSeq(swap(s, k)).
@@ -65,27 +65,27 @@ pure func AdjacentSwapProduct(s seq[Elem], ra RA, k int) Unit {
 		 let rest := s[2:] in
 		 let s2 := s[:0] ++ seq[Elem]{s[1], s[0]} ++ s[2:] in
 		 len(rest) == 0 ?
-			(let _ := asserting(s === seq[Elem]{a, b}) in
-			 let _ := asserting(s[1:] === seq[Elem]{b}) in
-			 let _ := asserting(ProductOfSeq(s[1:], ra) === b) in
-			 let _ := asserting(ProductOfSeq(s, ra) === ra.Compose(a, b)) in
-			 let _ := asserting(s2 === seq[Elem]{b, a}) in
-			 let _ := asserting(s2[1:] === seq[Elem]{a}) in
-			 let _ := asserting(ProductOfSeq(s2[1:], ra) === a) in
-			 let _ := asserting(ProductOfSeq(s2, ra) === ra.Compose(b, a)) in
+			(let _ := Asserting(s === seq[Elem]{a, b}) in
+			 let _ := Asserting(s[1:] === seq[Elem]{b}) in
+			 let _ := Asserting(ProductOfSeq(s[1:], ra) === b) in
+			 let _ := Asserting(ProductOfSeq(s, ra) === ra.Compose(a, b)) in
+			 let _ := Asserting(s2 === seq[Elem]{b, a}) in
+			 let _ := Asserting(s2[1:] === seq[Elem]{a}) in
+			 let _ := Asserting(ProductOfSeq(s2[1:], ra) === a) in
+			 let _ := Asserting(ProductOfSeq(s2, ra) === ra.Compose(b, a)) in
 			 ra.ComposeComm(a, b)) :
-			(let _ := asserting(s === seq[Elem]{a, b} ++ rest) in
-			 let _ := asserting(s[1:] === seq[Elem]{b} ++ rest) in
-			 let _ := asserting((s[1:])[0] === b) in
-			 let _ := asserting((s[1:])[1:] === rest) in
-			 let _ := asserting(ProductOfSeq(s[1:], ra) === ra.Compose(b, ProductOfSeq(rest, ra))) in
-			 let _ := asserting(ProductOfSeq(s, ra) === ra.Compose(a, ra.Compose(b, ProductOfSeq(rest, ra)))) in
-			 let _ := asserting(s2 === seq[Elem]{b, a} ++ rest) in
-			 let _ := asserting(s2[1:] === seq[Elem]{a} ++ rest) in
-			 let _ := asserting((s2[1:])[0] === a) in
-			 let _ := asserting((s2[1:])[1:] === rest) in
-			 let _ := asserting(ProductOfSeq(s2[1:], ra) === ra.Compose(a, ProductOfSeq(rest, ra))) in
-			 let _ := asserting(ProductOfSeq(s2, ra) === ra.Compose(b, ra.Compose(a, ProductOfSeq(rest, ra)))) in
+			(let _ := Asserting(s === seq[Elem]{a, b} ++ rest) in
+			 let _ := Asserting(s[1:] === seq[Elem]{b} ++ rest) in
+			 let _ := Asserting((s[1:])[0] === b) in
+			 let _ := Asserting((s[1:])[1:] === rest) in
+			 let _ := Asserting(ProductOfSeq(s[1:], ra) === ra.Compose(b, ProductOfSeq(rest, ra))) in
+			 let _ := Asserting(ProductOfSeq(s, ra) === ra.Compose(a, ra.Compose(b, ProductOfSeq(rest, ra)))) in
+			 let _ := Asserting(s2 === seq[Elem]{b, a} ++ rest) in
+			 let _ := Asserting(s2[1:] === seq[Elem]{a} ++ rest) in
+			 let _ := Asserting((s2[1:])[0] === a) in
+			 let _ := Asserting((s2[1:])[1:] === rest) in
+			 let _ := Asserting(ProductOfSeq(s2[1:], ra) === ra.Compose(a, ProductOfSeq(rest, ra))) in
+			 let _ := Asserting(ProductOfSeq(s2, ra) === ra.Compose(b, ra.Compose(a, ProductOfSeq(rest, ra)))) in
 			 let _ := ra.ComposeAssoc(a, b, ProductOfSeq(rest, ra)) in
 			 let _ := ra.ComposeAssoc(b, a, ProductOfSeq(rest, ra)) in
 			 ra.ComposeComm(a, b))) :
@@ -93,10 +93,10 @@ pure func AdjacentSwapProduct(s seq[Elem], ra RA, k int) Unit {
 		 let tail := s[1:] in
 		 let tailSwapped := tail[:k-1] ++ seq[Elem]{tail[k], tail[k-1]} ++ tail[k+1:] in
 		 let sSwapped := s[:k] ++ seq[Elem]{s[k+1], s[k]} ++ s[k+2:] in
-		 let _ := asserting(sSwapped[0] === s[0]) in
-		 let _ := asserting(sSwapped[1:] === tailSwapped) in
-		 let _ := asserting(ProductOfSeq(s, ra) === ra.Compose(s[0], ProductOfSeq(tail, ra))) in
-		 asserting(ProductOfSeq(sSwapped, ra) === ra.Compose(s[0], ProductOfSeq(tailSwapped, ra))))
+		 let _ := Asserting(sSwapped[0] === s[0]) in
+		 let _ := Asserting(sSwapped[1:] === tailSwapped) in
+		 let _ := Asserting(ProductOfSeq(s, ra) === ra.Compose(s[0], ProductOfSeq(tail, ra))) in
+		 Asserting(ProductOfSeq(sSwapped, ra) === ra.Compose(s[0], ProductOfSeq(tailSwapped, ra))))
 }
 
 // Move position k to the front: ProductOfSeq(s) === ProductOfSeq([s[k]] ++ s[:k] ++ s[k+1:]).
@@ -111,15 +111,15 @@ ensures  let s2 := seq[Elem]{s[k]} ++ s[:k] ++ s[k+1:] in
 decreases k
 pure func ProductOfSeqMoveFront(s seq[Elem], ra RA, k int) Unit {
 	return k == 0 ?
-		asserting(s === seq[Elem]{s[0]} ++ s[:0] ++ s[1:]) :
+		Asserting(s === seq[Elem]{s[0]} ++ s[:0] ++ s[1:]) :
 		(let _ := AdjacentSwapProduct(s, ra, k - 1) in
 		 let sSwapped := s[:k-1] ++ seq[Elem]{s[k], s[k-1]} ++ s[k+1:] in
 		 let _ := ProductOfSeqMoveFront(sSwapped, ra, k - 1) in
-		 let _ := asserting(sSwapped[k-1] === s[k]) in
-		 let _ := asserting(sSwapped[:k-1] === s[:k-1]) in
-		 let _ := asserting(sSwapped[k:] === seq[Elem]{s[k-1]} ++ s[k+1:]) in
-		 let _ := asserting(s[:k] === s[:k-1] ++ seq[Elem]{s[k-1]}) in
-		 asserting(seq[Elem]{s[k]} ++ s[:k] ++ s[k+1:] ===
+		 let _ := Asserting(sSwapped[k-1] === s[k]) in
+		 let _ := Asserting(sSwapped[:k-1] === s[:k-1]) in
+		 let _ := Asserting(sSwapped[k:] === seq[Elem]{s[k-1]} ++ s[k+1:]) in
+		 let _ := Asserting(s[:k] === s[:k-1] ++ seq[Elem]{s[k-1]}) in
+		 Asserting(seq[Elem]{s[k]} ++ s[:k] ++ s[k+1:] ===
 			seq[Elem]{sSwapped[k-1]} ++ sSwapped[:k-1] ++ sSwapped[k:]))
 }
 
@@ -142,36 +142,36 @@ pure func ExtractThreeValid(s seq[Elem], ra RA, p1 int, p2 int, p3 int) Unit {
 		let sA := seq[Elem]{s[p3]} ++ s[:p3] ++ s[p3+1:] in
 		let qA1 := p1 < p3 ? p1 + 1 : p1 in
 		let qA2 := p2 < p3 ? p2 + 1 : p2 in
-		let _ := asserting(sA[qA1] === s[p1]) in
-		let _ := asserting(sA[qA2] === s[p2]) in
-		let _ := asserting(qA1 != qA2) in
+		let _ := Asserting(sA[qA1] === s[p1]) in
+		let _ := Asserting(sA[qA2] === s[p2]) in
+		let _ := Asserting(qA1 != qA2) in
 		let _ := ProductOfSeqMoveFront(sA, ra, qA2) in
 		let sB := seq[Elem]{sA[qA2]} ++ sA[:qA2] ++ sA[qA2+1:] in
-		let _ := asserting(sB[0] === s[p2]) in
-		let _ := asserting(sB[1] === s[p3]) in
+		let _ := Asserting(sB[0] === s[p2]) in
+		let _ := Asserting(sB[1] === s[p3]) in
 		let qB1 := qA1 < qA2 ? qA1 + 1 : qA1 in
-		let _ := asserting(sB[qB1] === s[p1]) in
-		let _ := asserting(qB1 >= 2) in
+		let _ := Asserting(sB[qB1] === s[p1]) in
+		let _ := Asserting(qB1 >= 2) in
 		let _ := ProductOfSeqMoveFront(sB, ra, qB1) in
 		let sC := seq[Elem]{sB[qB1]} ++ sB[:qB1] ++ sB[qB1+1:] in
-		let _ := asserting(sC[0] === s[p1]) in
-		let _ := asserting(sC[1] === s[p2]) in
-		let _ := asserting(sC[2] === s[p3]) in
+		let _ := Asserting(sC[0] === s[p1]) in
+		let _ := Asserting(sC[1] === s[p2]) in
+		let _ := Asserting(sC[2] === s[p3]) in
 		let sHead := seq[Elem]{s[p1], s[p2], s[p3]} in
-		let _ := asserting(sHead[1:] === seq[Elem]{s[p2], s[p3]}) in
-		let _ := asserting((sHead[1:])[0] === s[p2]) in
-		let _ := asserting((sHead[1:])[1:] === seq[Elem]{s[p3]}) in
-		let _ := asserting(ProductOfSeq(seq[Elem]{s[p3]}, ra) === s[p3]) in
-		let _ := asserting(ProductOfSeq(sHead[1:], ra) === ra.Compose(s[p2], s[p3])) in
-		let _ := asserting(ProductOfSeq(sHead, ra) === ra.Compose(s[p1], ra.Compose(s[p2], s[p3]))) in
+		let _ := Asserting(sHead[1:] === seq[Elem]{s[p2], s[p3]}) in
+		let _ := Asserting((sHead[1:])[0] === s[p2]) in
+		let _ := Asserting((sHead[1:])[1:] === seq[Elem]{s[p3]}) in
+		let _ := Asserting(ProductOfSeq(seq[Elem]{s[p3]}, ra) === s[p3]) in
+		let _ := Asserting(ProductOfSeq(sHead[1:], ra) === ra.Compose(s[p2], s[p3])) in
+		let _ := Asserting(ProductOfSeq(sHead, ra) === ra.Compose(s[p1], ra.Compose(s[p2], s[p3]))) in
 		let _ := ra.ComposeAssoc(s[p1], s[p2], s[p3]) in
-		let _ := asserting(ProductOfSeq(sHead, ra) === ra.Compose(ra.Compose(s[p1], s[p2]), s[p3])) in
+		let _ := Asserting(ProductOfSeq(sHead, ra) === ra.Compose(ra.Compose(s[p1], s[p2]), s[p3])) in
 		(len(s) == 3 ?
-			asserting(sC === sHead) :
+			Asserting(sC === sHead) :
 			(let sTail := sC[3:] in
-			 let _ := asserting(sC === sHead ++ sTail) in
+			 let _ := Asserting(sC === sHead ++ sTail) in
 			 let _ := ProductOfSeqConcat(sHead, sTail, ra) in
-			 let _ := asserting(ProductOfSeq(sC, ra) ===
+			 let _ := Asserting(ProductOfSeq(sC, ra) ===
 				ra.Compose(ProductOfSeq(sHead, ra), ProductOfSeq(sTail, ra))) in
 			 ra.ValidOp(ProductOfSeq(sHead, ra), ProductOfSeq(sTail, ra))))
 }

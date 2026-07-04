@@ -20,15 +20,15 @@ pure func (pq PQueue) InsertCorrect(y int) Unit {
 		let max := y < x ? x : y in
 		let _ := r.InsertCorrect(max) in
 		let newRight := r.Insert(max) in
-		let _ := asserting(newRight.Valid()) in
-		let _ := asserting(newRight.IsBalanced()) in
-		let _ := asserting(l.IsBalanced()) in
-		let _ := asserting(
+		let _ := Asserting(newRight.Valid()) in
+		let _ := Asserting(newRight.IsBalanced()) in
+		let _ := Asserting(l.IsBalanced()) in
+		let _ := Asserting(
 			let Lprime := len(newRight.Elements()) in
 			let Rprime := len(l.Elements()) in
 			Lprime == Rprime || Lprime == Rprime + 1) in
-		let _ := asserting(pqPrime.IsBalanced()) in
-		asserting(pqPrime.IsBinaryHeap())
+		let _ := Asserting(pqPrime.IsBalanced()) in
+		Asserting(pqPrime.IsBinaryHeap())
 	}
 }
 
@@ -93,7 +93,7 @@ type Unit struct{}
 ghost
 requires b
 decreases
-pure func asserting(b bool) Unit {
+pure func Asserting(b bool) Unit {
 	return Unit{}
 }
 

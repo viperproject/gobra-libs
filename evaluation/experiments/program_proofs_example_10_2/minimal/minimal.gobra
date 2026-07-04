@@ -80,7 +80,7 @@ type Unit struct{}
 ghost
 requires b
 decreases
-pure func asserting(b bool) Unit {
+pure func Asserting(b bool) Unit {
 	return Unit{}
 }
 

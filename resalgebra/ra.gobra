@@ -103,7 +103,7 @@ ensures  forall e1, e2, e3 Elem :: { ra.Compose(ra.Compose(e1, e2), e3) } { ra.C
 		ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3))
 decreases
 pure func ComposeAssocQ(ra RA) Unit {
-	return asserting(forall e1, e2, e3 Elem :: { ra.Compose(ra.Compose(e1, e2), e3) } { ra.Compose(e1, ra.Compose(e2, e3)) } ra.IsElem(e1) && ra.IsElem(e2) && ra.IsElem(e3) ==> let _ := ra.ComposeAssoc(e1, e2, e3) in ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3)))
+	return Asserting(forall e1, e2, e3 Elem :: { ra.Compose(ra.Compose(e1, e2), e3) } { ra.Compose(e1, ra.Compose(e2, e3)) } ra.IsElem(e1) && ra.IsElem(e2) && ra.IsElem(e3) ==> let _ := ra.ComposeAssoc(e1, e2, e3) in ra.Compose(ra.Compose(e1, e2), e3) === ra.Compose(e1, ra.Compose(e2, e3)))
 }
 
 ghost
@@ -113,7 +113,7 @@ ensures  forall e1, e2 Elem :: { ra.Compose(e1, e2) } { ra.Compose(e2, e1) } ra.
 	ra.Compose(e1, e2) === ra.Compose(e2, e1)
 decreases
 pure func ComposeCommQ(ra RA) Unit {
-	return asserting(forall e1, e2 Elem :: { ra.Compose(e1, e2) } { ra.Compose(e2, e1) } ra.IsElem(e1) && ra.IsElem(e2) ==> let _ := ra.ComposeComm(e1, e2) in ra.Compose(e1, e2) === ra.Compose(e2, e1))
+	return Asserting(forall e1, e2 Elem :: { ra.Compose(e1, e2) } { ra.Compose(e2, e1) } ra.IsElem(e1) && ra.IsElem(e2) ==> let _ := ra.ComposeComm(e1, e2) in ra.Compose(e1, e2) === ra.Compose(e2, e1))
 }
 
 ghost
@@ -124,7 +124,7 @@ ensures  forall e Elem :: { ra.Core(e) } ra.IsElem(e) ==>
 		c !== none[Elem] ==> ra.Compose(get(c), e) === e
 decreases
 pure func CoreIdQ(ra RA) Unit {
-	return asserting(forall e Elem :: { ra.Core(e) } ra.IsElem(e) ==> let _ := ra.CoreId(e) in ra.Core(e) !== none[Elem] ==> ra.Compose(get(ra.Core(e)), e) === e)
+	return Asserting(forall e Elem :: { ra.Core(e) } ra.IsElem(e) ==> let _ := ra.CoreId(e) in ra.Core(e) !== none[Elem] ==> ra.Compose(get(ra.Core(e)), e) === e)
 }
 
 ghost
@@ -137,7 +137,7 @@ ensures  forall e Elem :: { ra.Core(e) } ra.IsElem(e) && ra.Core(e) !== none[Ele
 	get(cc) === get(c)
 decreases
 pure func CoreIdemQ(ra RA) Unit {
-	return asserting(forall e Elem :: { ra.Core(e) } ra.IsElem(e) && ra.Core(e) !== none[Elem] ==> let _ := ra.CoreIdem(e) in let c := ra.Core(e) in let cc := ra.Core(get(c)) in cc !== none[Elem] && get(cc) === get(c))
+	return Asserting(forall e Elem :: { ra.Core(e) } ra.IsElem(e) && ra.Core(e) !== none[Elem] ==> let _ := ra.CoreIdem(e) in let c := ra.Core(e) in let cc := ra.Core(get(c)) in cc !== none[Elem] && get(cc) === get(c))
 }
 
 ghost
@@ -150,7 +150,7 @@ ensures  forall e1, e2 Elem ::  { ra.Core(e1), ra.Core(e2) } ra.IsElem(e1) && ra
 	exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4)
 decreases
 pure func CoreMonoQ(ra RA) Unit {
-	return asserting(forall e1, e2 Elem :: { ra.Core(e1), ra.Core(e2) } ra.IsElem(e1) && ra.IsElem(e2) && ra.Core(e1) !== none[Elem] && (exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 === ra.Compose(e1, e3)) ==> let _ := ra.CoreMono(e1, e2) in ra.Core(e2) !== none[Elem] &&
+	return Asserting(forall e1, e2 Elem :: { ra.Core(e1), ra.Core(e2) } ra.IsElem(e1) && ra.IsElem(e2) && ra.Core(e1) !== none[Elem] && (exists e3 Elem :: { ra.IsElem(e3) } ra.IsElem(e3) && e2 === ra.Compose(e1, e3)) ==> let _ := ra.CoreMono(e1, e2) in ra.Core(e2) !== none[Elem] &&
 	exists e4 Elem :: { ra.IsElem(e4) } ra.IsElem(e4) && get(ra.Core(e2)) === ra.Compose(get(ra.Core(e1)), e4))
 }
 
@@ -161,12 +161,12 @@ ensures  forall e1, e2 Elem :: { ra.Compose(e1, e2) } ra.IsElem(e1) && ra.IsElem
 	ra.IsValid(e1)
 decreases
 pure func ValidOpQ(ra RA) Unit {
-	return asserting(forall e1, e2 Elem :: { ra.Compose(e1, e2) } ra.IsElem(e1) && ra.IsElem(e2) && ra.IsValid(ra.Compose(e1, e2)) ==> let _ := ra.ValidOp(e1, e2) in ra.IsValid(e1))
+	return Asserting(forall e1, e2 Elem :: { ra.Compose(e1, e2) } ra.IsElem(e1) && ra.IsElem(e2) && ra.IsValid(ra.Compose(e1, e2)) ==> let _ := ra.ValidOp(e1, e2) in ra.IsValid(e1))
 }
 
 ghost
 requires b
 decreases
-pure func asserting(ghost b bool) Unit {
+pure func Asserting(ghost b bool) Unit {
 	return Unit{}
 }
