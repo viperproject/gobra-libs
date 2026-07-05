@@ -18,9 +18,3 @@ package refinementguard
 
 type Unit struct{}
 
-ghost
-requires b
-decreases
-pure func Asserting(b bool) Unit {
-	return Unit{}
-}

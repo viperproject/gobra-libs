@@ -399,7 +399,7 @@ ensures Flatten(xs ++ ys) == Flatten(xs) ++ Flatten(ys)
 decreases xs
 pure func FlattenConcat(xs, ys seq[seq[int]]) util.Unit {
 	return len(xs) == 0 ? util.Unit{} :
-	let _ := util.Asserting((xs ++ ys)[1:] == xs[1:] ++ ys) in
+	asserting (xs ++ ys)[1:] == xs[1:] ++ ys in
 	FlattenConcat(xs[1:], ys)
 }
 

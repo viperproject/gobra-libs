@@ -393,8 +393,8 @@ pure func UnionLenLower(xs, ys set[int]) util.Unit {
 		(let yr := Remove(ys, y) in
 		(y elem xs ?
 			(let xr := Remove(xs, y) in
-			(let _ := util.Asserting(xr union yr == Remove(xs union ys, y)) in UnionLenLower(xr, yr))) :
-			(let _ := util.Asserting(xs union yr == Remove(xs union ys, y)) in UnionLenLower(xs, yr))))
+			(asserting xr union yr == Remove(xs union ys, y) in UnionLenLower(xr, yr))) :
+			(asserting xs union yr == Remove(xs union ys, y) in UnionLenLower(xs, yr))))
 }
 
 // The cardinality of a union of two sets is less than or equal to the cardinality of
@@ -414,7 +414,7 @@ decreases xs
 pure func IntersectLenUpper(xs, ys set[int]) util.Unit {
 	return IsEmpty(xs) ? util.Unit{} :
 		let x := Choose(xs) in
-		(let _ := util.Asserting((Remove(xs, x)) intersection ys == Remove((xs intersection ys), x)) in
+		(asserting (Remove(xs, x)) intersection ys == Remove((xs intersection ys), x) in
 		(IntersectLenUpper(Remove(xs, x), ys)))
 }
 

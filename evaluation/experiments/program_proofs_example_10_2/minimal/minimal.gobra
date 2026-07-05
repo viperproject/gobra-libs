@@ -77,13 +77,6 @@ pure func (pq PQueue) IsBinaryHeap() bool {
 
 type Unit struct{}
 
-ghost
-requires b
-decreases
-pure func asserting(b bool) Unit {
-	return Unit{}
-}
-
 ghost type PQueue = BraunTree
 
 ghost type BraunTree adt {
