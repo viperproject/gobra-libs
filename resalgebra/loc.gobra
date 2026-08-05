@@ -14,7 +14,10 @@
 
 // +gobra
 
-dup pkgInvariant Invariant(GlobalMem{})
+// The parentheses around GlobalMem force this to be parsed as a predicate
+// constructor; the ambiguity with composite literals is not resolved within
+// pkgInvariant clauses.
+dup pkgInvariant Invariant((GlobalMem){})
 package resalgebra
 
 // At the moment, all of these definitions are trusted, and this,
@@ -26,6 +29,7 @@ ghost type LocName gpointer[int]
 /***** GhostLocation *****/
 
 ghost
+opensInvariants
 requires ra != nil
 requires ra.IsElem(e) && ra.IsValid(e)
 ensures  l != nil
@@ -38,6 +42,7 @@ func Alloc(ra RA, e Elem) (l LocName) {
 }
 
 ghost
+opensInvariants
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)
@@ -52,6 +57,7 @@ func GhostOp1(l LocName, ra RA, e1 Elem, e2 Elem) {
 }
 
 ghost
+opensInvariants
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)
@@ -80,6 +86,7 @@ func GhostValid(l LocName, ra RA, e Elem) {
 // Slightly different from paper, only captures a deterministic update.
 // Non-deterministic update can be easily supported too.
 ghost
+opensInvariants
 requires ra != nil
 requires ra.IsElem(e1)
 requires ra.IsElem(e2)
