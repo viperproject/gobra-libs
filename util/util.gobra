@@ -38,3 +38,12 @@ decreases
 pure func Unreachable() Unit {
 	return Unit{}
 }
+
+// Deprecated! `Assert` and the type `Lemma` should be used for the purposes
+// for which we previously used `Asserting` and `Unit`.
+ghost
+requires b
+decreases
+pure func Asserting(ghost b bool) Unit {
+	return Unit{}
+}
