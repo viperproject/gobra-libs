@@ -34,26 +34,6 @@ func Rune(s []rune, start int, end int, i int) rune {
 }
 
 ghost
-requires acc(Runes(ub, 0, len(ub)), _)
-ensures  len(res) == len(ub)
-ensures  forall i int :: { res[i] } 0 <= i && i < len(ub) ==>
-    res[i] == Rune(ub, 0, len(ub), i)
-decreases
-opaque
-pure func View(ub []rune) (res seq[rune]) {
-	return unfolding acc(Runes(ub, 0, len(ub)), _) in ViewInner(ub)
-}
-
-ghost
-requires forall i int :: { &ub[i] } 0 <= i && i < len(ub) ==> acc(&ub[i], _)
-ensures  len(res) == len(ub)
-ensures  forall i int :: { res[i] } 0 <= i && i < len(ub) ==> res[i] == ub[i]
-decreases len(ub)
-pure func ViewInner(ub []rune) (res seq[rune]) {
-	return len(ub) == 0 ? seq[rune]{} :  ViewInner(ub[:len(ub)-1]) ++ seq[rune]{ub[len(ub)-1]}
-}
-
-ghost
 requires 0 < p
 requires acc(Runes(s, start, end), p)
 requires start <= idx && idx <= end
