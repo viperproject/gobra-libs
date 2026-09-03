@@ -25,8 +25,9 @@ package resalgebra
 
 // To keep the public API for ghost locations free of witnesses, `uniqueloc.gobra`
 // bundles a location name and its witness into the type `UniqueLoc`, whose
-// fields are both unexported. The public predicate `GhostLocation` and the
-// public operations (`Alloc`, `GhostOp1`, `GhostOp2`, `GhostValid`,
-// `GhostUpdate`) are stated in terms of `UniqueLoc` and are thin, *proven*
-// wrappers around the witness-based operations of `loc.gobra`. In particular,
-// the public API introduces no additional assumptions.
+// fields are both unexported, and defines the public predicate `GhostLocation`
+// on top of `GhostLocationW`. The public operations in `loc.gobra` (`Alloc`,
+// `GhostOp1`, `GhostOp2`, `GhostValid`, `GhostUpdate`) are stated in terms of
+// `UniqueLoc` and are thin, *proven* wrappers around the witness-based
+// operations of the same file. In particular, the public API introduces no
+// additional assumptions.

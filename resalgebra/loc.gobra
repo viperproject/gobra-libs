@@ -20,10 +20,104 @@
 dup pkgInvariant Invariant((GlobalMem){})
 package resalgebra
 
-// This file contains the witness-based model of ghost locations. The public,
-// witness-free API is built on top of it in `uniqueloc.gobra`.
+// This file contains the witness-based model of ghost locations, together with
+// the public API built on top of it. The public API is stated in terms of
+// `UniqueLoc` (see `uniqueloc.gobra`), which bundles a location name and a
+// witness, so that clients never have to mention a witness and no part of the
+// API has to be assumed.
 
 ghost type LocName gpointer[int]
+
+/***** GhostLocation *****/
+
+// Alloc allocates a fresh ghost location holding the valid element e of ra.
+ghost
+opensInvariants
+requires ra != nil
+requires ra.IsElem(e) && ra.IsValid(e)
+ensures  u.GetLocName() != nil
+ensures  GhostLocation(u, ra, e)
+decreases
+func Alloc(ra RA, e Elem) (u UniqueLoc) {
+	l, w := AllocW(ra, e)
+	u = UniqueLoc{l, w}
+	fold GhostLocation(u, ra, e)
+	return u
+}
+
+// GhostOp1 splits ownership of `ra.Compose(e1, e2)` at u into ownership of e1
+// and of e2. The two resulting shares refer to the same ghost location as u.
+ghost
+opensInvariants
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires GhostLocation(u, ra, ra.Compose(e1, e2))
+ensures  u1.GetLocName() == u.GetLocName()
+ensures  u2.GetLocName() == u.GetLocName()
+ensures  GhostLocation(u1, ra, e1) && GhostLocation(u2, ra, e2)
+decreases
+func GhostOp1(u UniqueLoc, ra RA, e1 Elem, e2 Elem) (u1 UniqueLoc, u2 UniqueLoc) {
+	unfold GhostLocation(u, ra, ra.Compose(e1, e2))
+	w1, w2 := GhostOp1W(u.l, ra, e1, e2, u.w)
+	u1 = UniqueLoc{u.l, w1}
+	u2 = UniqueLoc{u.l, w2}
+	fold GhostLocation(u1, ra, e1)
+	fold GhostLocation(u2, ra, e2)
+	return u1, u2
+}
+
+// GhostOp2 merges ownership of e1 at u1 and of e2 at u2 into ownership of
+// `ra.Compose(e1, e2)` at u1. Both shares must refer to the same ghost
+// location.
+ghost
+opensInvariants
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires u1.GetLocName() == u2.GetLocName()
+requires GhostLocation(u1, ra, e1) && GhostLocation(u2, ra, e2)
+ensures  GhostLocation(u1, ra, ra.Compose(e1, e2))
+decreases
+func GhostOp2(u1 UniqueLoc, u2 UniqueLoc, ra RA, e1 Elem, e2 Elem) {
+	unfold GhostLocation(u1, ra, e1)
+	unfold GhostLocation(u2, ra, e2)
+	GhostOp2W(u1.l, ra, e1, e2, u1.w, u2.w)
+	fold GhostLocation(u1, ra, ra.Compose(e1, e2))
+}
+
+// GhostValid states that any owned element is an element of ra and valid.
+ghost
+requires ra != nil
+requires GhostLocation(u, ra, e)
+ensures  GhostLocation(u, ra, e)
+ensures  ra.IsElem(e) && ra.IsValid(e)
+decreases
+func GhostValid(u UniqueLoc, ra RA, e Elem) {
+	unfold GhostLocation(u, ra, e)
+	GhostValidW(u.l, ra, e, u.w)
+	fold GhostLocation(u, ra, e)
+}
+
+// GhostUpdate performs a frame-preserving update of the element owned at u
+// from e1 to e2. The share u itself is unchanged.
+//
+// Slightly different from paper, only captures a deterministic update.
+// Non-deterministic update can be easily supported too.
+ghost
+opensInvariants
+requires ra != nil
+requires ra.IsElem(e1)
+requires ra.IsElem(e2)
+requires GhostLocation(u, ra, e1)
+requires IsFramePreservingUpdate(ra, e1, e2)
+ensures  GhostLocation(u, ra, e2)
+decreases
+func GhostUpdate(u UniqueLoc, ra RA, e1 Elem, e2 Elem) {
+	unfold GhostLocation(u, ra, e1)
+	GhostUpdateW(u.l, ra, e1, e2, u.w)
+	fold GhostLocation(u, ra, e2)
+}
 
 /***** Frame-Preserving Updates *****/
 

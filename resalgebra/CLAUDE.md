@@ -19,8 +19,8 @@ This package (`resalgebra`) is part of the `gobra-libs` project—a collection o
 - `GhostLocationW(l, ra, e, w)` - internal witness-based representation (Gobra cannot existentially quantify over resources)
 - Witness-based operations (`loc.gobra`): `AllocW`, `GhostOp1W`, `GhostOp2W`, `GhostValidW`, `GhostUpdateW`; the `*WI` variants are the same operations without acquiring the global invariant
 - `UniqueLoc` (`uniqueloc.gobra`) - public, opaque handle bundling a `LocName` and its `Witness` in two unexported fields; `GetLocName()` exposes the (stable) location name
-- `GhostLocation(u, ra, e)` - public predicate for ghost state ownership, defined as `GhostLocationW(u.l, ra, e, u.w)`
-- Public operations (`uniqueloc.gobra`): `Alloc`, `GhostOp1` (split), `GhostOp2` (merge), `GhostValid`, `GhostUpdate` - all proven wrappers around the witness-based operations, so the public API adds no assumptions
+- `GhostLocation(u, ra, e)` (`uniqueloc.gobra`) - public predicate for ghost state ownership, defined as `GhostLocationW(u.l, ra, e, u.w)`
+- Public operations (`loc.gobra`): `Alloc`, `GhostOp1` (split), `GhostOp2` (merge), `GhostValid`, `GhostUpdate` - all take a `UniqueLoc` and are proven wrappers around the witness-based operations, so the public API adds no assumptions
 - `GlobalMem()` - package invariant ensuring consistency of all ghost locations
 
 **RA Instantiations**:
