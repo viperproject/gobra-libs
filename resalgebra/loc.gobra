@@ -20,85 +20,10 @@
 dup pkgInvariant Invariant((GlobalMem){})
 package resalgebra
 
-// At the moment, all of these definitions are trusted, and this,
-// prone to mistakes. If possible, we should find a model for the
-// predicate GhostLocation and for all lemmas.
+// This file contains the witness-based model of ghost locations. The public,
+// witness-free API is built on top of it in `uniqueloc.gobra`.
 
 ghost type LocName gpointer[int]
-
-/***** GhostLocation *****/
-
-ghost
-opensInvariants
-requires ra != nil
-requires ra.IsElem(e) && ra.IsValid(e)
-ensures  l != nil
-ensures  GhostLocation(l, ra, e)
-decreases
-func Alloc(ra RA, e Elem) (l LocName) {
-	l, w := AllocW(ra, e)
-	assert GhostLocationW(l, ra, e, w)
-	IntroExists(l, ra, e, w)
-}
-
-ghost
-opensInvariants
-requires ra != nil
-requires ra.IsElem(e1)
-requires ra.IsElem(e2)
-requires GhostLocation(l, ra, ra.Compose(e1, e2))
-ensures  GhostLocation(l, ra, e1) && GhostLocation(l, ra, e2)
-decreases
-func GhostOp1(l LocName, ra RA, e1 Elem, e2 Elem) {
-	w := ElimExists(l, ra, ra.Compose(e1, e2))
-	w1, w2 := GhostOp1W(l, ra, e1, e2, w)
-	IntroExists(l, ra, e1, w1)
-	IntroExists(l, ra, e2, w2)
-}
-
-ghost
-opensInvariants
-requires ra != nil
-requires ra.IsElem(e1)
-requires ra.IsElem(e2)
-requires GhostLocation(l, ra, e1) && GhostLocation(l, ra, e2)
-ensures  GhostLocation(l, ra, ra.Compose(e1, e2))
-decreases
-func GhostOp2(l LocName, ra RA, e1 Elem, e2 Elem) {
-	w1 := ElimExists(l, ra, e1)
-	w2 := ElimExists(l, ra, e2)
-	GhostOp2W(l, ra, e1, e2, w1, w2)
-	IntroExists(l, ra, ra.Compose(e1, e2), w1)
-}
-
-ghost
-requires ra != nil
-requires GhostLocation(l, ra, e)
-ensures  GhostLocation(l, ra, e)
-ensures  ra.IsElem(e) && ra.IsValid(e)
-decreases
-func GhostValid(l LocName, ra RA, e Elem) {
-	w := ElimExists(l, ra, e)
-	GhostValidW(l, ra, e, w)
-	IntroExists(l, ra, e, w)
-}
-
-// Slightly different from paper, only captures a deterministic update.
-// Non-deterministic update can be easily supported too.
-ghost
-opensInvariants
-requires ra != nil
-requires ra.IsElem(e1)
-requires ra.IsElem(e2)
-requires GhostLocation(l, ra, e1)
-requires IsFramePreservingUpdate(ra, e1, e2)
-ensures  GhostLocation(l, ra, e2)
-decreases
-func GhostUpdate(l LocName, ra RA, e1 Elem, e2 Elem) {
-	w := ElimExists(l, ra, e1)
-	GhostUpdateW(l, ra, e1, e2, w)
-	IntroExists(l, ra, e2, w)
-}
 
 /***** Frame-Preserving Updates *****/
 

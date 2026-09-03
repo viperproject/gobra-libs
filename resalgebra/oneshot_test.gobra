@@ -22,11 +22,17 @@ type oneshot struct {
 	V int
 	isInit bool
 	ghost e Elem
+	// The share of the ghost location owned by the lock invariant. Splitting and
+	// merging changes the share, but never its location name, so the invariant
+	// stores the share in a ghost field and is parameterized by the (stable)
+	// location name.
+	ghost u UniqueLoc
 }
 
 pred oneshotInv(o *oneshot, l LocName) {
 	acc(o) &&
-	GhostLocation(l, OneShotRA, o.e) &&
+	o.u.GetLocName() == l &&
+	GhostLocation(o.u, OneShotRA, o.e) &&
 	(!o.isInit ==> o.e == Pending{} && o.V == 0) &&
 	(o.isInit ==> o.e == Shot{o.V})
 }
@@ -35,7 +41,8 @@ ensures oneshotInv(o, l)
 decreases
 func mkOneShot() (o *oneshot, ghost l LocName) {
 	o = new(oneshot)
-	l = Alloc(OneShotRA, Pending{})
+	o.u = Alloc(OneShotRA, Pending{})
+	l = o.u.GetLocName()
 	o.e = Pending{}
 	fold oneshotInv(o, l)
 	return o, l
@@ -52,7 +59,8 @@ func (o *oneshot) trySet(n int, m *sync.Mutex, ghost l LocName) bool {
 	if o.isInit {
 		return false
 	}
-	GhostUpdate(l, OneShotRA, Pending{}, Shot{n})
+	// A frame-preserving update leaves the share (and hence o.u) unchanged.
+	GhostUpdate(o.u, OneShotRA, Pending{}, Shot{n})
 	o.V = n
 	o.isInit = true
 	ghost o.e = Shot{n}
@@ -67,12 +75,15 @@ func (o *oneshot) check(m *sync.Mutex, ghost l LocName) {
 	y1 := o.V
 	ghost e1 := o.e
 	ghost isInit1 := o.isInit
+	// The share of Shot{y1} that we take out of the lock invariant, if any.
+	ghost var u1 UniqueLoc
 	ghost if isInit1 {
 		assert e1 == Shot{y1}
 		assert OneShotRA.Compose(e1, e1) == e1
-		assert GhostLocation(l, OneShotRA, e1)
-		GhostOp1(l, OneShotRA, e1, e1)
-		assert GhostLocation(l, OneShotRA, e1) && GhostLocation(l, OneShotRA, e1)
+		assert GhostLocation(o.u, OneShotRA, e1)
+		o.u, u1 = GhostOp1(o.u, OneShotRA, e1, e1)
+		assert GhostLocation(o.u, OneShotRA, e1) && GhostLocation(u1, OneShotRA, e1)
+		assert u1.GetLocName() == l
 	}
 	fold oneshotInv{o, l}()
 	m.Unlock()
@@ -83,19 +94,22 @@ func (o *oneshot) check(m *sync.Mutex, ghost l LocName) {
 	ghost e2 := o.e
 	ghost isInit2 := o.isInit
 	ghost if isInit1 && !isInit2 {
-		assert GhostLocation(l, OneShotRA, Shot{y1})
-		assert GhostLocation(l, OneShotRA, Pending{})
-		GhostOp2(l, OneShotRA, Shot{y1}, Pending{})
-		GhostValid(l, OneShotRA, OneShotRA.Compose(Shot{y1}, Pending{}))
+		assert GhostLocation(u1, OneShotRA, Shot{y1})
+		assert GhostLocation(o.u, OneShotRA, Pending{})
+		GhostOp2(u1, o.u, OneShotRA, Shot{y1}, Pending{})
+		GhostValid(u1, OneShotRA, OneShotRA.Compose(Shot{y1}, Pending{}))
 		assert false // Unreachable
 	}
 	ghost if isInit1 && isInit2 {
-		assert GhostLocation(l, OneShotRA, e1) && GhostLocation(l, OneShotRA, e2)
-		GhostValid(l, OneShotRA, e1)
-		GhostValid(l, OneShotRA, e2)
-		GhostOp2(l, OneShotRA, e1, e2)
-		GhostValid(l, OneShotRA, OneShotRA.Compose(e1, e2))
+		assert GhostLocation(u1, OneShotRA, e1) && GhostLocation(o.u, OneShotRA, e2)
+		GhostValid(u1, OneShotRA, e1)
+		GhostValid(o.u, OneShotRA, e2)
+		GhostOp2(u1, o.u, OneShotRA, e1, e2)
+		GhostValid(u1, OneShotRA, OneShotRA.Compose(e1, e2))
 		assert e1 == e2
+		// The merged share replaces the one owned by the lock invariant; it has
+		// the same location name and holds `Compose(e1, e2) == e2 == o.e`.
+		o.u = u1
 	}
 	fold oneshotInv{o, l}()
 	m.Unlock()

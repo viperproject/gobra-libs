@@ -21,7 +21,7 @@ import "sync"
 type MonoCounter struct {
 	val int
 	ghost authRes AuthCarrier
-	ghost loc LocName
+	ghost loc UniqueLoc
 }
 
 pred (c *MonoCounter) Mem() {
@@ -36,7 +36,7 @@ ghost
 requires c.Mem()
 decreases
 pure func (c *MonoCounter) GetLocName() LocName {
-	return unfolding c.Mem() in c.loc
+	return unfolding c.Mem() in c.loc.GetLocName()
 }
 
 ensures c.Mem()
@@ -50,29 +50,33 @@ func AllocMonotonicCounter() (c *MonoCounter) {
 
 requires c.Mem()
 ensures  c.Mem()
-ensures  GhostLocation(c.GetLocName(), AuthRA, FragView(res))
-func (c *MonoCounter) ReadVal() (res int) {
+ensures  u.GetLocName() == c.GetLocName()
+ensures  GhostLocation(u, AuthRA, FragView(res))
+func (c *MonoCounter) ReadVal() (res int, ghost u UniqueLoc) {
 	unfold c.Mem()
-	defer fold c.Mem()
 	ghost auth := c.authRes
 	ghost frag := FragView(c.val).(AuthCarrier)
 	ghost comp := AuthRA.Compose(auth, frag).(AuthCarrier)
 	GhostUpdate(c.loc, AuthRA, auth, comp)
 	assert GhostLocation(c.loc, AuthRA, comp)
 	assert AuthRA.Core(comp) === some(Elem(frag))
-	GhostOp1(c.loc, AuthRA, comp, frag)
-	assert GhostLocation(c.loc, AuthRA, comp) && GhostLocation(c.loc, AuthRA, frag)
-	GhostOp1(c.loc, AuthRA, auth, frag)
-	assert GhostLocation(c.loc, AuthRA, auth) && GhostLocation(c.loc, AuthRA, frag) && GhostLocation(c.loc, AuthRA, frag)
-	return c.val
+	// Split the composite resource back into the authoritative part, which stays
+	// in c.Mem(), and the fragment, which is handed to the caller. Both shares
+	// live at the same ghost location.
+	c.loc, u = GhostOp1(c.loc, AuthRA, auth, frag)
+	res = c.val
+	fold c.Mem()
+	return res, u
 }
 
 requires c.Mem()
-requires GhostLocation(c.GetLocName(), AuthRA, FragView(10))
-func test(c *MonoCounter) {
+requires u.GetLocName() == c.GetLocName()
+requires GhostLocation(u, AuthRA, FragView(10))
+func test(c *MonoCounter, ghost u UniqueLoc) {
 	unfold c.Mem()
+	assert u.GetLocName() == c.loc.GetLocName()
 	ghost v := AuthRA.Compose(c.authRes, FragView(10))
-	GhostOp2(c.loc, AuthRA, c.authRes, FragView(10))
+	GhostOp2(c.loc, u, AuthRA, c.authRes, FragView(10))
 	GhostValid(c.loc, AuthRA, v)
 	assert c.val >= 10
 }

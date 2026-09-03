@@ -23,26 +23,10 @@ package resalgebra
 // terms of an explicit Witness value. This is due to a technicality in Gobra:
 // we cannot existentially quantify over resources.
 
-// To keep the public API for GhostLocations free of witnesses, we axiomatize
-// the introduction and elimination rules for existential QPs:
-
-// Same as `exists w s.t. GhostLocationW(l, ra, e, w)`
-pred GhostLocation(l LocName, ra RA, e Elem)
-
-// Converting between GhostLocationW and GhostLocation by
-// introducing the existential quantifier.
-ghost
-trusted
-requires GhostLocationW(l, ra, e, w)
-ensures  GhostLocation(l, ra, e)
-decreases
-func IntroExists(l LocName, ra RA, e Elem, w Witness)
-
-// Converting between GhostLocation and GhostLocationW by
-// eliminating the existential quantifier.
-ghost
-trusted
-requires GhostLocation(l, ra, e)
-ensures  GhostLocationW(l, ra, e, w)
-decreases
-func ElimExists(l LocName, ra RA, e Elem) (w Witness)
+// To keep the public API for ghost locations free of witnesses, `uniqueloc.gobra`
+// bundles a location name and its witness into the type `UniqueLoc`, whose
+// fields are both unexported. The public predicate `GhostLocation` and the
+// public operations (`Alloc`, `GhostOp1`, `GhostOp2`, `GhostValid`,
+// `GhostUpdate`) are stated in terms of `UniqueLoc` and are thin, *proven*
+// wrappers around the witness-based operations of `loc.gobra`. In particular,
+// the public API introduces no additional assumptions.
