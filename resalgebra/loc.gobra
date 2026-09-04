@@ -188,8 +188,11 @@ pred GlobalMem() {
 	(forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall j1, j2 int :: 0 <= j1 && j1 < j2 && j2 < len(getIdxAt(k)) ==>
 			getIdxAt(k)[j1] !== getIdxAt(k)[j2])) &&
-	(forall k LocName :: k elem domain(toDict(model)) ==>
-		(forall j int :: 0 <= j && j < len(getIdxAt(k)) ==>
+	// The trigger is given explicitly: the inferred one also matches on `getIdxAt(k)[j].val`,
+	// which forces a lookup in the nested quantified permission above for every position of
+	// every location and makes folding this predicate blow up.
+	(forall k LocName :: { k elem domain(toDict(model)) } k elem domain(toDict(model)) ==>
+		(forall j int :: { getValAt(k)[j] } 0 <= j && j < len(getIdxAt(k)) ==>
 			getIdxAt(k)[j].val === getValAt(k)[j])) &&
 	(forall k LocName :: k elem domain(toDict(model)) ==>
 		(forall j int :: 0 <= j && j < len(getValAt(k)) ==>
@@ -405,8 +408,14 @@ func GhostOp1WI(l LocName, ra RA, e1 Elem, e2 Elem, w Witness) (w1 Witness, w2 W
 	assert oldVals[posI] === ra.Compose(e1, e2)
 	assert oldVals === pre ++ seq[Elem]{ra.Compose(e1, e2)} ++ post
 	ProductSplitEq(pre, post, e1, e2, ra)
+	ghost oldIdxMap := inUseIdx
+	ghost oldValMap := inUseVal
 	inUseIdx[l] = getIdxAt(l)[:posI] ++ seq[idx]{iii1} ++ getIdxAt(l)[posI+1:] ++ seq[idx]{iii2}
 	inUseVal[l] = pre ++ seq[Elem]{e1} ++ post ++ seq[Elem]{e2}
+	// Only l changed: spelling out the frame for every other location keeps the fold below from
+	// re-deriving the per-location invariants from scratch.
+	assert forall k LocName :: { getIdxAt(k) } k != l ==> getIdxAt(k) === idxSeqLookup(oldIdxMap, k)
+	assert forall k LocName :: { getValAt(k) } k != l ==> getValAt(k) === valSeqLookup(oldValMap, k)
 	fold GlobalMem()
 	return i1, i2
 }
@@ -550,9 +559,15 @@ func GhostOp2WI(l LocName, ra RA, e1 Elem, e2 Elem, w1 Witness, w2 Witness) {
 		ras.ToDict()[l].IsElem(ras.ToDict()[l].Compose(i2.val, i1.i.val)) &&
 		ras.ToDict()[l].IsValid(ras.ToDict()[l].Compose(i2.val, i1.i.val))
 
+	ghost oldIdxMap := inUseIdx
+	ghost oldValMap := inUseVal
 	inUseVal[l] = oldVals[:pmin] ++ seq[Elem]{ra.Compose(e1, e2)} ++ oldVals[pmin+1:pmax] ++ oldVals[pmax+1:]
 	inUseIdx[l] = oldIdxs[:pmin] ++ seq[idx]{i1.i} ++ oldIdxs[pmin+1:pmax] ++ oldIdxs[pmax+1:]
 
+	// Only l changed: spelling out the frame for every other location keeps the fold below from
+	// re-deriving the per-location invariants from scratch.
+	assert forall k LocName :: { getIdxAt(k) } k != l ==> getIdxAt(k) === idxSeqLookup(oldIdxMap, k)
+	assert forall k LocName :: { getValAt(k) } k != l ==> getValAt(k) === valSeqLookup(oldValMap, k)
 	fold GlobalMem()
 }
 
@@ -649,8 +664,6 @@ pure func updateFrameLemma(ra RA, e1 Elem, e2 Elem, e3 Elem) Unit {
 			LiftedIsValid(ra, LiftedCompose(ra, some(e1), c)) === ra.IsValid(ra.Compose(e1, get(c)))) in
 		asserting (forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { ra.Compose(e3, get(c)) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
 			LiftedIsValid(ra, LiftedCompose(ra, some(e3), c)) === ra.IsValid(ra.Compose(e3, get(c)))) in
-		asserting (forall c option[Elem] :: { LiftedCompose(ra, some(e1), c) } { ra.Compose(e3, get(c)) } (c !== none[Elem] && ra.IsElem(get(c))) ==>
-			ra.IsValid(ra.Compose(e1, get(c))) ==> ra.IsValid(ra.Compose(e3, get(c)))) in
 		// the term `get(some(e2))` is used to trigger the previous quantifier
 		Asserting(ra.IsElem(ra.Compose(e3, get(some(e2)))))
 }
